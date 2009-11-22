@@ -21,7 +21,10 @@ tableauAsList t = [(a t),(b t),(c t),(d t),(e t),(f t),(g t)]
 tableauCards :: Tableau -> [Maybe Card]
 tableauCards t = map listToMaybe (tableauAsList t)
 
-data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7
+data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7 deriving (Show,Enum,Bounded)
+
+data Location = Slot
+              | Deck
 
 -- TODO how do I restrict the card to have a suit of the appropriate type
 data Foundation = Foundation
@@ -41,7 +44,10 @@ data Game = Game
     , tableau :: Tableau
     } deriving (Show)
 
-data Move = TurnDeck
+data Move = GameOver
+          | TurnDeck
+          | MoveDown Slot
+          | MoveUp Location Suit
 
 alternateColors :: Card -> Card -> Bool
 alternateColors a b = color a /= color b
@@ -70,21 +76,33 @@ cardUp Nothing (Card value _) = False
 cardUp (Just x) (Card Ace _) = False
 cardUp (Just (Card fvalue fsuit)) (Card value suit) = (fsuit == suit) && (fvalue == pred value)
 
--- cardDown :: Card -> Tableau -> Maybe Slot
--- cardDown c t = undefined 
-
--- red / black
+-- TODO butt ugly again...
 cardDown :: Card -> (Maybe Card) -> Bool
-cardDown (Card Ace _) Nothing = True
+cardDown (Card King _) Nothing = True
 cardDown _ Nothing = False
-cardDown c@(Card value suit) (Just c2@(Card v s)) = (alternateColors c c2) && (succ value == v)
+cardDown c@(Card value _) (Just c2@(Card v _)) = (alternateColors c c2) && (succ value == v)
+
+-- All possible moves down (again butt ugly and WAY too complicated)
+cardDownTableau :: Card -> Tableau -> [Slot]
+cardDownTableau c t = map snd (filter fst (zip (map (cardDown c) (tableauCards t)) [Slot1 ..]))
+
+turnDeck :: [Card] -> [Card]
+turnDeck [] = []
+turnDeck (x:xs) = xs ++ [x]
 
 getMoves :: Game -> [Move]
-getMoves game = moveDowns game ++ moveUps game ++ [TurnDeck] where
-    foundationCards = undefined
-    deckCard = head (deck game)
+getMoves game | canTurnDeck = []
+              | otherwise = []
+              where 
+                canTurnDeck = (not . null . deck) game
+
+moveDowns game ++ moveUps game ++ [TurnDeck] where
+    canTurnDeck = (not . null . deck) game
     moveUps = undefined
     moveDowns = undefined
+
+makeMove :: Game -> Move -> Game
+makeMove g TurnDeck = undefined
 
 
 
