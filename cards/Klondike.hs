@@ -76,8 +76,8 @@ cardUp (Just (Card fvalue fsuit)) (Card value suit) = (fsuit == suit) && (fvalue
 -- red / black
 cardDown :: Card -> (Maybe Card) -> Bool
 cardDown (Card Ace _) Nothing = True
-carDownn _ Nothing = False
--- cardDown (Card value suit) (Just (Card v s)) = 
+cardDown _ Nothing = False
+cardDown c@(Card value suit) (Just c2@(Card v s)) = (alternateColors c c2) && (succ value == v)
 
 getMoves :: Game -> [Move]
 getMoves game = moveDowns game ++ moveUps game ++ [TurnDeck] where
