@@ -96,11 +96,6 @@ getMoves game | canTurnDeck = []
               where 
                 canTurnDeck = (not . null . deck) game
 
-moveDowns game ++ moveUps game ++ [TurnDeck] where
-    canTurnDeck = (not . null . deck) game
-    moveUps = undefined
-    moveDowns = undefined
-
 makeMove :: Game -> Move -> Game
 makeMove g TurnDeck = undefined
 
