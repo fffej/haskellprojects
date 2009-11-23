@@ -19,7 +19,7 @@ tableauAsList :: Tableau -> [[Card]]
 tableauAsList t = [(a t),(b t),(c t),(d t),(e t),(f t),(g t)]
 
 tableauCards :: Tableau -> [Maybe Card]
-tableauCards t = map listToMaybe (tableauAsList t)
+tableauCards t = map listToMaybe .tableauAsList
 
 data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7 deriving (Show,Enum,Bounded)
 
@@ -82,7 +82,7 @@ cardUp (Just (Card fvalue fsuit)) (Card value suit) = (fsuit == suit) && (fvalue
 cardDown :: Card -> (Maybe Card) -> Bool
 cardDown (Card King _) Nothing = True
 cardDown _ Nothing = False
-cardDown c@(Card value _) (Just c2@(Card v _)) = (alternateColors c c2) && (succ value == v)
+cardDown a@(Card x _) (Just b@(Card y _)) = alternateColors a b && succ a == b
 
 -- All possible moves down (again butt ugly and WAY too complicated)
 cardDownTableau :: Card -> Tableau -> [Slot]
