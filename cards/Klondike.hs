@@ -19,7 +19,7 @@ tableauAsList :: Tableau -> [[Card]]
 tableauAsList t = [(a t),(b t),(c t),(d t),(e t),(f t),(g t)]
 
 tableauCards :: Tableau -> [Maybe Card]
-tableauCards t = map listToMaybe .tableauAsList
+tableauCards = map listToMaybe . tableauAsList
 
 data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7 deriving (Show,Enum,Bounded)
 
@@ -82,19 +82,33 @@ cardUp (Just (Card fvalue fsuit)) (Card value suit) = (fsuit == suit) && (fvalue
 cardDown :: Card -> (Maybe Card) -> Bool
 cardDown (Card King _) Nothing = True
 cardDown _ Nothing = False
-cardDown a@(Card x _) (Just b@(Card y _)) = alternateColors a b && succ a == b
+cardDown a@(Card x _) (Just b@(Card y _)) = alternateColors a b && succ x == y
 
--- All possible moves down (again butt ugly and WAY too complicated)
+-- TODO clarify
 cardDownTableau :: Card -> Tableau -> [Slot]
 cardDownTableau c t = map snd (filter fst (zip (map (cardDown c) (tableauCards t)) [Slot1 ..]))
+
+-- TODO Clearly this is another lump of gibberish.  What's the right way?
+getFoundationCards :: Foundation -> Card -> [Card]
+getFoundationCards f (Card _ Clubs) = clubs f;
+getFoundationCards f (Card _ Diamonds) = diamonds f;
+getFoundationCards f (Card _ Hearts) = hearts f;
+getFoundationCards f (Card _ Spades) = spades f;
+
+moveUpTableau :: Card -> Foundation -> Maybe Suit
+moveUpTableau c@(Card Ace s) f | null (getFoundationCards f c) = Just s
+                               | otherwise = Nothing
+moveUpTableau c@(Card v s) f | null (getFoundationCards f c) = Nothing
+                             | value (head (getFoundationCards f c)) == pred v = Just s
+    
 
 turnDeck :: [Card] -> [Card]
 turnDeck [] = []
 turnDeck (x:xs) = xs ++ [x]
 
 getMoves :: Game -> [Move]
-getMoves game | canTurnDeck = cardDownMoves
-              | otherwise = []
+getMoves game | canTurnDeck = cardDownMoves ++ [TurnDeck]
+              | otherwise = cardDownMoves
               where 
                 canTurnDeck = (not . null . deck) game
                 cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) (tableau game))

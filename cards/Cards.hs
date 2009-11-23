@@ -32,6 +32,9 @@ color (Card _ Diamonds) = Red
 color (Card _ Hearts) = Red
 color (Card _ Spades) = Black
 
+value :: Card -> Value
+value (Card x _) = x
+
 data Card = Card Value Suit
             deriving (Show)
 
