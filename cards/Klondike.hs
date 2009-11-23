@@ -25,6 +25,7 @@ data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7 deriving (Show
 
 data Location = Slot
               | Deck
+                deriving (Show)
 
 -- TODO how do I restrict the card to have a suit of the appropriate type
 data Foundation = Foundation
@@ -46,8 +47,9 @@ data Game = Game
 
 data Move = GameOver
           | TurnDeck
-          | MoveDown Slot
+          | MoveFromDeck Slot
           | MoveUp Location Suit
+            deriving (Show)
 
 alternateColors :: Card -> Card -> Bool
 alternateColors a b = color a /= color b
@@ -91,10 +93,11 @@ turnDeck [] = []
 turnDeck (x:xs) = xs ++ [x]
 
 getMoves :: Game -> [Move]
-getMoves game | canTurnDeck = []
+getMoves game | canTurnDeck = cardDownMoves
               | otherwise = []
               where 
                 canTurnDeck = (not . null . deck) game
+                cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) (tableau game))
 
 makeMove :: Game -> Move -> Game
 makeMove g TurnDeck = undefined
