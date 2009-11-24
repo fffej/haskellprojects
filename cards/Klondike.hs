@@ -42,6 +42,7 @@ data Game = Game
 data Move = GameOver
           | TurnDeck
           | MoveFromDeck Card
+          | MoveUp Card
             deriving (Show)
 
 alternateColors :: Card -> Card -> Bool
@@ -88,11 +89,11 @@ getFoundationCards f (Card _ Diamonds) = diamonds f;
 getFoundationCards f (Card _ Hearts) = hearts f;
 getFoundationCards f (Card _ Spades) = spades f;
 
-moveUpTableau :: Foundation -> Card -> Maybe Suit
-moveUpTableau f c@(Card Ace s) | null (getFoundationCards f c) = Just s
+moveUpTableau :: Foundation -> Card -> Maybe Card
+moveUpTableau f c@(Card Ace s) | null (getFoundationCards f c) = Just c
                                | otherwise = Nothing
 moveUpTableau f c@(Card v s) | null (getFoundationCards f c) = Nothing
-                             | value (head (getFoundationCards f c)) == pred v = Just s
+                             | value (head (getFoundationCards f c)) == pred v = Just c
     
 
 turnDeck :: [Card] -> [Card]
@@ -107,6 +108,7 @@ getMoves game | canTurnDeck = TurnDeck : cardDownMoves
                 f = foundation game
                 canTurnDeck = (not . null . deck) game
                 cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) t)
+--                cardUpMoves = map MoveUp (
                 
 
 makeMove :: Game -> Move -> Game
