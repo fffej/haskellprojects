@@ -79,7 +79,7 @@ cardDown a@(Card x _) (Just b@(Card y _)) = alternateColors a b && succ x == y
 
 -- TODO clarify
 cardDownTableau :: Card -> Tableau -> [Card]
-cardDownTableau c t = catMaybes $ filter (cardDown c) (tableauCards t)
+cardDownTableau c = catMaybes . filter (cardDown c) . tableauCards
 
 -- TODO Clearly this is another lump of gibberish.  What's the right way?
 getFoundationCards :: Foundation -> Card -> [Card]
@@ -100,14 +100,13 @@ turnDeck [] = []
 turnDeck (x:xs) = xs ++ [x]
 
 getMoves :: Game -> [Move]
-getMoves game | canTurnDeck = [TurnDeck]  ++ cardDownMoves
+getMoves game | canTurnDeck = TurnDeck : cardDownMoves
               | otherwise = []
               where 
                 t = tableau game
                 f = foundation game
                 canTurnDeck = (not . null . deck) game
                 cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) t)
-                headTableau = (tableauCards t)
                 
 
 makeMove :: Game -> Move -> Game
