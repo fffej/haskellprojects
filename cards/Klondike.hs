@@ -1,8 +1,8 @@
 module Klondike where
 
 import Cards
-
 import Data.Maybe
+import Test.HUnit
 
 data Tableau = Tableau 
     {
@@ -20,12 +20,6 @@ tableauAsList t = [(a t),(b t),(c t),(d t),(e t),(f t),(g t)]
 
 tableauCards :: Tableau -> [Maybe Card]
 tableauCards = map listToMaybe . tableauAsList
-
-data Slot = Slot1 | Slot2 | Slot3 | Slot4 | Slot5 | Slot6 | Slot7 deriving (Show,Enum,Bounded)
-
-data Location = Slot
-              | Deck
-                deriving (Show)
 
 -- TODO how do I restrict the card to have a suit of the appropriate type
 data Foundation = Foundation
@@ -47,8 +41,7 @@ data Game = Game
 
 data Move = GameOver
           | TurnDeck
-          | MoveFromDeck Slot
-          | MoveUp Location Suit
+          | MoveFromDeck Card
             deriving (Show)
 
 alternateColors :: Card -> Card -> Bool
@@ -76,7 +69,7 @@ cardUp :: (Maybe Card) -> Card -> Bool
 cardUp Nothing (Card Ace _) = True
 cardUp Nothing (Card value _) = False
 cardUp (Just x) (Card Ace _) = False
-cardUp (Just (Card fvalue fsuit)) (Card value suit) = (fsuit == suit) && (fvalue == pred value)
+cardUp (Just (Card fvalue fsuit)) (Card value suit) = fsuit == suit && fvalue == pred value
 
 -- TODO butt ugly again...
 cardDown :: Card -> (Maybe Card) -> Bool
@@ -85,8 +78,8 @@ cardDown _ Nothing = False
 cardDown a@(Card x _) (Just b@(Card y _)) = alternateColors a b && succ x == y
 
 -- TODO clarify
-cardDownTableau :: Card -> Tableau -> [Slot]
-cardDownTableau c t = map snd (filter fst (zip (map (cardDown c) (tableauCards t)) [Slot1 ..]))
+cardDownTableau :: Card -> Tableau -> [Card]
+cardDownTableau c t = catMaybes $ filter (cardDown c) (tableauCards t)
 
 -- TODO Clearly this is another lump of gibberish.  What's the right way?
 getFoundationCards :: Foundation -> Card -> [Card]
@@ -95,10 +88,10 @@ getFoundationCards f (Card _ Diamonds) = diamonds f;
 getFoundationCards f (Card _ Hearts) = hearts f;
 getFoundationCards f (Card _ Spades) = spades f;
 
-moveUpTableau :: Card -> Foundation -> Maybe Suit
-moveUpTableau c@(Card Ace s) f | null (getFoundationCards f c) = Just s
+moveUpTableau :: Foundation -> Card -> Maybe Suit
+moveUpTableau f c@(Card Ace s) | null (getFoundationCards f c) = Just s
                                | otherwise = Nothing
-moveUpTableau c@(Card v s) f | null (getFoundationCards f c) = Nothing
+moveUpTableau f c@(Card v s) | null (getFoundationCards f c) = Nothing
                              | value (head (getFoundationCards f c)) == pred v = Just s
     
 
@@ -107,14 +100,19 @@ turnDeck [] = []
 turnDeck (x:xs) = xs ++ [x]
 
 getMoves :: Game -> [Move]
-getMoves game | canTurnDeck = cardDownMoves ++ [TurnDeck]
-              | otherwise = cardDownMoves
+getMoves game | canTurnDeck = [TurnDeck]  ++ cardDownMoves
+              | otherwise = []
               where 
+                t = tableau game
+                f = foundation game
                 canTurnDeck = (not . null . deck) game
-                cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) (tableau game))
+                cardDownMoves = map MoveFromDeck (cardDownTableau ((head . deck) game) t)
+                headTableau = (tableauCards t)
+                
 
 makeMove :: Game -> Move -> Game
 makeMove g TurnDeck = undefined
+
 
 
 

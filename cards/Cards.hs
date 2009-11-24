@@ -36,7 +36,7 @@ value :: Card -> Value
 value (Card x _) = x
 
 data Card = Card Value Suit
-            deriving (Show)
+            deriving (Eq,Show)
 
 allCards :: [Card]
 allCards = [Card x y | x <- [Ace .. King],  y <- [Clubs .. Spades]]
