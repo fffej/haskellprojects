@@ -40,4 +40,4 @@ data Card = Card Value Suit
 
 allCards :: [Card]
 allCards = [Card x y | x <- [Ace .. King],  y <- [Clubs .. Spades]]
-      
+
