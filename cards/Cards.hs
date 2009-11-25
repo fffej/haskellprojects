@@ -35,6 +35,9 @@ color (Card _ Spades) = Black
 value :: Card -> Value
 value (Card x _) = x
 
+alternateColors :: Card -> Card -> Bool
+alternateColors a b = color a /= color b
+
 data Card = Card Value Suit
             deriving (Eq,Show)
 
