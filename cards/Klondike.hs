@@ -72,6 +72,8 @@ cardUpFromDeck (Card v s) (Base t (Card x b:xs)) = succ x == v && s == t
 cardUpFromSlot :: Slot -> Base -> Bool
 cardUpFromSlot (Slot (x:xs) _) b = cardUpFromDeck x b
 
+-- | 
+
 {-
 
 -- TODO This should return the target card NOT the source card.  Should be list [Maybe Card]
