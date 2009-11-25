@@ -10,7 +10,7 @@ data Id = A | B | C | D | E | F | G deriving (Show,Eq)
 data Slot = Slot [Card] Id deriving (Show,Eq)
 
 -- |The Tableau is the seven possible piles of cards
-data Tableau2 = Tableau2 Slot Slot Slot Slot Slot Slot Slot
+data Tableau = Tableau Slot Slot Slot Slot Slot Slot Slot deriving (Show)
 
 -- |Moves determines the types of actions that can be taken
 data Move = TurnDeck
@@ -21,15 +21,9 @@ data Move = TurnDeck
           | GameOver
             deriving (Show,Eq)
 
--- |The foundations are the top most cards.  
--- TODO I should be able to say only Cards of type "Club" go on clubs
-data Foundation = Foundation
-    {
-      clubs :: [Card]
-    , diamonds :: [Card]
-    , hearts :: [Card]
-    , spades :: [Card]
-    } deriving (Show)
+data Base = Base Suit [Card] deriving (Eq,Show)
+data Foundation = Foundation Base Base Base Base 
+                  deriving (Show)
 
 -- |A game consists of a single deck of cards, a foundation and a tableau
 data Game = Game 
@@ -39,10 +33,13 @@ data Game = Game
     , tableau :: Tableau
     } deriving (Show)
 
+-- |Create empty foundation
+emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds []) (Base Hearts [])
+
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
-dealTableau2 :: [Card] -> (Tableau2,[Card])
-dealTableau2 deck = (Tableau2 
+dealTableau :: [Card] -> (Tableau,[Card])
+dealTableau deck = (Tableau 
                      (Slot a A) (Slot b B) (Slot c C) 
                      (Slot d D) (Slot e E) (Slot f F) (Slot g G),
                      rest) where
@@ -56,36 +53,33 @@ dealTableau2 deck = (Tableau2
 
 
 
+-- |Can the card move down from the deck to the given slot?
+cardDown :: Card -> Slot -> Bool
+cardDown (Card King _) (Slot [] _) = True
+cardDown (Card King s) (Slot (x:xs) _) = False
+cardDown a@(Card x _) (Slot (b@(Card y _):xs) _) = alternateColors a b && succ x == y
 
+-- |Can the card move to the given base?
+cardUpFromDeck :: Card -> Base -> Bool
+cardUpFromDeck (Card v s) (Base t []) = s == t && v == Ace 
+cardUpFromDeck (Card v s) (Base t (Card King b:xs)) = False
+cardUpFromDeck (Card v s) (Base t (Card x b:xs)) = succ x == v && s == t
 
+-- |Can we move up from the particular slot to a base object?
+cardUpFromSlot :: Slot -> Base -> Bool
+cardUpFromSlot (Slot [] _) _ = False
+cardUpFromSlot (Slot (x:xs) _) b = cardUpFromDeck x b
 
-data Tableau = Tableau
-    {
-      a :: [Card]
-    , b :: [Card]
-    , c :: [Card]
-    , d :: [Card]
-    , e :: [Card]
-    , f :: [Card]
-    , g :: [Card]
-    } deriving (Show)
-
--- A list of cards at the head of the tableau
-tableauCards :: Tableau -> [Maybe Card]
-tableauCards = map listToMaybe . tableauAsList where
-    tableauAsList t = [(a t),(b t),(c t),(d t),(e t),(f t),(g t)]
-
+{-
 emptyFoundation = Foundation [] [] [] []
 
 -- The various moves possible
-{-
 data Move = GameOver
           | TurnDeck
           | MoveFromDeck Slot
           | MoveUp Slot -- the slot
           | MoveUpFromDeck -- the suit is known from the card on the deck
             deriving (Show)
--}
 
 newGame :: [Card] -> Game
 newGame cards = Game deck emptyFoundation tableu where
@@ -139,7 +133,7 @@ turnDeck [] = []
 turnDeck (x:xs) = xs ++ [x]
 
 -- A list of available moves that can be played from the current position
-{-
+
 getMoves :: Game -> [Move]
 getMoves game | canTurnDeck = TurnDeck : cardDownMoves ++ cardUpMoves
               | otherwise = cardDownMoves ++ cardUpMoves
@@ -155,8 +149,4 @@ makeMove :: Game -> Move -> Game
 makeMove g TurnDeck = Game (turnDeck (deck g)) (foundation g) (tableau g)
 makeMove g (MoveFromDeck c) = undefined
 makeMove g (MoveUp c) = undefined
--}
-
-
-
-          
+-}          
