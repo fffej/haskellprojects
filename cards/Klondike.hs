@@ -10,7 +10,9 @@ data Id = A | B | C | D | E | F | G deriving (Show,Eq)
 data Slot = Slot [Card] Id deriving (Show,Eq)
 
 -- |The Tableau is the seven possible piles of cards
-data Tableau = Tableau Slot Slot Slot Slot Slot Slot Slot deriving (Show)
+-- I can't describe a fixed list of seven cards, but I won't export
+-- this constructor and then all is well
+data Tableau = Tableau [Slot] deriving (Show)
 
 -- |Moves determines the types of actions that can be taken
 data Move = TurnDeck
@@ -44,10 +46,8 @@ emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds [])
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
 dealTableau :: [Card] -> (Tableau,[Card])
-dealTableau deck = (Tableau 
-                     (Slot a A) (Slot b B) (Slot c C) 
-                     (Slot d D) (Slot e E) (Slot f F) (Slot g G),
-                     rest) where
+dealTableau deck = (Tableau [(Slot a A),(Slot b B),(Slot c C),(Slot d D),(Slot e E),(Slot f F),(Slot g G)]
+                   ,rest) where
     (a,h) = splitAt 1 deck
     (b,i) = splitAt 2 h
     (c,j) = splitAt 3 i
@@ -95,9 +95,10 @@ move g (MoveCard (Slot (s:ss) from) (Slot x to)) = Game (deck g) (foundation g) 
 
 -- |Given an updated slot, update the create a new tableau reflecting this
 updateTableau :: Slot -> Tableau -> Tableau
-updateTableau = undefined
+updateTableau s@(Slot _ i) t@(Tableau ss) = Tableau (map updateSlot ss) where
+    updateSlot a@(Slot _ j) = if j==i then s else a
 
--- |In the competition for uglist function that has ever existed there can be only one
+-- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
 addCard :: Card -> Foundation -> Foundation
 addCard t@(Card _ s) 
