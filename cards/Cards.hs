@@ -35,8 +35,14 @@ color (Card _ Spades) = Black
 value :: Card -> Value
 value (Card x _) = x
 
+-- |Are the two cards alternate colours
 alternateColors :: Card -> Card -> Bool
 alternateColors a b = color a /= color b
+
+-- |Does the second card follow the first?
+follows :: Card -> Card -> Bool
+follows (Card King _) _ = False
+follows (Card v1 _) (Card v2 _) = succ v1 == v2
 
 data Card = Card Value Suit
             deriving (Eq,Show)
