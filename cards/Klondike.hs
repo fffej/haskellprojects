@@ -1,7 +1,9 @@
 module Klondike where
 
 import Cards
+
 import Data.Maybe
+import Data.List
 
 -- |Identifiers for each possible "slot"
 data Id = A | B | C | D | E | F | G deriving (Show,Eq)
@@ -10,12 +12,15 @@ data Id = A | B | C | D | E | F | G deriving (Show,Eq)
 data Slot = Slot [Card] Id deriving (Show,Eq)
 
 -- |The Tableau is the seven possible piles of cards
-data Tableau = Tableau Slot Slot Slot Slot Slot Slot Slot deriving (Show)
+-- I can't describe a fixed list of seven cards, but I won't export
+-- this constructor and then all is well
+data Tableau = Tableau [Slot] deriving (Show)
 
 -- |Moves determines the types of actions that can be taken
 data Move = TurnDeck
           | ToFoundation Slot 
           | DeckTo Slot
+          | DeckUp
           | MoveCards Slot Int Slot 
           | MoveCard Slot Slot
           | GameOver
@@ -44,10 +49,8 @@ emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds [])
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
 dealTableau :: [Card] -> (Tableau,[Card])
-dealTableau deck = (Tableau 
-                     (Slot a A) (Slot b B) (Slot c C) 
-                     (Slot d D) (Slot e E) (Slot f F) (Slot g G),
-                     rest) where
+dealTableau deck = (Tableau [(Slot a A),(Slot b B),(Slot c C),(Slot d D),(Slot e E),(Slot f F),(Slot g G)]
+                   ,rest) where
     (a,h) = splitAt 1 deck
     (b,i) = splitAt 2 h
     (c,j) = splitAt 3 i
@@ -56,11 +59,15 @@ dealTableau deck = (Tableau
     (f,m) = splitAt 6 l
     (g,rest) = splitAt 7 m
 
+-- |Does the second card follow the first?
+successor :: Card -> Card -> Bool
+successor (Card King _) _ = False
+successor a b = alternateColors a b && follows a b
+
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
 cardDown (Card King _) (Slot [] _) = True
-cardDown (Card King s) (Slot (x:xs) _) = False
-cardDown a@(Card x _) (Slot (b@(Card y _):xs) _) = alternateColors a b && succ x == y
+cardDown a@(Card x _) (Slot (b@(Card y _):xs) _) = successor a b
 
 -- |Can the card move to the given base?
 cardUpFromDeck :: Card -> Base -> Bool
@@ -72,32 +79,54 @@ cardUpFromDeck (Card v s) (Base t (Card x b:xs)) = succ x == v && s == t
 cardUpFromSlot :: Slot -> Base -> Bool
 cardUpFromSlot (Slot (x:_) _) = cardUpFromDeck x
 
--- |Make the moves
 move :: Game -> Move -> Game
+
+-- |Turn the deck
 move g TurnDeck = Game (turnDeck (deck g)) (foundation g) (tableau g) where 
     turnDeck [] = []
     turnDeck (x:xs) = xs ++ [x]
 
+-- |Move a card from the given slot to the foundation
 move g (ToFoundation (Slot (x:xs) id)) = Game d (addCard x f) t where
     d = deck g
     f = foundation g
     t = updateTableau (Slot xs id) (tableau g)
 
+-- |Move a card from the deck to the given slot
 move g (DeckTo (Slot xs id)) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
     t = updateTableau (Slot (c:xs) id) (tableau g) 
         
-move g (MoveCards s i t) = undefined
-
+-- |Move a single card between two slots
 move g (MoveCard (Slot (s:ss) from) (Slot x to)) = Game (deck g) (foundation g) t where
     u = updateTableau (Slot ss from) (tableau g)
     t = updateTableau (Slot (s:x) to) u
 
+-- |Move the given number of cards between two slots
+move g (MoveCards (Slot froms from) n (Slot tos to)) = Game (deck g) (foundation g) t where
+    (move,new) = splitAt n froms
+    updatedFrom = Slot new from
+    updatedTo = Slot (move ++ tos) to
+    t = updateTableau updatedTo (updateTableau updatedFrom (tableau g))
+
+-- |Given the stack of cards, find the longest sequence of cards
+consecutiveCards :: [Card] -> [Card]
+consecutiveCards [] = []
+consecutiveCards (x:[]) = [x]
+consecutiveCards (x:y:xs) | successor x y = x : consecutiveCards (y:xs)
+                          | otherwise = [x]
+
+-- |Given a series of consecutive cards, produce all the initial occurrences
+-- TODO less bizarre implementation!
+heads :: [a] -> [[a]]
+heads = init . map reverse . (tails . reverse)
+
 -- |Given an updated slot, update the create a new tableau reflecting this
 updateTableau :: Slot -> Tableau -> Tableau
-updateTableau = undefined
+updateTableau s@(Slot _ i) t@(Tableau ss) = Tableau (map updateSlot ss) where
+    updateSlot a@(Slot _ j) = if j==i then s else a
 
--- |In the competition for uglist function that has ever existed there can be only one
+-- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
 addCard :: Card -> Foundation -> Foundation
 addCard t@(Card _ s) 
@@ -106,3 +135,17 @@ addCard t@(Card _ s)
             | s == b = Foundation w (Base b (t:bs)) y z
             | s == c = Foundation w x (Base c (t:cs)) z
             | s == d = Foundation w x y (Base d (t:ds))
+
+getMoves :: Game -> [Move]
+getMoves g  = (movesFromDeckToFoundation dk) ++ turnDeckMove where
+    dk = deck g
+    (Tableau slots) = tableau g
+    (Foundation s c d h) = foundation g
+    turnDeckMove = if (null dk) then [] else [TurnDeck]
+    movesFromDeckToFoundation [] = []
+    movesFromDeckToFoundation (x:xs) = if (any (cardUpFromDeck x) [s,c,d,h]) 
+                                       then [DeckUp]
+                                       else []
+                                             
+    
+                 
