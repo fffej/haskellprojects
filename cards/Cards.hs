@@ -27,15 +27,13 @@ data Color = Red
            
 
 color :: Card -> Color
-color (Card _ Clubs) = Black
-color (Card _ Diamonds) = Red
-color (Card _ Hearts) = Red
-color (Card _ Spades) = Black
+color (Card _ s) | s == Clubs || s == Spades = Black
+                 | otherwise = Red
 
 value :: Card -> Value
 value (Card x _) = x
 
--- |Are the two cards alternate colours
+-- |Are the two cards alternate colours?
 alternateColors :: Card -> Card -> Bool
 alternateColors a b = color a /= color b
 

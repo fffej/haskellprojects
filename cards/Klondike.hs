@@ -20,6 +20,7 @@ data Tableau = Tableau [Slot] deriving (Show)
 data Move = TurnDeck
           | ToFoundation Slot 
           | DeckTo Slot
+          | DeckUp
           | MoveCards Slot Int Slot 
           | MoveCard Slot Slot
           | GameOver
@@ -103,7 +104,10 @@ move g (MoveCard (Slot (s:ss) from) (Slot x to)) = Game (deck g) (foundation g) 
 
 -- |Move the given number of cards between two slots
 move g (MoveCards (Slot froms from) n (Slot tos to)) = Game (deck g) (foundation g) t where
-    t = undefined
+    (move,new) = splitAt n froms
+    updatedFrom = Slot new from
+    updatedTo = Slot (move ++ tos) to
+    t = updateTableau updatedTo (updateTableau updatedFrom (tableau g))
 
 -- |Given the stack of cards, find the longest sequence of cards
 consecutiveCards :: [Card] -> [Card]
@@ -131,3 +135,17 @@ addCard t@(Card _ s)
             | s == b = Foundation w (Base b (t:bs)) y z
             | s == c = Foundation w x (Base c (t:cs)) z
             | s == d = Foundation w x y (Base d (t:ds))
+
+getMoves :: Game -> [Move]
+getMoves g  = (movesFromDeckToFoundation dk) ++ turnDeckMove where
+    dk = deck g
+    (Tableau slots) = tableau g
+    (Foundation s c d h) = foundation g
+    turnDeckMove = if (null dk) then [] else [TurnDeck]
+    movesFromDeckToFoundation [] = []
+    movesFromDeckToFoundation (x:xs) = if (any (cardUpFromDeck x) [s,c,d,h]) 
+                                       then [DeckUp]
+                                       else []
+                                             
+    
+                 
