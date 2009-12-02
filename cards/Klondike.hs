@@ -158,15 +158,18 @@ addCard t@(Card _ s)
 
 getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
+              ++ deckToSlot dk
               ++ turnDeckMove 
               ++ cardsUp where
     dk = deck g
     (Tableau slots) = tableau g
     (Foundation s c d h) = foundation g
-    turnDeckMove = [TurnDeck | not. null $ dk]
+    turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
     cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
+    deckToSlot [] = []
+    deckToSlot (d:ds) = map DeckTo (filter (cardDown d) slots)
                                              
     
                  
