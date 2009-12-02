@@ -66,6 +66,7 @@ dealTableau deck = (Tableau [
     (e:es,l) = splitAt 5 k
     (f:fs,m) = splitAt 6 l
     (g:gs,rest) = splitAt 7 m
+
 -- |Does the second card follow the first?
 successor :: Card -> Card -> Bool
 successor (Card King _) _ = False
@@ -156,13 +157,16 @@ addCard t@(Card _ s)
             | s == d = Foundation w x y (Base d (t:ds))
 
 getMoves :: Game -> [Move]
-getMoves g  = movesFromDeckToFoundation dk ++ turnDeckMove where
+getMoves g  = movesFromDeckToFoundation dk 
+              ++ turnDeckMove 
+              ++ cardsUp where
     dk = deck g
     (Tableau slots) = tableau g
     (Foundation s c d h) = foundation g
-    turnDeckMove = if null dk then [] else [TurnDeck]
+    turnDeckMove = [TurnDeck | not. null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
+    cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
                                              
     
                  
