@@ -18,6 +18,7 @@ data Slot = Slot
 data Tableau = Tableau [Slot] deriving (Show)
 
 -- |Moves determines the types of actions that can be taken
+-- TODO consolidate moveCard and move cards
 data Move = TurnDeck
           | ToFoundation Slot 
           | DeckTo Slot
@@ -27,7 +28,11 @@ data Move = TurnDeck
           | GameOver
             deriving (Show,Eq)
 
+-- |A base is based on a particular suit of cards
 data Base = Base Suit [Card] deriving (Eq,Show)
+
+-- |A foundation is a collection of bases
+-- TODO Can I specify that they must have different suits?
 data Foundation = Foundation Base Base Base Base
                   deriving (Show)
 
@@ -43,6 +48,9 @@ data Game = Game
 newGame :: [Card] -> Game
 newGame cards = Game deck emptyFoundation tableu where
     (tableu,deck) = dealTableau cards
+
+empty :: Slot -> Bool
+empty (Slot s h) = null s && null h
 
 -- |Create empty foundation
 emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds []) (Base Hearts [])
@@ -101,6 +109,11 @@ dropCards (Slot from (h:hs)) n = (cards,(Slot visible hidden)) where
     visible = if null x then [h] else x
     hidden = if null x then hs else h:hs
 
+-- |Can the card move from x to y?
+slotMove :: Slot -> Slot -> Bool
+slotMove (Slot [] []) (Slot [] []) = False
+slotMove (Slot (x:xs) _) s = cardDown x s
+
 move :: Game -> Move -> Game
 
 -- |Turn the deck
@@ -156,20 +169,24 @@ addCard t@(Card _ s)
             | s == c = Foundation w x (Base c (t:cs)) z
             | s == d = Foundation w x y (Base d (t:ds))
 
+-- TurnDeck ToFoundation DeckTo DeckUp
+-- TODO MoveCards
 getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
               ++ deckToSlot dk
               ++ turnDeckMove 
-              ++ cardsUp where
+              ++ cardsUp 
+              ++ slotMoves 
+              ++ won where
     dk = deck g
     (Tableau slots) = tableau g
     (Foundation s c d h) = foundation g
+    won = [GameOver | all empty slots && null dk]
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
     cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
     deckToSlot (d:ds) = map DeckTo (filter (cardDown d) slots)
+    slotMoves = [MoveCard x y | x <- slots, y <- slots, slotMove x y]
                                              
-    
-                 
