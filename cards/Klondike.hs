@@ -169,7 +169,6 @@ addCard t@(Card _ s)
             | s == c = Foundation w x (Base c (t:cs)) z
             | s == d = Foundation w x y (Base d (t:ds))
 
--- TurnDeck ToFoundation DeckTo DeckUp
 -- TODO MoveCards
 getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
@@ -189,4 +188,7 @@ getMoves g  = movesFromDeckToFoundation dk
     deckToSlot [] = []
     deckToSlot (d:ds) = map DeckTo (filter (cardDown d) slots)
     slotMoves = [MoveCard x y | x <- slots, y <- slots, slotMove x y]
+
+playGame :: Game -> (Game -> Move) -> Game
+playGame g player = undefined
                                              
