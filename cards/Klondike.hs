@@ -119,7 +119,7 @@ move :: Game -> Move -> Game
 -- |Turn the deck
 move g TurnDeck = Game (turnDeck (deck g)) (foundation g) (tableau g) where 
     turnDeck [] = []
-    turnDeck (x:xs) = xs ++ [x]
+    turnDeck (x:xs) = xs
 
 -- |Move a card from the given slot to the foundation
 move g (ToFoundation s@(Slot (x:xs) _)) = Game d (addCard x f) t where
