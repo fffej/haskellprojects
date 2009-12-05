@@ -2,7 +2,6 @@ module Klondike where
 
 import Cards
 
-import Data.Maybe
 import Data.List
 
 -- |A Slot is a pile of cards in the tableau, consisting of some shown cards and some hidden
@@ -46,28 +45,29 @@ data Game = Game
 
 -- |Create a new game from the given deck of cards (assumed a full deck)
 newGame :: [Card] -> Game
-newGame cards = Game deck emptyFoundation tableu where
-    (tableu,deck) = dealTableau cards
+newGame cards = Game d emptyFoundation t where
+    (t,d) = dealTableau cards
 
 empty :: Slot -> Bool
 empty (Slot s h) = null s && null h
 
 -- |Create empty foundation
+emptyFoundation :: Foundation
 emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds []) (Base Hearts [])
 
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
 dealTableau :: [Card] -> (Tableau,[Card])
-dealTableau deck = (Tableau [
-                     (Slot [a] as),
-                     (Slot [b] bs),
-                     (Slot [c] cs),
-                     (Slot [d] ds),
-                     (Slot [e] es),
-                     (Slot [f] fs),
-                     (Slot [g] gs)]
-                   ,rest) where
-    (a:as,h) = splitAt 1 deck
+dealTableau dk = (Tableau [
+                   (Slot [a] as),
+                   (Slot [b] bs),
+                   (Slot [c] cs),
+                   (Slot [d] ds),
+                   (Slot [e] es),
+                   (Slot [f] fs),
+                   (Slot [g] gs)]
+                 ,rest) where
+    (a:as,h) = splitAt 1 dk
     (b:bs,i) = splitAt 2 h
     (c:cs,j) = splitAt 3 i
     (d:ds,k) = splitAt 4 j
@@ -83,23 +83,25 @@ successor a b = alternateColors a b && follows a b
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
 cardDown (Card King _) (Slot [] _ ) = True
-cardDown a@(Card x _) (Slot (b@(Card y _):xs) _ ) = successor a b
+cardDown (Card _ _) (Slot [] _) = False
+cardDown a (Slot (b:_) _ ) = successor a b
 
 -- |Can the card move to the given base?
 cardUpFromDeck :: Card -> Base -> Bool
 cardUpFromDeck (Card v s) (Base t []) = s == t && v == Ace 
-cardUpFromDeck (Card v s) (Base t (Card King b:xs)) = False
-cardUpFromDeck (Card v s) (Base t (Card x b:xs)) = succ x == v && s == t
+cardUpFromDeck _ (Base _ (Card King _:_)) = False
+cardUpFromDeck (Card v s) (Base t (Card x _:_)) = succ x == v && s == t
 
 -- |Can we move up from the particular slot to a base object?
 cardUpFromSlot :: Slot -> Base -> Bool
-cardUpFromSlot (Slot (x:_) _ ) = cardUpFromDeck x
+cardUpFromSlot (Slot x _) | null x = const False
+                          | otherwise = cardUpFromDeck (head x)
 
 -- |Lose a card from the given slot
 dropCard :: Slot -> Slot
-dropCard (Slot (x:[]) []) = Slot [] []
-dropCard (Slot (x:[]) (y:ys)) = Slot [y] ys
-dropCard (Slot (x:xs) y) = Slot xs y
+dropCard (Slot (_:[]) []) = Slot [] []
+dropCard (Slot (_:[]) (y:ys)) = Slot [y] ys
+dropCard (Slot (_:xs) y) = Slot xs y
 
 dropCards :: Slot -> Int -> ([Card],Slot)
 dropCards (Slot from []) n = (cards,(Slot r [])) where
@@ -111,16 +113,24 @@ dropCards (Slot from (h:hs)) n = (cards,(Slot visible hidden)) where
 
 -- |Can the card move from x to y?
 slotMove :: Slot -> Slot -> Bool
-slotMove (Slot [] []) (Slot [] []) = False
-slotMove (Slot (x:xs) _) s = cardDown x s
+slotMove (Slot [] []) _ = False
+slotMove (Slot (x:_) _) s = cardDown x s
+
+-- |Turn the deck over
+turnOverDeck [] = []
+turnOverDeck (x:xs) = xs
 
 move :: Game -> Move -> Game
 
--- |Turn the deck
-move g TurnDeck = Game (turnDeck (deck g)) (foundation g) (tableau g) where 
-    turnDeck [] = []
-    turnDeck (x:xs) = xs
+move g GameOver = g
 
+-- |Turn the deck, dropping the card from play
+move g TurnDeck = Game (turnOverDeck (deck g)) (foundation g) (tableau g)
+
+-- |Move the card from the deck to the foundation
+move g DeckUp = Game (turnOverDeck (deck g)) f (tableau g) where
+    f = addCard (head (deck g)) (foundation g)
+    
 -- |Move a card from the given slot to the foundation
 move g (ToFoundation s@(Slot (x:xs) _)) = Game d (addCard x f) t where
     d = deck g
@@ -138,9 +148,9 @@ move g (MoveCard from@(Slot (s:ss) _) to@(Slot x h)) = Game (deck g) (foundation
     t = updateTableau to (Slot (s:x) h) u
 
 -- |Move the given number of cards between two slots
-move g (MoveCards from n to@(Slot tos hidden)) = Game (deck g) (foundation g) t where
-    (move,updatedFrom) = dropCards from n
-    updatedTo = Slot (move ++ tos) hidden
+move g (MoveCards from n to@(Slot tos h)) = Game (deck g) (foundation g) t where
+    (newMove,updatedFrom) = dropCards from n
+    updatedTo = Slot (newMove ++ tos) h
     t = updateTableau to updatedTo (updateTableau from updatedFrom (tableau g))
 
 -- |Given the stack of cards, find the longest sequence of cards
@@ -157,7 +167,8 @@ heads = init . map reverse . (tails . reverse)
 
 -- |Given an updated slot, update the create a new tableau reflecting this
 updateTableau :: Slot -> Slot -> Tableau -> Tableau
-updateTableau old new tableau = tableau
+updateTableau old new (Tableau slots) = Tableau s where
+    s = map (\x -> if x == old then new else x) slots
 
 -- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
@@ -186,19 +197,34 @@ getMoves g  = movesFromDeckToFoundation dk
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
     cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
-    deckToSlot (d:ds) = map DeckTo (filter (cardDown d) slots)
+    deckToSlot (z:ds) = map DeckTo (filter (cardDown z) slots)
     slotMoves = [MoveCard x y | x <- slots, y <- slots, slotMove x y]
 
 -- |Play a game from the given state using the provider player function.  Get the list
 -- of moves from the oringal state
 playGame :: Game -> (Game -> [Move] -> Move) -> [Move]
-playGame g player = nextMove : (playGame nextGame player) where
+playGame g player = nextMove : playGame nextGame player where
     moves = getMoves g
     nextMove = player g moves
     nextGame = move g nextMove
 
--- |Selects the first available move
+replayMoves :: Game -> [Move] -> Game
+replayMoves = foldl move
+
+-- |Selects the first available move.  This player gets into a loop slapping
+-- items between any two slots
 firstMove :: Game -> [Move] -> Move
 firstMove g [] = GameOver
 firstMove g (x:xs) = x
+
+betterPlayer :: Game -> [Move] -> Move
+betterPlayer g [] = GameOver
+betterPlayer g m = head $ sortBy compareMoves m 
                                              
+compareMoves :: Move -> Move -> Ordering
+compareMoves a TurnDeck = LT
+compareMoves _ DeckUp = GT
+compareMoves _ (ToFoundation _) = GT
+compareMoves _ (MoveCard _ _) = LT
+compareMoves _ _ = EQ
+
