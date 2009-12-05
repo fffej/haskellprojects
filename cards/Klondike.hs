@@ -189,6 +189,16 @@ getMoves g  = movesFromDeckToFoundation dk
     deckToSlot (d:ds) = map DeckTo (filter (cardDown d) slots)
     slotMoves = [MoveCard x y | x <- slots, y <- slots, slotMove x y]
 
-playGame :: Game -> (Game -> Move) -> Game
-playGame g player = undefined
+-- |Play a game from the given state using the provider player function.  Get the list
+-- of moves from the oringal state
+playGame :: Game -> (Game -> [Move] -> Move) -> [Move]
+playGame g player = nextMove : (playGame nextGame player) where
+    moves = getMoves g
+    nextMove = player g moves
+    nextGame = move g nextMove
+
+-- |Selects the first available move
+firstMove :: Game -> [Move] -> Move
+firstMove g [] = GameOver
+firstMove g (x:xs) = x
                                              
