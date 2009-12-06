@@ -22,8 +22,7 @@ data Move = TurnDeck
           | ToFoundation Slot 
           | DeckTo Slot
           | DeckUp
-          | MoveCards Slot Int Slot 
-          | MoveCard Slot Slot
+          | MoveCards Slot Int Slot
           | GameOver
             deriving (Show,Eq)
 
@@ -142,11 +141,6 @@ move g (DeckTo old@(Slot xs ys)) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
     t = updateTableau old (Slot (c:xs) ys) (tableau g) 
         
--- |Move a single card between two slots
-move g (MoveCard from@(Slot (s:ss) _) to@(Slot x h)) = Game (deck g) (foundation g) t where
-    u = updateTableau from (dropCard from) (tableau g)
-    t = updateTableau to (Slot (s:x) h) u
-
 -- |Move the given number of cards between two slots
 move g (MoveCards from n to@(Slot tos h)) = Game (deck g) (foundation g) t where
     (newMove,updatedFrom) = dropCards from n
@@ -198,7 +192,7 @@ getMoves g  = movesFromDeckToFoundation dk
     cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
     deckToSlot (z:ds) = map DeckTo (filter (cardDown z) slots)
-    slotMoves = [MoveCard x y | x <- slots, y <- slots, slotMove x y]
+    slotMoves = [MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
 
 -- |Play a game from the given state using the provider player function.  Get the list
 -- of moves from the oringal state
@@ -225,6 +219,6 @@ compareMoves :: Move -> Move -> Ordering
 compareMoves a TurnDeck = LT
 compareMoves _ DeckUp = GT
 compareMoves _ (ToFoundation _) = GT
-compareMoves _ (MoveCard _ _) = LT
+compareMoves _ (MoveCards _ _ _) = LT
 compareMoves _ _ = EQ
 
