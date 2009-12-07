@@ -3,6 +3,12 @@ module Klondike where
 import Cards
 
 import Data.List
+import Data.Array
+import Ix
+
+-- |A type to index into the array
+data Index = A | B | C | D | E | F | G 
+           deriving (Eq, Ord, Show, Enum, Ix)
 
 -- |A Slot is a pile of cards in the tableau, consisting of some shown cards and some hidden
 data Slot = Slot 
@@ -11,10 +17,8 @@ data Slot = Slot
     , hidden :: [Card] 
     }deriving (Show,Eq)
 
--- |The Tableau is the seven possible piles of cards
--- I can't describe a fixed list of seven cards, but I won't export
--- this constructor and then all is well
-data Tableau = Tableau [Slot] deriving (Show)
+-- |The tableu is the seven possible piles of cards
+type Tableau = Array Index Slot
 
 -- |Moves determines the types of actions that can be taken
 data Move = TurnDeck
@@ -56,15 +60,14 @@ emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds [])
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
 dealTableau :: [Card] -> (Tableau,[Card])
-dealTableau dk = (Tableau [
-                   (Slot [a] as),
-                   (Slot [b] bs),
-                   (Slot [c] cs),
-                   (Slot [d] ds),
-                   (Slot [e] es),
-                   (Slot [f] fs),
-                   (Slot [g] gs)]
-                 ,rest) where
+dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
+                              ,(B,(Slot [b] bs))
+                              ,(C,(Slot [c] cs))
+                              ,(D,(Slot [d] ds))
+                              ,(E,(Slot [e] es))
+                              ,(F,(Slot [f] fs))
+                              ,(G,(Slot [g] gs))]),
+                  rest) where 
     (a:as,h) = splitAt 1 dk
     (b:bs,i) = splitAt 2 h
     (c:cs,j) = splitAt 3 i
@@ -160,8 +163,8 @@ heads = init . map reverse . (tails . reverse)
 
 -- |Given an updated slot, update the create a new tableau reflecting this
 updateTableau :: Slot -> Slot -> Tableau -> Tableau
-updateTableau old new (Tableau slots) = Tableau s where
-    s = map (\x -> if x == old then new else x) slots
+updateTableau old new slots = s where
+    s = fmap (\x -> if x == old then new else x) slots
 
 -- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
@@ -182,7 +185,7 @@ getMoves g  = movesFromDeckToFoundation dk
               ++ slotMoves 
               ++ won where
     dk = deck g
-    (Tableau slots) = tableau g
+    slots = elems (tableau g)
     (Foundation s c d h) = foundation g
     won = [GameOver | all empty slots && null dk]
     turnDeckMove = [TurnDeck | not.null $ dk]
