@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -XEmptyDataDecls #-}
+
 module Klondike where
 
 import Cards
@@ -5,6 +7,10 @@ import Cards
 import Data.List
 import Data.Array
 import Ix
+
+-- Phantom types used only to construct other types; values NEVER used
+data RED
+data BLACK
 
 -- |A type to index into the array
 data Index = A | B | C | D | E | F | G 
