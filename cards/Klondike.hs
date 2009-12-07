@@ -17,7 +17,6 @@ data Slot = Slot
 data Tableau = Tableau [Slot] deriving (Show)
 
 -- |Moves determines the types of actions that can be taken
--- TODO consolidate moveCard and move cards
 data Move = TurnDeck
           | ToFoundation Slot 
           | DeckTo Slot
@@ -222,3 +221,31 @@ compareMoves _ (ToFoundation _) = GT
 compareMoves _ (MoveCards _ _ _) = LT
 compareMoves _ _ = EQ
 
+{-
+
+Comment from Blog
+
+At a guess, you are probably not using the Suit argument to the Base type. (Or, at least, not in a critical way.)
+
+Here's an idea of a way to ensure that there at most seven slots in the Tableau: define a new enumeration type
+
+data Index = One | Two | ... | Seven deriving (Eq, Ord, Show, Read, Enum, Ix)
+
+Then let your Tableau be an array using Index as its index type.
+
+To guarantee that shown cards alternate color, you could use phantom types. For example
+
+data RED
+data BLACK
+data Shown = ShownRed RedList | ShownBlack BlackList
+data RedList = NilRed | ConsRed (Card RED) BlackList
+data BlackList = NilBlack | ConsBlack (Card BLACK) RedList
+
+Then you need to define a new Card type that has a type argument, and only expose smart constructors like
+
+club, spade :: CardNumber -> Card BLACK
+diamond, heart :: CardNumber -> Card RED
+
+I'm sure this will all get horribly mangled; I apologize in advance.
+
+-}
