@@ -135,24 +135,24 @@ move g DeckUp = Game (turnOverDeck (deck g)) f (tableau g) where
 -- |Move a card from the given slot to the foundation
 move g (ToFoundation i) = Game (deck g) (addCard card f) t where
     f = foundation g
-    slot = (tableau g)! i
+    slot = tableau g! i
     card = head $ shown slot
-    t = (tableau g) // [(i,dropCard slot)] 
+    t = tableau g // [(i,dropCard slot)] 
 
 
 -- |Move a card from the deck to the given slot
 move g (DeckTo i) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
-    (Slot s h) = (tableau g) ! i
-    t = (tableau g) // [(i,Slot (c:s) h)]
+    (Slot s h) = tableau g ! i
+    t = tableau g // [(i,Slot (c:s) h)]
         
 -- |Move the given number of cards between two slots
 move g (MoveCards fromIndex n toIndex) = Game (deck g) (foundation g) t where
-    from = (tableau g) ! fromIndex
-    (Slot tos hidden) = (tableau g) ! toIndex
+    from = tableau g ! fromIndex
+    (Slot tos hidden) = tableau g ! toIndex
     (newMove,updatedFrom) = dropCards from n
     updatedTo = Slot (newMove ++ tos) hidden
-    t = (tableau g) // [(fromIndex,updatedFrom),(toIndex,updatedTo)]
+    t = tableau g // [(fromIndex,updatedFrom),(toIndex,updatedTo)]
 
 -- |Given the stack of cards, find the longest sequence of cards
 consecutiveCards :: [Card] -> [Card]
@@ -190,15 +190,15 @@ getMoves g  = movesFromDeckToFoundation dk
               ++ slotMoves 
               ++ won where
     dk = deck g
-    slots = elems (tableau g)
+    slots = assocs (tableau g)
     (Foundation s c d h) = foundation g
-    won = [GameOver | all empty slots && null dk]
+    won = [GameOver | all empty (map snd slots) && null dk]
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
-    cardsUp = undefined -- concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
+    cardsUp = undefined --concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
-    deckToSlot (z:ds) = undefined -- map DeckTo (filter (cardDown z) slots)
+    deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd x) slots)
     slotMoves = undefined --[MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
 
 -- |Play a game from the given state using the provider player function.  Get the list
