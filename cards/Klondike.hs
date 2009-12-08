@@ -198,7 +198,7 @@ getMoves g  = movesFromDeckToFoundation dk
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
     cardsUp = undefined --concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
-    deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd x) slots)
+    deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd) slots)
     slotMoves = undefined --[MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
 
 -- |Play a game from the given state using the provider player function.  Get the list
