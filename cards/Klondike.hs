@@ -199,7 +199,8 @@ getMoves g  = movesFromDeckToFoundation dk
     cardsUp = undefined --concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
     deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd) slots)
-    slotMoves = undefined --[MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
+    slotMoves = [MoveCards (fst x) 1 (fst y) | x <- slots, y <- slots, 
+                                               (fst x) /= (fst y) && slotMove (snd x) (snd y)]
 
 -- |Play a game from the given state using the provider player function.  Get the list
 -- of moves from the oringal state
