@@ -133,19 +133,18 @@ move g DeckUp = Game (turnOverDeck (deck g)) f (tableau g) where
     f = addCard (head (deck g)) (foundation g)
     
 -- |Move a card from the given slot to the foundation
--- TODO update the tableau
-move g (ToFoundation i) = Game d (addCard card f) (tableau g) where
-    d = deck g
+move g (ToFoundation i) = Game (deck g) (addCard card f) t where
     f = foundation g
-    slot = (tableau g) ! i
+    slot = (tableau g)! i
     card = head $ shown slot
+    t = (tableau g) // [(i,dropCard slot)] 
 
 
 -- |Move a card from the deck to the given slot
--- TODO update the tableau
 move g (DeckTo i) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
-    t = tableau g
+    (Slot s h) = (tableau g) ! i
+    t = (tableau g) // [(i,Slot (c:s) h)]
         
 -- |Move the given number of cards between two slots
 move g (MoveCards fromIndex n toIndex) = Game (deck g) (foundation g) t where
@@ -153,7 +152,7 @@ move g (MoveCards fromIndex n toIndex) = Game (deck g) (foundation g) t where
     (Slot tos hidden) = (tableau g) ! toIndex
     (newMove,updatedFrom) = dropCards from n
     updatedTo = Slot (newMove ++ tos) hidden
-    t = (tableau g)
+    t = (tableau g) // [(fromIndex,updatedFrom),(toIndex,updatedTo)]
 
 -- |Given the stack of cards, find the longest sequence of cards
 consecutiveCards :: [Card] -> [Card]
