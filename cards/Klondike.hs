@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -XEmptyDataDecls #-}
-
 module Klondike where
 
 import Cards
@@ -7,10 +5,6 @@ import Cards
 import Data.List
 import Data.Array
 import Ix
-
--- Phantom types used only to construct other types; values NEVER used
-data RED
-data BLACK
 
 -- |A type to index into the array
 data Index = A | B | C | D | E | F | G 
@@ -28,10 +22,10 @@ type Tableau = Array Index Slot
 
 -- |Moves determines the types of actions that can be taken
 data Move = TurnDeck
-          | ToFoundation Slot 
-          | DeckTo Slot
+          | ToFoundation Index 
+          | DeckTo Index
           | DeckUp
-          | MoveCards Slot Int Slot
+          | MoveCards Index Int Index
           | GameOver
             deriving (Show,Eq)
 
@@ -67,12 +61,12 @@ emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds [])
 -- is enough for this to succeed without error
 dealTableau :: [Card] -> (Tableau,[Card])
 dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
-                              ,(B,(Slot [b] bs))
-                              ,(C,(Slot [c] cs))
-                              ,(D,(Slot [d] ds))
-                              ,(E,(Slot [e] es))
-                              ,(F,(Slot [f] fs))
-                              ,(G,(Slot [g] gs))]),
+                               ,(B,(Slot [b] bs))
+                               ,(C,(Slot [c] cs))
+                               ,(D,(Slot [d] ds))
+                               ,(E,(Slot [e] es))
+                               ,(F,(Slot [f] fs))
+                               ,(G,(Slot [g] gs))]),
                   rest) where 
     (a:as,h) = splitAt 1 dk
     (b:bs,i) = splitAt 2 h
@@ -139,21 +133,27 @@ move g DeckUp = Game (turnOverDeck (deck g)) f (tableau g) where
     f = addCard (head (deck g)) (foundation g)
     
 -- |Move a card from the given slot to the foundation
-move g (ToFoundation s@(Slot (x:xs) _)) = Game d (addCard x f) t where
+-- TODO update the tableau
+move g (ToFoundation i) = Game d (addCard card f) (tableau g) where
     d = deck g
     f = foundation g
-    t = updateTableau s (dropCard s) (tableau g)
+    slot = (tableau g) ! i
+    card = head $ shown slot
+
 
 -- |Move a card from the deck to the given slot
-move g (DeckTo old@(Slot xs ys)) = Game rest (foundation g) t where
+-- TODO update the tableau
+move g (DeckTo i) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
-    t = updateTableau old (Slot (c:xs) ys) (tableau g) 
+    t = tableau g
         
 -- |Move the given number of cards between two slots
-move g (MoveCards from n to@(Slot tos h)) = Game (deck g) (foundation g) t where
+move g (MoveCards fromIndex n toIndex) = Game (deck g) (foundation g) t where
+    from = (tableau g) ! fromIndex
+    (Slot tos hidden) = (tableau g) ! toIndex
     (newMove,updatedFrom) = dropCards from n
-    updatedTo = Slot (newMove ++ tos) h
-    t = updateTableau to updatedTo (updateTableau from updatedFrom (tableau g))
+    updatedTo = Slot (newMove ++ tos) hidden
+    t = (tableau g)
 
 -- |Given the stack of cards, find the longest sequence of cards
 consecutiveCards :: [Card] -> [Card]
@@ -197,10 +197,10 @@ getMoves g  = movesFromDeckToFoundation dk
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
-    cardsUp = concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
+    cardsUp = undefined -- concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
     deckToSlot [] = []
-    deckToSlot (z:ds) = map DeckTo (filter (cardDown z) slots)
-    slotMoves = [MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
+    deckToSlot (z:ds) = undefined -- map DeckTo (filter (cardDown z) slots)
+    slotMoves = undefined --[MoveCards x 1 y | x <- slots, y <- slots, slotMove x y]
 
 -- |Play a game from the given state using the provider player function.  Get the list
 -- of moves from the oringal state
