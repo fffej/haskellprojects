@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -XEmptyDataDecls #-}
-
 module Cards where
 
 data Suit = Clubs 

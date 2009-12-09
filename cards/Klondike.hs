@@ -4,7 +4,9 @@ import Cards
 
 import Data.List
 import Data.Array
+import Data.Maybe
 import Ix
+
 
 -- |A type to index into the array
 data Index = A | B | C | D | E | F | G 
@@ -16,6 +18,9 @@ data Slot = Slot
       shown :: [Card] 
     , hidden :: [Card] 
     }deriving (Show,Eq)
+
+shownCard :: Slot -> Maybe Card
+shownCard (Slot s h) = listToMaybe s
 
 -- |The tableu is the seven possible piles of cards
 type Tableau = Array Index Slot
@@ -55,7 +60,10 @@ empty (Slot s h) = null s && null h
 
 -- |Create empty foundation
 emptyFoundation :: Foundation
-emptyFoundation = Foundation (Base Spades []) (Base Clubs []) (Base Diamonds []) (Base Hearts [])
+emptyFoundation = Foundation (Base Spades []) 
+                             (Base Clubs []) 
+                             (Base Diamonds []) 
+                             (Base Hearts [])
 
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
@@ -78,8 +86,7 @@ dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
 
 -- |Does the second card follow the first?
 successor :: Card -> Card -> Bool
-successor (Card King _) _ = False
-successor a b = alternateColors a b && follows a b
+successor a b = value a /= King && alternateColors a b && follows a b
 
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
@@ -119,7 +126,7 @@ slotMove (Slot (x:_) _) s = cardDown x s
 
 -- |Turn the deck over
 turnOverDeck [] = []
-turnOverDeck (x:xs) = xs
+turnOverDeck (x:xs) = xs ++ [x]
 
 move :: Game -> Move -> Game
 
@@ -181,6 +188,13 @@ addCard t@(Card _ s)
             | s == c = Foundation w x (Base c (t:cs)) z
             | s == d = Foundation w x y (Base d (t:ds))
 
+-- |Is the game complete?
+gameWon :: Game -> Bool
+gameWon game = all empty (elems (tableau game)) && not (turnDeck game)
+
+turnDeck :: Game -> Bool
+turnDeck = null .deck
+
 -- TODO MoveCards
 getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
@@ -188,19 +202,19 @@ getMoves g  = movesFromDeckToFoundation dk
               ++ turnDeckMove 
               ++ cardsUp 
               ++ slotMoves 
-              ++ won where
+              ++ [GameOver | gameWon g] where
     dk = deck g
     slots = assocs (tableau g)
     (Foundation s c d h) = foundation g
-    won = [GameOver | all empty (map snd slots) && null dk]
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
-    cardsUp = undefined --concatMap (\base -> (map ToFoundation (filter (flip cardUpFromSlot base) slots))) [s,c,d,h]
+    cardsUp = concatMap (\b -> map (ToFoundation . fst) (filter (flip cardUpFromSlot b . snd) slots))
+              [s,c,d,h]
     deckToSlot [] = []
     deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd) slots)
     slotMoves = [MoveCards (fst x) 1 (fst y) | x <- slots, y <- slots, 
-                                               (fst x) /= (fst y) && slotMove (snd x) (snd y)]
+                                               fst x /= fst y && slotMove (snd x) (snd y)]
 
 -- |Play a game from the given state using the provider player function.  Get the list
 -- of moves from the oringal state
