@@ -7,7 +7,6 @@ import Data.Array
 import Data.Maybe
 import Ix
 
-
 -- |A type to index into the array
 data Index = A | B | C | D | E | F | G 
            deriving (Eq, Ord, Show, Enum, Ix)
@@ -17,10 +16,10 @@ data Slot = Slot
     {
       shown :: [Card] 
     , hidden :: [Card] 
-    }deriving (Show,Eq)
+    } deriving (Show,Eq)
 
-shownCard :: Slot -> Maybe Card
-shownCard (Slot s h) = listToMaybe s
+dropCard :: Slot -> Slot
+dropCard (Slot s h) = Slot ((take 1 h) ++ (drop 1 s)) (drop 1 h)
 
 -- |The tableu is the seven possible piles of cards
 type Tableau = Array Index Slot
@@ -107,13 +106,6 @@ cardUpFromSlot :: Slot -> Base -> Bool
 cardUpFromSlot (Slot x _) | null x = const False
                           | otherwise = cardUpFromDeck (head x)
 
--- |Lose a card from the given slot
--- TODO eliminate special cases
-dropCard :: Slot -> Slot
-dropCard (Slot (_:[]) []) = Slot [] []
-dropCard (Slot (_:[]) (y:ys)) = Slot [y] ys
-dropCard (Slot (_:xs) y) = Slot xs y
-
 dropCards :: Slot -> Int -> ([Card],Slot)
 dropCards (Slot from []) n = (cards,(Slot r [])) where
     (cards,r) = splitAt n from
@@ -130,7 +122,7 @@ slotMove (Slot (x:_) _) s = cardDown x s
 
 -- |Turn the deck over
 turnOverDeck [] = []
-turnOverDeck (x:xs) = xs ++ [x]
+turnOverDeck (x:xs) = xs
 
 move :: Game -> Move -> Game
 
