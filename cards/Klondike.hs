@@ -177,11 +177,6 @@ consecutiveCards (x:y:xs) | successor x y = x : consecutiveCards (y:xs)
 heads :: [a] -> [[a]]
 heads = init . map reverse . (tails . reverse)
 
--- |Given an updated slot, update the create a new tableau reflecting this
-updateTableau :: Slot -> Slot -> Tableau -> Tableau
-updateTableau old new slots = s where
-    s = fmap (\x -> if x == old then new else x) slots
-
 -- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
 addCard :: Card -> Foundation -> Foundation
