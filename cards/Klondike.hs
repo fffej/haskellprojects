@@ -89,12 +89,14 @@ successor :: Card -> Card -> Bool
 successor a b = value a /= King && alternateColors a b && follows a b
 
 -- |Can the card move down from the deck to the given slot?
+-- TODO eliminate special cases
 cardDown :: Card -> Slot -> Bool
 cardDown (Card King _) (Slot [] _ ) = True
 cardDown (Card _ _) (Slot [] _) = False
 cardDown a (Slot (b:_) _ ) = successor a b
 
 -- |Can the card move to the given base?
+-- TODO eliminate special cases
 cardUpFromDeck :: Card -> Base -> Bool
 cardUpFromDeck (Card v s) (Base t []) = s == t && v == Ace 
 cardUpFromDeck _ (Base _ (Card King _:_)) = False
@@ -106,6 +108,7 @@ cardUpFromSlot (Slot x _) | null x = const False
                           | otherwise = cardUpFromDeck (head x)
 
 -- |Lose a card from the given slot
+-- TODO eliminate special cases
 dropCard :: Slot -> Slot
 dropCard (Slot (_:[]) []) = Slot [] []
 dropCard (Slot (_:[]) (y:ys)) = Slot [y] ys
@@ -120,6 +123,7 @@ dropCards (Slot from (h:hs)) n = (cards,(Slot visible hidden)) where
     hidden = if null x then hs else h:hs
 
 -- |Can the card move from x to y?
+-- TODO eliminate special cases
 slotMove :: Slot -> Slot -> Bool
 slotMove (Slot [] []) _ = False
 slotMove (Slot (x:_) _) s = cardDown x s
