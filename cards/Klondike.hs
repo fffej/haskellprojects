@@ -189,10 +189,7 @@ addCard t@(Card _ s)
 
 -- |Is the game complete?
 gameWon :: Game -> Bool
-gameWon game = all empty (elems (tableau game)) && not (turnDeck game)
-
-turnDeck :: Game -> Bool
-turnDeck = null .deck
+gameWon game = all empty (elems (tableau game)) && not (null (deck game))
 
 -- TODO MoveCards
 getMoves :: Game -> [Move]
@@ -226,15 +223,9 @@ playGame g player = nextMove : playGame nextGame player where
 replayMoves :: Game -> [Move] -> Game
 replayMoves = foldl move
 
--- |Selects the first available move.  This player gets into a loop slapping
--- items between any two slots
-firstMove :: Game -> [Move] -> Move
-firstMove g [] = GameOver
-firstMove g (x:xs) = x
-
-betterPlayer :: Game -> [Move] -> Move
-betterPlayer g [] = GameOver
-betterPlayer g m = head $ sortBy compareMoves m 
+player :: Game -> [Move] -> Move
+player g [] = GameOver
+player g m = head $ sortBy compareMoves m 
                                              
 compareMoves :: Move -> Move -> Ordering
 compareMoves a TurnDeck = LT
