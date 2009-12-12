@@ -78,6 +78,12 @@ dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
 successor :: Card -> Card -> Bool
 successor a b = value a /= King && alternateColors a b && follows a b
 
+-- TODO One of the reasons the code in "getMoves" is so klunky, is because I'm building up 
+-- predicate functions and trying to use them.  I don't need to do that, I just need to know
+-- which indices a card can move down to the tableau in.  
+-- If I refactor the code like tihs, I can break down the getMoves function into something
+-- a bit more sensible
+
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
 cardDown card (Slot s _) | null s = value card == King
@@ -154,7 +160,7 @@ consecutiveCards (x:[]) = [x]
 consecutiveCards (x:y:xs) | successor x y = x : consecutiveCards (y:xs)
                           | otherwise = [x]
 
--- |Add the given card tot he foundation
+-- |Add the given card to the foundation
 addCard :: Card -> Foundation -> Foundation
 addCard t@(Card _ s) f = f // [(s,(t:f!s))]
 
@@ -180,8 +186,7 @@ getMoves g  = [DeckUp | (not.null) dk && cardUp (head dk) (foundation g)]
 -- of moves from the original state
 playGame :: Game -> (Game -> [Move] -> Move) -> [Move]
 playGame g p = nextMove : playGame nextGame p where
-    moves = getMoves g
-    nextMove = p g moves
+    nextMove = p g (getMoves g)
     nextGame = move g nextMove
 
 replayMoves :: Game -> [Move] -> Game
