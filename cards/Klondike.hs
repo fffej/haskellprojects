@@ -134,7 +134,6 @@ move g (ToFoundation i) = Game (deck g) (addCard card f) t where
     card = head $ shown slot
     t = tableau g // [(i,dropCard slot)] 
 
-
 -- |Move a card from the deck to the given slot
 move g (DeckTo i) = Game rest (foundation g) t where
     (c@(Card _ _):rest) = deck g
@@ -175,7 +174,7 @@ getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
               ++ deckToSlot dk
               ++ turnDeckMove 
-              -- ++ cardsUp 
+              ++ [ToFoundation is | is <- cardsUp]
               ++ slotMoves 
               ++ [GameOver | gameWon g] where
     dk = deck g
@@ -184,8 +183,7 @@ getMoves g  = movesFromDeckToFoundation dk
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
     movesFromDeckToFoundation (x:_) = [DeckUp | cardUpFromDeck x (foundation g)]
-    --cardsUp = concatMap (\b -> map (ToFoundation . fst) (filter (flip cardUpFromSlot b . snd) slots))
-    --          (foundation g)
+    cardsUp = map fst (filter (((flip cardUpFromSlot) (foundation g)) . snd) slots)
     deckToSlot [] = []
     deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd) slots)
     slotMoves = [MoveCards (fst x) 1 (fst y) | x <- slots, y <- slots, 
