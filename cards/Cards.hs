@@ -43,6 +43,10 @@ follows :: Card -> Card -> Bool
 follows (Card King _) _ = False
 follows (Card v1 _) (Card v2 _) = succ v1 == v2
 
+-- |Does the second card follow the first?
+successor :: Card -> Card -> Bool
+successor a b = value a /= King && alternateColors a b && follows a b
+
 data Card = Card Value Suit
             deriving (Eq,Show)
 

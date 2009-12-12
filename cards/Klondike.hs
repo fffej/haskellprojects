@@ -74,15 +74,21 @@ dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
     (f:fs,m) = splitAt 6 l
     (g:gs,rest) = splitAt 7 m
 
--- |Does the second card follow the first?
-successor :: Card -> Card -> Bool
-successor a b = value a /= King && alternateColors a b && follows a b
 
 -- TODO One of the reasons the code in "getMoves" is so klunky, is because I'm building up 
 -- predicate functions and trying to use them.  I don't need to do that, I just need to know
 -- which indices a card can move down to the tableau in.  
 -- If I refactor the code like tihs, I can break down the getMoves function into something
 -- a bit more sensible
+
+{--
+up :: Card -> Foundation -> [Move]
+down :: Card -> Card -> Bool
+
+cardDown :: Card -> Tableau -> [Move]
+cardUp :: Card -> Foundation -> [Move]
+slotMoves :: Tableau -> [Move]
+--}
 
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
