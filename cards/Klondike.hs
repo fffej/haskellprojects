@@ -33,13 +33,8 @@ data Move = TurnDeck
           | GameOver
             deriving (Show,Eq)
 
--- |A base is based on a particular suit of cards
-data Base = Base Suit [Card] deriving (Eq,Show)
-
 -- |A foundation is a collection of bases
--- TODO Can I specify that they must have different suits?
-data Foundation = Foundation Base Base Base Base
-                  deriving (Show)
+type Foundation = Array Suit [Card]
 
 -- |A game consists of a single deck of cards, a foundation and a tableau
 data Game = Game 
@@ -59,10 +54,7 @@ empty (Slot s h) = null s && null h
 
 -- |Create empty foundation
 emptyFoundation :: Foundation
-emptyFoundation = Foundation (Base Spades []) 
-                             (Base Clubs []) 
-                             (Base Diamonds []) 
-                             (Base Hearts [])
+emptyFoundation = array (Clubs,Spades) [(Clubs,[]),(Diamonds,[]),(Hearts,[]),(Spades,[])]
 
 -- |Deal the tableau from a selection of cards.  Assumes that length [Card] 
 -- is enough for this to succeed without error
@@ -88,21 +80,21 @@ successor :: Card -> Card -> Bool
 successor a b = value a /= King && alternateColors a b && follows a b
 
 -- |Can the card move down from the deck to the given slot?
--- TODO eliminate special cases
 cardDown :: Card -> Slot -> Bool
-cardDown (Card King _) (Slot [] _ ) = True
-cardDown (Card _ _) (Slot [] _) = False
-cardDown a (Slot (b:_) _ ) = successor a b
+cardDown card (Slot shown _) | null shown = value card == King
+                             | otherwise = successor card (head shown)
 
--- |Can the card move to the given base?
--- TODO eliminate special cases
-cardUpFromDeck :: Card -> Base -> Bool
-cardUpFromDeck (Card v s) (Base t []) = s == t && v == Ace 
-cardUpFromDeck _ (Base _ (Card King _:_)) = False
-cardUpFromDeck (Card v s) (Base t (Card x _:_)) = succ x == v && s == t
+-- |Can the card move to foundation?
+cardUpFromDeck :: Card -> Foundation -> Bool
+cardUpFromDeck (Card v s) f | null cards = v == Ace
+                            | otherwise = x /=King && succ x == v 
+                            where
+                              cards = f ! s
+                              (Card x _) = head cards
+
 
 -- |Can we move up from the particular slot to a base object?
-cardUpFromSlot :: Slot -> Base -> Bool
+cardUpFromSlot :: Slot -> Foundation -> Bool
 cardUpFromSlot (Slot x _) | null x = const False
                           | otherwise = cardUpFromDeck (head x)
 
@@ -172,12 +164,7 @@ heads = init . map reverse . (tails . reverse)
 -- |In the competition for uglist function that has ever existed there can be only one winner
 -- And here it is...  (TODO make look less moronic)
 addCard :: Card -> Foundation -> Foundation
-addCard t@(Card _ s) 
-        (Foundation w@(Base a as) x@(Base b bs) y@(Base c cs) z@(Base d ds)) 
-            | s == a = Foundation (Base a (t:as)) x y z
-            | s == b = Foundation w (Base b (t:bs)) y z
-            | s == c = Foundation w x (Base c (t:cs)) z
-            | s == d = Foundation w x y (Base d (t:ds))
+addCard t@(Card _ s) f = f // [(s,(t:f!s))]
 
 -- |Is the game complete?
 gameWon :: Game -> Bool
@@ -188,17 +175,17 @@ getMoves :: Game -> [Move]
 getMoves g  = movesFromDeckToFoundation dk 
               ++ deckToSlot dk
               ++ turnDeckMove 
-              ++ cardsUp 
+              -- ++ cardsUp 
               ++ slotMoves 
               ++ [GameOver | gameWon g] where
     dk = deck g
     slots = assocs (tableau g)
-    (Foundation s c d h) = foundation g
+    f = assocs (foundation g)
     turnDeckMove = [TurnDeck | not.null $ dk]
     movesFromDeckToFoundation [] = []
-    movesFromDeckToFoundation (x:xs) = [DeckUp | any (cardUpFromDeck x) [s,c,d,h]]
-    cardsUp = concatMap (\b -> map (ToFoundation . fst) (filter (flip cardUpFromSlot b . snd) slots))
-              [s,c,d,h]
+    movesFromDeckToFoundation (x:_) = [DeckUp | cardUpFromDeck x (foundation g)]
+    --cardsUp = concatMap (\b -> map (ToFoundation . fst) (filter (flip cardUpFromSlot b . snd) slots))
+    --          (foundation g)
     deckToSlot [] = []
     deckToSlot (z:ds) = map (DeckTo . fst) (filter (cardDown z . snd) slots)
     slotMoves = [MoveCards (fst x) 1 (fst y) | x <- slots, y <- slots, 

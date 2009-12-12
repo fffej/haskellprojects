@@ -1,10 +1,12 @@
 module Cards where
 
+import Ix
+
 data Suit = Clubs 
           | Diamonds 
           | Hearts  
           | Spades
-            deriving (Eq,Show,Enum,Bounded)
+            deriving (Eq,Show,Enum,Bounded,Ord,Ix)
 
 data Value = Ace
            | Two
