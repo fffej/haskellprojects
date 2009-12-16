@@ -6,6 +6,8 @@ import Data.List
 import Data.Array
 import Ix
 
+import Random
+
 -- |A type to index into the array
 data Index = A | B | C | D | E | F | G  deriving (Eq, Ord, Show, Enum, Ix)
 
@@ -48,8 +50,6 @@ newGame :: [Card] -> Game
 newGame cards = Game d emptyFoundation t where
     (t,d) = dealTableau cards
 
-empty :: Slot -> Bool
-empty (Slot s h) = null s && null h
 
 -- |Create empty foundation
 emptyFoundation :: Foundation
@@ -75,28 +75,13 @@ dealTableau dk = ((array (A,G) [(A,(Slot [a] as))
     (g:gs,rest) = splitAt 7 m
 
 
--- TODO One of the reasons the code in "getMoves" is so klunky, is because I'm building up 
--- predicate functions and trying to use them.  I don't need to do that, I just need to know
--- which indices a card can move down to the tableau in.  
--- If I refactor the code like tihs, I can break down the getMoves function into something
--- a bit more sensible
-
-{--
-up :: Card -> Foundation -> [Move]
-down :: Card -> Card -> Bool
-
-cardDown :: Card -> Tableau -> [Move]
-cardUp :: Card -> Foundation -> [Move]
-slotMoves :: Tableau -> [Move]
---}
-
 -- |Can the card move down from the deck to the given slot?
 cardDown :: Card -> Slot -> Bool
 cardDown card (Slot s _) | null s = value card == King
                          | otherwise = successor card (head s)
 
 -- |Can the card move to foundation?
-cardUp :: Card -> Foundation -> Bool
+cardUp :: Card -> Foundation -> Bool 
 cardUp (Card v suit) f | null cards = v == Ace
                        | otherwise = x /=King && succ x == v 
                             where
@@ -172,7 +157,8 @@ addCard t@(Card _ s) f = f // [(s,(t:f!s))]
 
 -- |Is the game complete?
 gameWon :: Game -> Bool
-gameWon game = all empty (elems (tableau game)) && not (null (deck game))
+gameWon game = all empty (elems (tableau game)) && not (null (deck game)) where
+    empty (Slot s h) = null s && null h
 
 -- TODO Move more than 1 card at a time
 getMoves :: Game -> [Move]
@@ -209,3 +195,28 @@ compareMoves _ (ToFoundation _) = GT
 compareMoves _ (MoveCards _ _ _) = LT
 compareMoves _ _ = EQ
 
+-- Code nabbed from http://aoeu.snth.net/?p=119
+shuffle :: (RandomGen g) => g -> [Card]
+shuffle g = fst (mix allCards (randomRs (True, False) g))
+    where mix [ ] r0 = ([ ], r0)
+          mix [x] r0 = ([x], r0)
+          mix  xs r0 = let (ys, zs, r1) = cut xs r0 [] []
+                           (cs,     r2) = mix ys r1
+                           (ds,     r3) = mix zs r2
+                       in  (cs++ds, r3)
+          cut    []     rs  ys zs = (ys, zs, rs)
+          cut (x:xs) (r:rs) ys zs = if r then cut xs rs (x:ys) zs
+                                         else cut xs rs ys (x:zs)
+
+
+-- Infinite list of random games
+randomGames :: [Game]
+randomGames = map (\x -> newGame (shuffle (mkStdGen x))) [1..]
+
+-- TODO this currently blows up because I get into an infinite loop
+-- MoveCards B 1 G,MoveCards G 1 B repeated over and over again
+foo = map (takeWhile (/= GameOver)) (map ((flip playGame) player) (take 100 randomGames))
+
+
+
+  
