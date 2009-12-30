@@ -11,13 +11,34 @@
   <script src="web.js"></script>
 
   <script>
+    var ws;
+
+    var onData = function(evt) {
+      $("#output").append("<p>" + evt.data);
+    };
+
+    var onOpen = function() {
+      $("#connectionStatus").text("Connection opened");
+      ws.send("I'm connected\n");
+    };
+
+    var onClose = function () { 
+      $("#connectionStatus").text("Connection closed");
+    };
+
     $(document).ready(function() {
-      var ws = createConnection();
+      ws = createConnection(onOpen,onData,onClose);
     });
   </script>
 
 </head>
 <body>
-  <h1>I'll do something exciting soon.</h1>
+  <h1>I'm calculating PI.</h1>
+
+  <div id="output">
+  </div>
+
+  <div id="connectionStatus">
+  </div>
 </body>
 </html>

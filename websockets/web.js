@@ -5,21 +5,13 @@ function supportsWebSockets() {
     return ("WebSocket" in window);         
 }
 
-function createConnection() {
+function createConnection(open,data,close) {
     if (supportsWebSockets()) {
         var ws = new WebSocket("ws://localhost:9876/");
         
-        ws.onopen = function() {
-            alert('opened');
-        };
-
-        ws.onmessage = function(evt) {
-            alert(evt.data);
-        };
-
-        ws.onclose = function() {
-            alert('closed');
-        };
+        ws.onopen = open;
+        ws.onmessage = data;
+        ws.onclose = close;
 
         return ws;
     }
