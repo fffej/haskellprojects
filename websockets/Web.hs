@@ -1,6 +1,7 @@
 import Network
 import System.IO
 import Char
+import Control.Concurrent
 
 -- restarting an apache server (apache2ctl restart)
 -- magic configuration file /etc/apache2/sites-available/default
@@ -18,20 +19,43 @@ serverHandshake =
     \WebSocket-Location: ws://localhost:9876/\r\n\
     \WebSocket-Protocol: sample\r\n\r\n\0"
 
+acceptLoop socket = forever $ do
+                      (h,_,_) <- accept socket
+                      hPutStr h serverHandshake
+                      hSetBuffering h NoBuffering
+                      forkIO (listenLoop h)  
+    where
+      forever a = do a; forever a
+
 main = withSocketsDo $ do
          socket <- listenOn (PortNumber 9876)
-         (h,_,_) <- accept socket
-         hPutStrLn h serverHandshake
-         listenLoop h
+         acceptLoop socket
          sClose socket
          return ()
 
 listenLoop :: Handle  -> IO ()
 listenLoop h = do
-  sendFrame h "hello from haskell"
+  sendFrame h "hi, remember you can stop this at anytime by pressing quit!"
+  msg <- readFrame h
+  putStrLn msg
+  if (msg /= "quit") then (listenLoop h) else return ()
 
 sendFrame :: Handle -> String -> IO ()
 sendFrame h s = do
   hPutChar h (chr 0)
   hPutStr h s
   hPutChar h (chr 255)
+
+readFrame :: Handle -> IO String
+readFrame h = readUntil h ""
+    where
+      readUntil h str = do
+        new <- hGetChar h
+        if (new == chr 0) 
+          then readUntil h ""
+          else if new == chr 255
+            then return str
+            else readUntil h (str ++ [new])
+
+
+

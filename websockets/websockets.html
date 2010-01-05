@@ -1,44 +1,52 @@
 <html>
 <head>
   <title>Web Sockets</title>
-  <meta charset="UTF-8">
 
   <script src="http://www.google.com/jsapi"></script>
   <script>
     google.load('jquery','1.3.2');
   </script>
 
-  <script src="web.js"></script>
-
   <script>
-    var ws;
-
-    var onData = function(evt) {
-      $("#output").append("<p>" + evt.data);
-    };
-
-    var onOpen = function() {
-      $("#connectionStatus").text("Connection opened");
-      ws.send("I'm connected\n");
-    };
-
-    var onClose = function () { 
-      $("#connectionStatus").text("Connection closed");
-    };
-
     $(document).ready(function() {
-      ws = createConnection(onOpen,onData,onClose);
+    
+      if ("WebSocket" in window) {
+        ws = new WebSocket("ws://localhost:9876/");
+        ws.onopen = function() { 
+          $('#connectionStatus').text('Connection opened');
+        };
+        ws.onmessage = function(evt) {
+          $('#output').append('<p>' + evt.data);
+        };
+        ws.onclose = function() {
+           $('#connectionStatus').text('Connection closed');
+        };
+      }
+      else {
+        $('#connectionStatus').append('<p>Your browser does not support web sockets</p>');
+      }
     });
   </script>
 
 </head>
 <body>
-  <h1>I'm calculating PI.</h1>
+  <h1>I'm doing something</h1>
 
   <div id="output">
   </div>
 
   <div id="connectionStatus">
   </div>
+
+  <textarea rows="2" cols="80" id="message">
+    Type whatever you want here, but type quit to close the connection
+  </textarea>
+
+  <br />
+
+  <button id="clickMe" onClick="ws.send($('#message').val());">
+    Click me!
+  </button>
+
 </body>
 </html>
