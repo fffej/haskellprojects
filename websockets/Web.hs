@@ -2,6 +2,7 @@ import Network
 import System.IO
 import Char
 import Control.Concurrent
+import Control.Monad
 
 -- restarting an apache server (apache2ctl restart)
 -- magic configuration file /etc/apache2/sites-available/default
@@ -38,7 +39,7 @@ listenLoop h = do
   sendFrame h "hi, remember you can stop this at anytime by pressing quit!"
   msg <- readFrame h
   putStrLn msg
-  if (msg /= "quit") then (listenLoop h) else return ()
+  when (msg /= "quit") (listenLoop h)
 
 sendFrame :: Handle -> String -> IO ()
 sendFrame h s = do
