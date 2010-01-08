@@ -1,0 +1,64 @@
+<html>
+<head>
+  <title>Brian's Brain in Haskell</title>
+  <script src="http://www.google.com/jsapi"></script>
+  <script>
+    google.load('jquery','1.3.2');
+  </script>
+
+  <script src="grid.js"></script>
+  
+  <script>
+    
+    var processClick = function(e) {
+      alert('You clicked');
+    };
+    
+    $(document).ready(function() {
+     
+      $('#canvas').bind('click',click);
+      init($('#canvas'));
+
+      drawGrid();
+
+      if ('WebSocket' in window) {
+        ws = new WebSocket('ws://localhost:9876/');
+        ws.onopen = function() {
+          $('#connectionStatus').text('Connection opened');
+        }
+        ws.onclose = function() {
+          $('#connectionStatus').text('Connection closed');
+        }
+        ws.onmessage = function(evt) {
+          updateGrid(evt.data);
+        }
+      }
+
+      $('#step').bind('click', function() { runStep(ws); });
+    });
+  </script>
+
+</head>
+<body>
+  <h1>Brian's Brain</h1>
+
+  <a href="http://en.wikipedia.org/wiki/Brian's_Brain">Brian's Brain</a> is a celluar automaton, similar to the Game of Life, but where each cell can be in one of three states (on / off / dying.  In the grid below you can set up a pattern and press play.  Communication goes back to a <a href="http://www.haskell.org/">Haskell</a>
+  
+  <hr />
+
+  <canvas width="500" height="500" id="canvas">
+    Your browser does not support canvas
+  </canvas>
+
+  <hr />
+  
+  <button id="step" type="button">
+    Step
+  </button>
+
+   <div id="connectionStatus">
+
+   </div>
+
+</body>
+</html>
