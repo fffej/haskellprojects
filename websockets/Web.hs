@@ -1,3 +1,5 @@
+module Web (serverListen, sendFrame, readFrame) where
+
 import Network
 import System.IO
 import Char
@@ -20,20 +22,23 @@ serverHandshake =
     \WebSocket-Location: ws://localhost:9876/\r\n\
     \WebSocket-Protocol: sample\r\n\r\n\0"
 
-acceptLoop socket = forever $ do
-                      (h,_,_) <- accept socket
-                      hPutStr h serverHandshake
-                      hSetBuffering h NoBuffering
-                      forkIO (listenLoop h)  
+acceptLoop :: Socket -> (Handle -> IO ()) -> IO a
+acceptLoop socket f = forever $ do
+                        (h,_,_) <- accept socket
+                        hPutStr h serverHandshake
+                        hSetBuffering h NoBuffering
+                        forkIO (f h)  
     where
       forever a = do a; forever a
 
-main = withSocketsDo $ do
-         socket <- listenOn (PortNumber 9876)
-         acceptLoop socket
-         sClose socket
-         return ()
+serverListen :: PortNumber -> (Handle -> IO()) -> IO()
+serverListen port f = withSocketsDo $ do
+                        socket <- listenOn (PortNumber port)
+                        acceptLoop socket f
+                        sClose socket
+                        return ()
 
+-- Example listen loop
 listenLoop :: Handle  -> IO ()
 listenLoop h = do
   sendFrame h "hi, remember you can stop this at anytime by pressing quit!"
