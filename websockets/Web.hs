@@ -20,7 +20,7 @@ serverHandshake =
     \Connection: Upgrade\r\n\
     \WebSocket-Origin: http://localhost\r\n\
     \WebSocket-Location: ws://localhost:9876/\r\n\
-    \WebSocket-Protocol: sample\r\n\r\n\0"
+    \WebSocket-Protocol: sample\r\n\r\n"
 
 acceptLoop :: Socket -> (Handle -> IO ()) -> IO a
 acceptLoop socket f = forever $ do
@@ -57,7 +57,7 @@ readFrame h = readUntil h ""
     where
       readUntil h str = do
         new <- hGetChar h
-        if (new == chr 0) 
+        if new == chr 0
           then readUntil h ""
           else if new == chr 255
             then return str

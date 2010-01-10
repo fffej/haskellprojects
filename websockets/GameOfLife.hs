@@ -27,15 +27,26 @@ charToCell x = error "Undefined character received"
 type GameGrid = Array (Int,Int) Cell
 
 createGrid :: Int -> [Cell] -> GameGrid
-createGrid x = listArray ((0,0),(x,x))
+createGrid x = listArray ((0,0),(x - 1,x - 1))
+
+gridToString :: GameGrid -> String
+gridToString = elems . fmap cellToChar 
+
+step :: Int -> GameGrid -> GameGrid
+step x grid = grid
 
 processMessage :: String -> String
-processMessage s = s where
-    [cellSize,grid] = lines s
+processMessage s = gridToString newGrid where
+    [cellSizeStr,original] = lines s
+    cells = map charToCell original
+    cellSize = read cellSizeStr :: Int
+    newGrid = step cellSize (createGrid cellSize cells)
 
 listenLoop :: Handle -> IO ()
 listenLoop h = do
   msg <- readFrame h
+  putStrLn ("Received: " ++ msg)
+  putStrLn ("Calculated: " ++ (processMessage msg))
   sendFrame h (processMessage msg)
   listenLoop h
   

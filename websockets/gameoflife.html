@@ -31,6 +31,8 @@
         }
         ws.onmessage = function(evt) {
           updateGrid(evt.data);
+          drawGrid();
+          return true;
         }
       }
 

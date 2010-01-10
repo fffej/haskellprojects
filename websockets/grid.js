@@ -46,6 +46,8 @@ function cycle(x,y) {
       case DYING:
         grid[x][y] = OFF;
         break;
+      default:
+        throw new Error('Unknown state')
     }
 }
 
@@ -57,6 +59,8 @@ function getColors(state) {
         return "#FF0000";
       case DYING:
         return "#00FF00";
+      default:
+        throw new Error('Unknown state');
     }
 }
 
@@ -74,14 +78,14 @@ function drawGrid(){
 
 // Send the complete set of data
 function runStep(ws) {
-    var cells = new Array(cellCount*cellCount);
+    var cells = '';
     var pos = 0;
     for (i=0;i<cellCount;++i) {
         for (j=0;j<cellCount;++j) {
-            cells[pos++] = grid[i][j];
+            cells += grid[i][j];
         }
     }
-    ws.send(cellCount + '\n' + cells.join(''));
+    ws.send(cellCount + '\n' + cells);
 }
 
 // callback will get here.
@@ -89,8 +93,10 @@ function updateGrid(data) {
     var pos=0;
     for (i=0;i<cellCount;++i) {
         for (j=0;j<cellCount;++j) {
-            cells[pos] = data.charAt(pos);
-            pos++;
+            grid[i][j] = parseInt(data.charAt(pos++));
+            if (grid[i][j] != 0 && grid[i][j] != 1 && grid[i][j] != 2) {
+                alert(grid[i][j]);
+            }
         }
     }
 }
