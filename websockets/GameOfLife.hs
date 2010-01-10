@@ -26,21 +26,30 @@ charToCell x = error "Undefined character received"
 
 type GameGrid = Array (Int,Int) Cell
 
-createGrid :: Int -> [Cell] -> GameGrid
-createGrid x = listArray ((0,0),(x - 1,x - 1))
+data Game = Game GameGrid Int
 
-gridToString :: GameGrid -> String
-gridToString = elems . fmap cellToChar 
+createGame :: Int -> [Cell] -> Game
+createGame x c = Game (listArray ((0,0),(x - 1,x - 1)) c) x
 
-step :: Int -> GameGrid -> GameGrid
-step x grid = grid
+gridToString :: Game -> String
+gridToString (Game g c) = elems $ fmap cellToChar g
+
+-- If a square is On -> Dying
+-- If a square is off, it turns on if it has EXACTLY two neighbours
+-- If a square Dying -> Off
+
+neighbours :: Game -> (Int,Int) -> [Cell]
+neighbours = undefined
+
+step :: Game -> Game
+step grid = grid
 
 processMessage :: String -> String
 processMessage s = gridToString newGrid where
     [cellSizeStr,original] = lines s
     cells = map charToCell original
     cellSize = read cellSizeStr :: Int
-    newGrid = step cellSize (createGrid cellSize cells)
+    newGrid = step (createGame cellSize cells)
 
 listenLoop :: Handle -> IO ()
 listenLoop h = do
