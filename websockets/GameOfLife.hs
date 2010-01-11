@@ -26,7 +26,7 @@ charToCell x = error "Undefined character received"
 
 type GameGrid = Array (Int,Int) Cell
 
-data Game = Game GameGrid Int
+data Game = Game GameGrid Int deriving Show
 
 createGame :: Int -> [Cell] -> Game
 createGame x c = Game (listArray ((0,0),(x - 1,x - 1)) c) x
@@ -39,8 +39,9 @@ gridToString (Game g c) = elems $ fmap cellToChar g
 -- If a square Dying -> Off
 
 neighbours :: Game -> (Int,Int) -> [Cell]
-neighbours = undefined
-
+neighbours (Game c s) (x,y) = [c ! ((x + dx) `mod` s, (y + dy) `mod` s)
+                                   | dx <- [-1,0,1], dy <- [-1,0,1], dx /= dy]
+    
 step :: Game -> Game
 step grid = grid
 
