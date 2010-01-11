@@ -14,6 +14,7 @@ import Control.Monad
 -- tcpdump -i lo (run as sudo)
 
 -- Should really parse this out to headers!
+serverHandshake :: String
 serverHandshake = 
     "HTTP/1.1 101 Web Socket Protocol Handshake\r\n\
     \Upgrade: WebSocket\r\n\
@@ -28,8 +29,6 @@ acceptLoop socket f = forever $ do
                         hPutStr h serverHandshake
                         hSetBuffering h NoBuffering
                         forkIO (f h)  
-    where
-      forever a = do a; forever a
 
 serverListen :: PortNumber -> (Handle -> IO()) -> IO()
 serverListen port f = withSocketsDo $ do
@@ -37,14 +36,6 @@ serverListen port f = withSocketsDo $ do
                         acceptLoop socket f
                         sClose socket
                         return ()
-
--- Example listen loop
-listenLoop :: Handle  -> IO ()
-listenLoop h = do
-  sendFrame h "hi, remember you can stop this at anytime by pressing quit!"
-  msg <- readFrame h
-  putStrLn msg
-  when (msg /= "quit") (listenLoop h)
 
 sendFrame :: Handle -> String -> IO ()
 sendFrame h s = do
@@ -55,13 +46,13 @@ sendFrame h s = do
 readFrame :: Handle -> IO String
 readFrame h = readUntil h ""
     where
-      readUntil h str = do
-        new <- hGetChar h
+      readUntil hl str = do
+        new <- hGetChar hl
         if new == chr 0
-          then readUntil h ""
+          then readUntil hl ""
           else if new == chr 255
             then return str
-            else readUntil h (str ++ [new])
+            else readUntil hl (str ++ [new])
 
 
 
