@@ -15,8 +15,11 @@
     };
     
     $(document).ready(function() {
-     
-      $('#canvas').bind('click',click);
+
+      $('#canvas').bind('mousedown', mouseClickChange);
+      $('#canvas').bind('mousemove', mouseMove);
+      $('#canvas').bind('mouseup', mouseClickChange);
+
       init($('#canvas'));
 
       drawGrid();

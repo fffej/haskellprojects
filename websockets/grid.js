@@ -10,6 +10,21 @@ var OFF = 0;
 var ON = 1;
 var DYING = 2;
 
+var isDrawing = false;
+
+function mouseClickChange() {
+    isDrawing = !isDrawing;
+}
+
+function mouseMove(e){
+    if (isDrawing) {
+        var x = Math.floor((e.clientX - canvas[0].offsetLeft) / cellSize);
+        var y = Math.floor((e.clientY - canvas[0].offsetTop) / cellSize);
+        cycle(x,y);
+        drawGrid();        
+    }
+}
+
 function init(cvs) {
     canvas = cvs;
     width = canvas.width();
@@ -18,7 +33,7 @@ function init(cvs) {
     cellSize = 10;
     
     cellCount = Math.min(width,height) / cellSize;
-
+    
     grid = new Array(cellCount);
     for (i=0;i<cellCount;++i) {
         grid[i] = new Array(cellCount);
@@ -28,38 +43,31 @@ function init(cvs) {
     }
 }
 
-function click(e){
-    var x = Math.floor((e.clientX - canvas[0].offsetLeft) / cellSize);
-    var y = Math.floor((e.clientY - canvas[0].offsetTop) / cellSize);
-    cycle(x,y);
-    drawGrid();
-}
-
 function cycle(x,y) {
     switch(grid[x][y]) {
-      case OFF:
+    case OFF:
         grid[x][y] = ON;
         break;
-      case ON:
+    case ON:
         grid[x][y] = DYING;
         break;
-      case DYING:
+    case DYING:
         grid[x][y] = OFF;
         break;
-      default:
+    default:
         throw new Error('Unknown state')
     }
 }
 
 function getColors(state) {
     switch(state) {
-      case OFF:
+    case OFF:
         return "#000000";
-      case ON:
+    case ON:
         return "#FF0000";
-      case DYING:
+    case DYING:
         return "#00FF00";
-      default:
+    default:
         throw new Error('Unknown state');
     }
 }
@@ -76,7 +84,6 @@ function drawGrid(){
     }
 }
 
-// Send the complete set of data
 function runStep(ws) {
     var cells = '';
     var pos = 0;

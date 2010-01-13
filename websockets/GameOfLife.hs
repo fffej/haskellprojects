@@ -30,7 +30,7 @@ createGame :: Int -> [Cell] -> Game
 createGame x c = Game (listArray ((0,0),(x - 1,x - 1)) c) x
 
 gridToString :: Game -> String
-gridToString (Game g _) = elems $ fmap cellToChar g
+gridToString (Game g _) = map cellToChar (elems g)
 
 neighbours :: Game -> (Int,Int) -> [Cell]
 neighbours (Game c s) (x,y) = [c ! ((x + dx) `mod` s, (y + dy) `mod` s)
@@ -42,16 +42,12 @@ rules Off cells | length (filter (/= Off) cells) == 2 = On
                 | otherwise = Off
 rules Dying _ = Off
     
-step :: Game -> Game
-step g@(Game grid size) = Game (grid // updates) size where
-    updates = stepCell g
-
-stepCell :: Game -> [((Int,Int),Cell)]
-stepCell g@(Game c _) = map (transform g) (assocs c) where
-    transform gm ((x,y),s) = ((x,y),rules s (neighbours gm (x,y)))
+step :: Game -> [Cell]
+step g@(Game c s) = [ rules (c ! p) (neighbours g p) | p <- coords] where
+    coords = [(x,y) | x <- [0..(s-1)], y <- [0..(s-1)]]
 
 processMessage :: String -> String
-processMessage s = gridToString newGrid where
+processMessage s = map cellToChar newGrid where
     [cellSizeStr,original] = lines s
     cells = map charToCell original
     cellSize = read cellSizeStr :: Int
@@ -65,6 +61,3 @@ listenLoop h = do
 
 main :: IO ()
 main = serverListen 9876 listenLoop
-
-
-
