@@ -7,6 +7,8 @@
   </script>
 
   <script src="grid.js"></script>
+  <script src="base64.js"></script>
+  <script src="canvas2image.js"></script>
   
   <script>
     
@@ -39,7 +41,13 @@
         }
       }
 
-      $('#step').bind('click', function() { runStep(ws); });
+      $('#step').bind('click', function() { 
+        runStep(ws); 
+
+        var img = Canvas2Image.saveAsPNG($('#canvas')[0],true);
+        $('#images').append(img);
+        $('#images').append('<hr />');
+      });
     });
   </script>
 
@@ -62,6 +70,10 @@
   </button>
 
    <div id="connectionStatus">
+
+   </div>
+
+   <div id="images">
 
    </div>
 

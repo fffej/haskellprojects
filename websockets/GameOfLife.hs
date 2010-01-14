@@ -5,12 +5,10 @@ import System.IO
 import Data.Array
 
 data Cell = Off 
-          | On 
+          | On
           | Dying
           deriving (Eq,Show)
 
--- For marshalling back and forth to JSON
--- this is embarassingly shite
 cellToChar :: Cell -> Char
 cellToChar Off = '0'
 cellToChar On = '1'
@@ -24,19 +22,21 @@ charToCell _ = error "Undefined character received"
 
 type GameGrid = Array (Int,Int) Cell
 
+type Neighbours = [Cell]
+
 data Game = Game GameGrid Int deriving Show
 
 createGame :: Int -> [Cell] -> Game
-createGame x c = Game (listArray ((0,0),(x - 1,x - 1)) c) x
+createGame x c = Game (listArray ((0,0),(x-1,x-1)) c) x
 
 gridToString :: Game -> String
 gridToString (Game g _) = map cellToChar (elems g)
 
-neighbours :: Game -> (Int,Int) -> [Cell]
-neighbours (Game c s) (x,y) = [c ! ((x + dx) `mod` s, (y + dy) `mod` s)
+neighbours :: Game -> (Int,Int) -> Neighbours
+neighbours (Game c s) (x,y) = [c ! ((x+dx) `mod` s, (y+dy) `mod` s)
                                    | dx <- [-1,0,1], dy <- [-1,0,1], dx /= dy]
 
-rules :: Cell -> [Cell] -> Cell
+rules :: Cell -> Neighbours -> Cell
 rules On _ = Dying
 rules Off cells | length (filter (/= Off) cells) == 2 = On
                 | otherwise = Off
