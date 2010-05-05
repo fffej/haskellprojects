@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-full-laziness #-}
+
 module MFluid (main) where
 -- Inspired by http://www.bestinclass.dk/index.php/2010/03/functional-fluid-dynamics-in-clojure/
 -- http://github.com/LauJensen/Fluid-Dynamics/raw/master/fluids.clj
@@ -5,11 +7,8 @@ module MFluid (main) where
 
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
-import qualified Data.Vector.Generic         as G
 
 import Criterion.Main
-import Test.HUnit
-import Data.List (foldl')
 
 import Control.Monad
 
@@ -17,9 +16,6 @@ type DVector = M.IOVector Double
 
 data Grid = Grid Int DVector
 
-instance Show Grid where
-    show (Grid n g) = "Grid: " ++ show n
-                     
 vecToList :: DVector -> IO [Double]
 vecToList d = mapM (M.read d) [0..n] where
     n = M.length d - 1
@@ -44,15 +40,15 @@ listToVec d = do
     return v
 
 zeroGrid :: Grid -> IO ()
-zeroGrid (Grid n ns) = M.set ns 0
+zeroGrid (Grid _ ns) = M.set ns 0
 
 -- |Hideously inefficient way of swapping two vectors
 swap :: Grid -> Grid -> IO()
-swap x@(Grid n xs) (Grid _ ys) = forM_ [0..(vectorLength n - 1)] $ \i -> do
-                        xtmp <- GM.unsafeRead xs i
-                        ytmp <- GM.unsafeRead ys i
-                        GM.unsafeWrite xs i ytmp
-                        GM.unsafeWrite ys i xtmp
+swap (Grid n xs) (Grid _ ys) = forM_ [0..(vectorLength n - 1)] $ \i -> do
+                                 xtmp <- GM.unsafeRead xs i
+                                 ytmp <- GM.unsafeRead ys i
+                                 GM.unsafeWrite xs i ytmp
+                                 GM.unsafeWrite ys i xtmp
   
 
 -- |Create an empty vector
@@ -82,7 +78,7 @@ writeVal (Grid sz d) p = GM.unsafeWrite d (ix sz p)
 
 -- |Write multiple values
 setVals :: Grid -> [((Int,Int),Double)] -> IO ()
-setVals g@(Grid sz d) vals = forM_ vals (uncurry (writeVal g))
+setVals g vals = forM_ vals (uncurry (writeVal g))
 
 -- |Read the value at the given point
 readVal :: Grid -> (Int,Int) -> IO Double
@@ -90,7 +86,7 @@ readVal (Grid sz d) p = GM.unsafeRead d (ix sz p)
 
 -- |This code is vomit inducing, but handles the edge cases..
 setBnd :: Int -> Grid -> IO()
-setBnd b g@(Grid sz x) = forM_ [1..sz] 
+setBnd b g@(Grid sz _) = forM_ [1..sz] 
                           (\i -> 
                                do
                                  a1 <- readVal g (1,i)
@@ -121,7 +117,7 @@ setBnd b g@(Grid sz x) = forM_ [1..sz]
 
 -- |A simple loop over each pixel
 forEachPixel :: Grid -> ((Int,Int) -> IO()) -> IO()
-forEachPixel g@(Grid n gs) = forM_ [(u,v) | u<-[1..n], v <- [1..n]]
+forEachPixel (Grid n _) = forM_ [(u,v) | u<-[1..n], v <- [1..n]]
 
 -- |For simplicity, just consider up,down,left,right to be the neighbours
 neighbours :: Grid -> (Int,Int) -> IO (Double,Double,Double,Double)
@@ -175,18 +171,18 @@ advect b d@(Grid n _) d0 u v dt = forEachPixel d
                                         dt0 = dt * fromIntegral n
 
 project :: Grid -> Grid -> Grid -> Grid -> IO ()
-project u@(Grid n _) v p div = forEachPixel u
+project u@(Grid n _) v p d = forEachPixel u
                                 (\(i,j) ->
                                      do
                                        u0 <- readVal u (i+1,j)
                                        u1 <- readVal u (i-1,j)
                                        v0 <- readVal v (i,j+1)
                                        v1 <- readVal v (i,j-1)
-                                       writeVal div (i,j) (-0.5 * ((u0-u1+v0-v1) / fromIntegral n))
+                                       writeVal d (i,j) (-0.5 * ((u0-u1+v0-v1) / fromIntegral n))
                                        writeVal p (i,j) 0)
-                               >> setBnd 0 div 
+                               >> setBnd 0 d 
                                >> setBnd 0 p 
-                               >> linSolve 0 p div 1 4 
+                               >> linSolve 0 p d 1 4 
                                >> forEachPixel p
                                    (\(i,j) ->
                                     do
@@ -199,7 +195,7 @@ project u@(Grid n _) v p div = forEachPixel u
                                >> setBnd 2 v
 
 densStep :: Grid -> Grid -> Grid -> Grid -> Double -> Double -> IO ()
-densStep x@(Grid n _) x0 u v diff dt = do
+densStep x x0 u v diff dt = do
              addSource x x0 dt
              swap x0 x
              diffuse 0 x x0 diff dt
@@ -295,18 +291,30 @@ testVelStep = do
   print (nearlyEqual xResult expectedX && nearlyEqual yResult expectedY &&
          nearlyEqual uResult expectedU && nearlyEqual vResult expectedV)
 
-main = defaultMain [
+main = do
+  x <- emptyGrid 80
+  y <- emptyGrid 80
+  u <- emptyGrid 80
+  v <- emptyGrid 80
+  defaultMain [
         bgroup "Mutable Fluids" [ 
-         bench "LinSolve 10" $ whnf profileLinSolve 10
-        ,bench "LinSolve 100" $ whnf profileLinSolve 100
-        ,bench "LinSolve 1000" $ whnf profileLinSolve 1000
-        ]]
+                    bench "Project" $ nfIO (project x y u v)
+                   ,bench "SetBnds" $ nfIO (setBnd 2 x)
+                   ]]
+
+profileSetBnds n = do
+  x <- emptyGrid n
+  (setBnd 2 x)
 
 profileLinSolve n = do
-  a <- emptyGrid n
-  b <- emptyGrid n
-  linSolve 0 a b 1 4  
-  return ()
+  x <- emptyGrid n
+  y <- emptyGrid n
+  u <- emptyGrid n
+  v <- emptyGrid n
+  (project x y u v)
+  
+
+  
 
 
 {--
