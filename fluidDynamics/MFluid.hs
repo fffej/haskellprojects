@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-full-laziness #-}
 
-module MFluid (main) where
+module MFluid where
 -- Inspired by http://www.bestinclass.dk/index.php/2010/03/functional-fluid-dynamics-in-clojure/
 -- http://github.com/LauJensen/Fluid-Dynamics/raw/master/fluids.clj
 -- Navier Stokes (http://en.wikipedia.org/wiki/Navier–Stokes_equations)
@@ -16,41 +16,6 @@ type DVector = M.IOVector Double
 
 data Grid = Grid Int DVector
 
-vecToList :: DVector -> IO [Double]
-vecToList d = mapM (M.read d) [0..n] where
-    n = M.length d - 1
-
-absDifference :: [Double] -> [Double] -> Double
-absDifference v1 v2 = sqrt (sum (map (\y -> y*y) (zipWith (-) v1 v2)))
-
-nearlyEqual :: [Double] -> [Double] -> Bool
-nearlyEqual x y = absDifference x y < 0.0001
-
-gridToList :: Grid -> IO [Double]
-gridToList (Grid _ d) = vecToList d
-
-vectorLength :: Int -> Int
-vectorLength sz = (sz+2)*(sz+2)
-
-listToVec :: [Double] -> IO DVector
-listToVec d = do
-    let n = length d
-    v <- GM.unsafeNewWith n 0.0
-    mapM_ (\(x,p) -> M.write v p x) (zip d [0..])
-    return v
-
-zeroGrid :: Grid -> IO ()
-zeroGrid (Grid _ ns) = M.set ns 0
-
--- |Hideously inefficient way of swapping two vectors
-swap :: Grid -> Grid -> IO()
-swap (Grid n xs) (Grid _ ys) = forM_ [0..(vectorLength n - 1)] $ \i -> do
-                                 xtmp <- GM.unsafeRead xs i
-                                 ytmp <- GM.unsafeRead ys i
-                                 GM.unsafeWrite xs i ytmp
-                                 GM.unsafeWrite ys i xtmp
-  
-
 -- |Create an empty vector
 emptyGrid :: Int -> IO Grid
 emptyGrid sz = do
@@ -59,18 +24,7 @@ emptyGrid sz = do
 
 -- |Translate from 2D to 1D co-ordinates
 ix :: Int -> (Int,Int) -> Int
-ix n (i,j) = i + (n+2) * j where
-
--- |Look up the given point from the vector
-get :: Grid -> (Int,Int) -> IO Double
-get (Grid sz g) p = GM.read g (ix sz p)
-
--- |Add the sources together, writing the content out to x
-addSource :: Grid -> Grid -> Double -> IO ()
-addSource (Grid sz x) (Grid _ s) dt = forM_ [0..(vectorLength sz - 1)] $ \i -> do
-                         xa <- GM.unsafeRead x i
-                         sa <- GM.unsafeRead s i 
-                         GM.unsafeWrite x i (xa + sa*dt)
+ix n (i,j) = i + (n+2) * j
 
 -- |Write a single value at the given co-ordinates
 writeVal :: Grid -> (Int,Int) -> Double -> IO ()
@@ -83,6 +37,13 @@ setVals g vals = forM_ vals (uncurry (writeVal g))
 -- |Read the value at the given point
 readVal :: Grid -> (Int,Int) -> IO Double
 readVal (Grid sz d) p = GM.unsafeRead d (ix sz p)
+
+-- |Add the sources together, writing the content out to x
+addSource :: Grid -> Grid -> Double -> IO ()
+addSource (Grid sz x) (Grid _ s) dt = forM_ [0..(vectorLength sz - 1)] $ \i -> do
+                         xa <- GM.unsafeRead x i
+                         sa <- GM.unsafeRead s i 
+                         GM.unsafeWrite x i (xa + sa*dt)
 
 -- |This code is vomit inducing, but handles the edge cases..
 setBnd :: Int -> Grid -> IO()
@@ -217,6 +178,43 @@ velStep u v u0 v0 visc dt = do
              advect 2 v v0 u0 v0 dt
              project u v u0 v0
 
+
+vecToList :: DVector -> IO [Double]
+vecToList d = mapM (M.read d) [0..n] where
+    n = M.length d - 1
+
+absDifference :: [Double] -> [Double] -> Double
+absDifference v1 v2 = sqrt (sum (map (\y -> y*y) (zipWith (-) v1 v2)))
+
+nearlyEqual :: [Double] -> [Double] -> Bool
+nearlyEqual x y = absDifference x y < 0.0001
+
+gridToList :: Grid -> IO [Double]
+gridToList (Grid _ d) = vecToList d
+
+vectorLength :: Int -> Int
+vectorLength sz = (sz+2)*(sz+2)
+
+listToVec :: [Double] -> IO DVector
+listToVec d = do
+    let n = length d
+    v <- GM.unsafeNewWith n 0.0
+    mapM_ (\(x,p) -> M.write v p x) (zip d [0..])
+    return v
+
+zeroGrid :: Grid -> IO ()
+zeroGrid (Grid _ ns) = M.set ns 0
+
+-- |Hideously inefficient way of swapping two vectors
+swap :: Grid -> Grid -> IO()
+swap (Grid n xs) (Grid _ ys) = forM_ [0..(vectorLength n - 1)] $ \i -> do
+                                 xtmp <- GM.unsafeRead xs i
+                                 ytmp <- GM.unsafeRead ys i
+                                 GM.unsafeWrite xs i ytmp
+                                 GM.unsafeWrite ys i xtmp
+  
+
+
 testSetBnd = do
   putStrLn "Testing setBnd"
   a <- listToVec [0..15]
@@ -302,24 +300,7 @@ main = do
                    ,bench "SetBnds" $ nfIO (setBnd 2 x)
                    ]]
 
-profileSetBnds n = do
-  x <- emptyGrid n
-  (setBnd 2 x)
-
-profileLinSolve n = do
-  x <- emptyGrid n
-  y <- emptyGrid n
-  u <- emptyGrid n
-  v <- emptyGrid n
-  (project x y u v)
-  
-
-  
-
-
-{--
-
-main = do
+tests = do
   testSetBnd
   testLinSolveStep
   testLinSolve
@@ -328,4 +309,3 @@ main = do
   testVelStep
   return ()
 
---}
