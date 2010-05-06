@@ -1,20 +1,21 @@
 module Main where
 
--- TODO proper imports
-import MFluid (densStep,velStep,readVal,writeVal,Grid(Grid),emptyGrid,zeroGrid)
+import MFluid (densStep,velStep,readVal,writeVal,Grid,emptyGrid,zeroGrid)
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith, ExitCode(ExitSuccess))
 import Control.Monad (unless,when,forM_)
 import Data.IORef (IORef, newIORef)
 
--- TODO why do I need these!
-color3f = color :: Color3 GLfloat -> IO ()
+color3f :: Color3 GLfloat -> IO ()
+color3f = color
+
+vertex2f :: Vertex2 GLfloat -> IO ()
 vertex2f = vertex :: Vertex2 GLfloat -> IO ()
 
 -- |Grid resolution
 n :: Int
-n = 160
+n = 80
 
 -- |Time step
 dt :: Double
@@ -42,10 +43,10 @@ colorVertex (c,v) = do
   vertex v
 
 data State = State {
-      dens :: IORef Grid
-    , densPrev :: IORef Grid
-    , vel :: IORef (Grid,Grid)
-    , velPrev :: IORef (Grid,Grid)
+      dens :: Grid
+    , densPrev :: Grid
+    , vel :: (Grid,Grid)
+    , velPrev :: (Grid,Grid)
     , mousePoint :: IORef (Int,Int)
     , oMousePoint :: IORef (Int,Int)
     , leftDown :: IORef Bool
@@ -56,29 +57,25 @@ data State = State {
 makeState :: IO State
 makeState = do
   densGrid <- emptyGrid n
-  dens <- newIORef densGrid
   densPrevGrid <- emptyGrid n
-  densPrev <- newIORef densPrevGrid
   vG1 <- emptyGrid n
   vG2 <- emptyGrid n
-  vel <- newIORef (vG1,vG2)
   vP1 <- emptyGrid n
   vP2 <- emptyGrid n
-  velPrev <- newIORef (vP1,vP2)
   mP <- newIORef (0,0)
   omP <- newIORef (0,0)
   left <- newIORef False
   right <- newIORef False
   mD <- newIORef False
-  return $ State dens densPrev vel velPrev mP omP left right mD
+  return $ State densGrid densPrevGrid (vG1,vG2) (vP1,vP2) mP omP left right mD
 
 clearState :: State -> IO()
 clearState s = do
-  g <- emptyGrid n
+{-  g <- emptyGrid n
   dens s $~ const g
   densPrev s $~ const g
   vel s $~ const (g,g)
-  velPrev s $~ const (g,g)
+  velPrev s $~ const (g,g)-}
   mousePoint s $~ const (0,0)
   oMousePoint s $~ const (0,0)
   leftDown s $~ const False
@@ -111,6 +108,10 @@ densColor g p@(x,y) = do
   d11 <- readVal g (x+1,y+1)
   return (realToFrac d00,realToFrac d01,realToFrac d10,realToFrac d11) 
 
+mapToColor :: (GLfloat,GLfloat) -> GLfloat -> GLfloat -> GLfloat -> (Color3 GLfloat)
+mapToColor (i,j) x y z = Color3 (i*x) (j*y) (i/j * z)
+                         
+
 drawDens :: Grid -> IO ()
 drawDens g = do
   color3f (Color3 1 0 1)
@@ -121,17 +122,18 @@ drawDens g = do
                       (\(i,j) ->
                            do
                              (d00,d01,d10,d11) <- densColor g (i,j)
-                             colorVertex ((Color3 d00 d00 d00), (Vertex2 (f i) (f j)))
-                             colorVertex ((Color3 d10 d10 d10), (Vertex2 (f i+h) (f j)))
-                             colorVertex ((Color3 d11 d11 d11), (Vertex2 (f i+h) (f j+h)))
-                             colorVertex ((Color3 d01 d01 d01), (Vertex2 (f i) (f j+h))))
+                             let m = (fromIntegral i / fromIntegral n, fromIntegral j / fromIntegral n)
+                             colorVertex (mapToColor m d00 d00 d00, Vertex2 (f i) (f j))
+                             colorVertex (mapToColor m d10 d10 d10, Vertex2 (f i+h) (f j))
+                             colorVertex (mapToColor m d11 d11 d11, Vertex2 (f i+h) (f j+h))
+                             colorVertex (mapToColor m d01 d01 d01, Vertex2 (f i) (f j+h)))
   flush
                   
 displayFunc :: State -> DisplayCallback
 displayFunc s = do
   clear [ColorBuffer]
-  d <- G.get (dens s)
-  v <- G.get (vel s)
+  let d = dens s
+      v = vel s
   dv <- G.get (drawVel s)
   drawDens d
   when (dv) (drawVelocity v)     
@@ -157,14 +159,14 @@ updateDens p g = do
 
 updateStateFromUI :: State -> IO()
 updateStateFromUI s = do
-  vp@(_, Size width height) <- G.get viewport  
+  (_, Size width height) <- G.get viewport  
   (mx,my) <- G.get (mousePoint s)
   (omx,omy) <- G.get (oMousePoint s)
   let (x,y) = pos n (fromIntegral width :: Int, fromIntegral height :: Int) (mx,my)
   left <- G.get (leftDown s)
   right <- G.get (rightDown s)
-  velP <- G.get (velPrev s)
-  denP <- G.get (densPrev s)
+  let velP = velPrev s
+      denP = densPrev s
   when (left)
        (updateForce (x,y)  (realToFrac (mx - omx), realToFrac (omy - my)) velP)
   when (right)
@@ -177,11 +179,12 @@ idleFunc :: State -> IdleCallback
 idleFunc s = do
 
   -- Reset the previous velocities
-  velP <- G.get (velPrev s)
-  zeroGrid (fst velP)
-  zeroGrid (snd velP)
-  
-  densP <- G.get (densPrev s)
+  let (u0,v0) = velPrev s
+      densP = densPrev s
+      density = dens s
+      (u,v) = vel s
+  zeroGrid u0
+  zeroGrid v0
   zeroGrid densP
 
   left <- G.get (leftDown s)
@@ -191,21 +194,14 @@ idleFunc s = do
   when (left || right) 
        (updateStateFromUI s)
 
-  density <- G.get (dens s)
-  velocity <- G.get (vel s)
-  dPrev <- G.get (densPrev s)
-  (u0,v0) <- G.get (velPrev s)
-  (u,v) <- G.get (vel s)
-
   velStep u v u0 v0 visc dt
-  densStep density dPrev u v diff dt
+  densStep density densP u v diff dt
 
   postRedisplay Nothing -- TODO should only do this if changed
   return ()
 
-
 reshapeFunc :: ReshapeCallback
-reshapeFunc size@(Size width height) =
+reshapeFunc size@(Size _ height) =
    unless (height == 0) $ do
       viewport $= (Position 0 0, size)
       matrixMode $= Projection
@@ -222,7 +218,7 @@ setMouseData s k (x,y)= do
 setButton :: State -> Key -> IO ()
 setButton s (MouseButton LeftButton) = leftDown s $~ not
 setButton s (MouseButton RightButton) = rightDown s $~ not
-setButton s _ = return ()
+setButton _ _ = return ()
 
 keyMouseFunc :: State -> KeyboardMouseCallback
 keyMouseFunc _ (Char 'q') _ _ _ = exitWith ExitSuccess
@@ -238,11 +234,11 @@ motionFunc s (Position x y) = do
 -- This just starts up the event loop
 main :: IO ()
 main = do
-  getArgsAndInitialize
+  _ <- getArgsAndInitialize
   initialDisplayMode $= [ DoubleBuffered, RGBAMode ]
   initialWindowSize $= Size 512 512
   initialWindowPosition $= Position 0 0
-  createWindow "Barely Functional Fluid Dynamics"
+  _ <- createWindow "Barely Functional Fluid Dynamics"
   clearColor $= Color4 0 0 0 1
 
   state <- makeState
@@ -255,4 +251,3 @@ main = do
   motionCallback $= Just (motionFunc state)
 
   mainLoop
-                     
