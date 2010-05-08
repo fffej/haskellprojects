@@ -51,7 +51,10 @@ lightBulbInt xs | powerInt x && stateInt x = "ON"
       x = V.unsafeLast xs
 
 runTestInt :: Int -> Int -> String
-runTestInt n k = lightBulbInt $ Prelude.last $ Prelude.take (k+1) $ iterate clickInt (snappersInt n)
+runTestInt n k | powerInt x && stateInt x = "ON"
+               | otherwise = "OFF"
+    where
+      x = (V.unsafeLast ((iterate clickInt (snappersInt n)) !! k))
 
 readInteger :: String -> Integer
 readInteger = read
@@ -69,4 +72,4 @@ main = do
               let (n:k:[]) = Prelude.map readInt (words nk)
                   ans = runTestInt n k 
               putStrLn ("Case #" Prelude.++ show t Prelude.++ ": " Prelude.++ ans)
-              return ())
+              return ()) 
