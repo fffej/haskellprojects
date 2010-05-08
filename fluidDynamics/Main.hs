@@ -71,11 +71,14 @@ makeState = do
 
 clearState :: State -> IO()
 clearState s = do
-{-  g <- emptyGrid n
-  dens s $~ const g
-  densPrev s $~ const g
-  vel s $~ const (g,g)
-  velPrev s $~ const (g,g)-}
+  zeroGrid (dens s)
+  zeroGrid (densPrev s)
+  let (vG1,vG2) = (vel s) 
+      (vP1,vP2) = (velPrev s)
+  zeroGrid vG1
+  zeroGrid vG2
+  zeroGrid vP1
+  zeroGrid vP2
   mousePoint s $~ const (0,0)
   oMousePoint s $~ const (0,0)
   leftDown s $~ const False
