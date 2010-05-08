@@ -1,14 +1,12 @@
-module Snapper (main) where
+module Snapper where
 
+import Data.Vector.Unboxed as V
 import Control.Monad (forM_)
-
-data Snapper = Snapper {
-      state :: Bool
-    , power :: Bool
-} deriving (Show,Eq)
 
 -- 0 ≤ N ≤ 30;
 -- 0 ≤ K ≤ 10^8
+
+type IntVector = Vector Int
 
 statePower :: Bool -> Bool -> Int
 statePower False False = 0
@@ -31,25 +29,29 @@ flipStateInt x | (powerInt x) = statePower (not (stateInt x)) (powerInt x)
 turnOffInt :: Int -> Int
 turnOffInt x = statePower (stateInt x) False
 
-updatePowerInt :: [Int] -> Bool -> [Int]
-updatePowerInt [] _ = []
-updatePowerInt (x:xs) previous | previous = statePower (stateInt x) True : updatePowerInt xs (stateInt x)
-                               | otherwise = statePower (stateInt x) False : map turnOffInt xs
-                                                
-clickInt :: [Int] -> [Int]
-clickInt xs = updatePowerInt (map flipStateInt xs) True
+updatePowerInt :: IntVector -> Bool -> IntVector
+updatePowerInt v previous | V.null v = empty
+                          | previous = V.cons (statePower (stateInt x) True) (updatePowerInt xs (stateInt x))
+                          | otherwise = V.cons (statePower (stateInt x) False) (V.map turnOffInt xs)
+    where
+      x = V.unsafeHead v
+      xs = V.unsafeTail v
 
-snappersInt :: Int -> [Int]
-snappersInt n = statePower False True : replicate (n-1) (statePower False False)
+clickInt :: IntVector -> IntVector
+clickInt xs = updatePowerInt (V.map flipStateInt xs) True
 
-lightBulbInt :: [Int] -> String
+snappersInt :: Int -> IntVector
+snappersInt n = V.cons (statePower False True) (V.replicate (n-1) (statePower False False))
+
+
+lightBulbInt :: IntVector -> String
 lightBulbInt xs | powerInt x && stateInt x = "ON"
                 | otherwise = "OFF"
     where
-      x = last xs
+      x = V.unsafeLast xs
 
 runTestInt :: Int -> Int -> String
-runTestInt n k = lightBulbInt $ last $ take (k+1) $ iterate clickInt (snappersInt n)
+runTestInt n k = lightBulbInt $ Prelude.last $ Prelude.take (k+1) $ iterate clickInt (snappersInt n)
 
 readInteger :: String -> Integer
 readInteger = read
@@ -60,11 +62,11 @@ readInt = read
 main :: IO ()
 main = do
   nStr <- readLn :: IO Integer
-  forM_ [1..nStr] 
+  Control.Monad.forM_ [1..nStr] 
        (\t ->
             do
               nk <- getLine
-              let (n:k:[]) = map readInt (words nk)
+              let (n:k:[]) = Prelude.map readInt (words nk)
                   ans = runTestInt n k 
-              putStrLn ("Case #" ++ show t ++ ": " ++ ans)
+              putStrLn ("Case #" Prelude.++ show t Prelude.++ ": " Prelude.++ ans)
               return ())
