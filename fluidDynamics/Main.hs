@@ -67,7 +67,15 @@ makeState = do
   left <- newIORef False
   right <- newIORef False
   mD <- newIORef False
-  return $ State densGrid previousDensityGrid (vG1,vG2) (vP1,vP2) mP omP left right mD
+  return $ State densGrid 
+         previousDensityGrid 
+         (vG1,vG2) 
+         (vP1,vP2) 
+         mP 
+         omP 
+         left 
+         right 
+         mD
 
 clearState :: State -> IO()
 clearState s = do
@@ -114,9 +122,8 @@ densColor g p@(x,y) = do
 mapToColor :: (GLfloat,GLfloat) -> GLfloat -> GLfloat -> GLfloat -> (Color3 GLfloat)
 mapToColor (i,j) x y z = Color3 (i*x) (j*y) (i/j * z)
                          
-
-drawDens :: Grid -> IO ()
-drawDens g = do
+drawDensity :: Grid -> IO ()
+drawDensity g = do
   color3f (Color3 1 0 1)
   lineWidth $= 0.5
   let h = 1.0 / fromIntegral n
@@ -138,7 +145,7 @@ displayFunc s = do
   let d = density s
       v = velocity s
   dv <- G.get (drawVel s)
-  drawDens d
+  drawDensity d
   when (dv) (drawVelocity v)     
   swapBuffers
 
