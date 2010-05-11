@@ -2,31 +2,33 @@ module Snapper where
 
 import Data.Vector.Unboxed as V
 import Control.Monad (forM_)
+import Data.Int (Int8)
 
 -- 0 ≤ N ≤ 30;
 -- 0 ≤ K ≤ 10^8
 
-type IntVector = Vector Int
+type IntVector = Vector Int8
 
-statePower :: Bool -> Bool -> Int
+statePower :: Bool -> Bool -> Int8
 statePower False False = 0
 statePower False True = 1
 statePower True False = 2
 statePower True True = 3
 
-stateInt :: Int -> Bool
+stateInt :: Int8 -> Bool
 stateInt x | x == 2 || x == 3 = True
-         | otherwise = False
+           | otherwise = False
 
-powerInt :: Int -> Bool
+powerInt :: Int8 -> Bool
 powerInt x | x ==1 || x == 3 = True
-         | otherwise = False
+           | otherwise = False
 
 
+flipStateInt :: Int8 -> Int8
 flipStateInt x | (powerInt x) = statePower (not (stateInt x)) (powerInt x)
                | otherwise = x
 
-turnOffInt :: Int -> Int
+turnOffInt :: Int8 -> Int8
 turnOffInt x = statePower (stateInt x) False
 
 updatePowerInt :: IntVector -> Bool -> IntVector
@@ -43,15 +45,8 @@ clickInt xs = updatePowerInt (V.map flipStateInt xs) True
 snappersInt :: Int -> IntVector
 snappersInt n = V.cons (statePower False True) (V.replicate (n-1) (statePower False False))
 
-
-lightBulbInt :: IntVector -> String
-lightBulbInt xs | powerInt x && stateInt x = "ON"
-                | otherwise = "OFF"
-    where
-      x = V.unsafeLast xs
-
 runTestInt :: Int -> Int -> String
-runTestInt n k | powerInt x && stateInt x = "ON"
+runTestInt n k | x == 3 = "ON"
                | otherwise = "OFF"
     where
       x = (V.unsafeLast ((iterate clickInt (snappersInt n)) !! k))

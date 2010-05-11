@@ -43,12 +43,12 @@ colorVertex (c,v) = do
   vertex v
 
 data State = State {
-      dens :: Grid
-    , densPrev :: Grid
-    , vel :: (Grid,Grid)
-    , velPrev :: (Grid,Grid)
+      density :: Grid
+    , previousDensity :: Grid
+    , velocity :: (Grid,Grid)
+    , previousVelocity :: (Grid,Grid)
     , mousePoint :: IORef (Int,Int)
-    , oMousePoint :: IORef (Int,Int)
+    , oldMousePoint :: IORef (Int,Int)
     , leftDown :: IORef Bool
     , rightDown :: IORef Bool
     , drawVel :: IORef Bool
@@ -57,7 +57,7 @@ data State = State {
 makeState :: IO State
 makeState = do
   densGrid <- emptyGrid n
-  densPrevGrid <- emptyGrid n
+  previousDensityGrid <- emptyGrid n
   vG1 <- emptyGrid n
   vG2 <- emptyGrid n
   vP1 <- emptyGrid n
@@ -67,20 +67,20 @@ makeState = do
   left <- newIORef False
   right <- newIORef False
   mD <- newIORef False
-  return $ State densGrid densPrevGrid (vG1,vG2) (vP1,vP2) mP omP left right mD
+  return $ State densGrid previousDensityGrid (vG1,vG2) (vP1,vP2) mP omP left right mD
 
 clearState :: State -> IO()
 clearState s = do
-  zeroGrid (dens s)
-  zeroGrid (densPrev s)
-  let (vG1,vG2) = (vel s) 
-      (vP1,vP2) = (velPrev s)
+  zeroGrid (density s)
+  zeroGrid (previousDensity s)
+  let (vG1,vG2) = (velocity s) 
+      (vP1,vP2) = (previousVelocity s)
   zeroGrid vG1
   zeroGrid vG2
   zeroGrid vP1
   zeroGrid vP2
   mousePoint s $~ const (0,0)
-  oMousePoint s $~ const (0,0)
+  oldMousePoint s $~ const (0,0)
   leftDown s $~ const False
   rightDown s $~ const False
   drawVel s $~ const False
@@ -135,8 +135,8 @@ drawDens g = do
 displayFunc :: State -> DisplayCallback
 displayFunc s = do
   clear [ColorBuffer]
-  let d = dens s
-      v = vel s
+  let d = density s
+      v = velocity s
   dv <- G.get (drawVel s)
   drawDens d
   when (dv) (drawVelocity v)     
@@ -164,17 +164,17 @@ updateStateFromUI :: State -> IO()
 updateStateFromUI s = do
   (_, Size width height) <- G.get viewport  
   (mx,my) <- G.get (mousePoint s)
-  (omx,omy) <- G.get (oMousePoint s)
+  (omx,omy) <- G.get (oldMousePoint s)
   let (x,y) = pos n (fromIntegral width :: Int, fromIntegral height :: Int) (mx,my)
   left <- G.get (leftDown s)
   right <- G.get (rightDown s)
-  let velP = velPrev s
-      denP = densPrev s
+  let velP = previousVelocity s
+      denP = previousDensity s
   when (left)
        (updateForce (x,y)  (realToFrac (mx - omx), realToFrac (omy - my)) velP)
   when (right)
        (updateDens (x,y) denP)
-  oMousePoint s $~ (const (mx,my))
+  oldMousePoint s $~ (const (mx,my))
   return ()
 
 -- Update the display
@@ -182,10 +182,10 @@ idleFunc :: State -> IdleCallback
 idleFunc s = do
 
   -- Reset the previous velocities
-  let (u0,v0) = velPrev s
-      densP = densPrev s
-      density = dens s
-      (u,v) = vel s
+  let (u0,v0) = previousVelocity s
+      densP = previousDensity s
+      dens = density s
+      (u,v) = velocity s
   zeroGrid u0
   zeroGrid v0
   zeroGrid densP
@@ -198,7 +198,7 @@ idleFunc s = do
        (updateStateFromUI s)
 
   velStep u v u0 v0 visc dt
-  densStep density densP u v diff dt
+  densStep dens densP u v diff dt
 
   postRedisplay Nothing -- TODO should only do this if changed
   return ()
@@ -215,7 +215,7 @@ reshapeFunc size@(Size _ height) =
 setMouseData :: State -> Key -> (Int,Int) -> IO ()
 setMouseData s k (x,y)= do
   mousePoint s $~ const (x,y)
-  oMousePoint s $~ const (x,y)
+  oldMousePoint s $~ const (x,y)
   setButton s k
 
 setButton :: State -> Key -> IO ()
