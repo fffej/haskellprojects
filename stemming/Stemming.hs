@@ -1,9 +1,11 @@
 module Stemming (main,parseRules) where
 
+import qualified Data.Map as Map
 import Data.Char (isLower)
 import Data.List (isSuffixOf)
 import System (getArgs)
 import System.Console.GetOpt
+
 
 import Text.ParserCombinators.Parsec
 
@@ -21,22 +23,19 @@ data Rule = Rule {
     , ruleType :: RuleType
 } deriving (Show)
 
-data RuleResult = RuleStop | RuleContinue | RuleNotApplied
+data RuleResult = RuleStop | RuleContinue | RuleNotApplied deriving (Eq)
 
-{- A stemming file is an order list of rules, terminated by EOF
-   Each rule consists of a number of lines like this
-   ia,?,intact ;-ia > -- if intact 
+type Rules = Map.Map Char [Rule]
 
-   Everything after " ;" is a comment
+makeRulesTable :: [Rule] -> Rules
+makeRulesTable = foldl insertRule Map.empty where
+    insertRule mp r@(Rule k _ _) = Map.insertWith (++) (last k) [r] mp
 
-   String,String,RuleType producing a Rule object
--}
-
-rules :: GenParser Char st [Rule]
+rules :: GenParser Char st Rules
 rules = do
   result <- many rule
   eof
-  return result
+  return (makeRulesTable result)
 
 rule :: GenParser Char st Rule
 rule = do
@@ -59,7 +58,7 @@ parseRuleType = do
   <|> (try $ string "protint" >> return ProtInt)
   <|> (try $ string "stop" >> return Stop)
 
-parseRules :: String -> Either ParseError [Rule]
+parseRules :: String -> Either ParseError Rules
 parseRules input = parse rules "(unknown)" input
 
 continue :: RuleType -> Bool
@@ -109,15 +108,15 @@ applyRule r@(Rule keyString replaceString ruleType) word itct | shouldBeIntact |
       shouldBeIntact = itct && (not $ intact ruleType)
       endingMatches = keyString `isSuffixOf` word
 
-applyRules :: [Rule] -> String -> String
-applyRules [] word = word
-applyRules (rule:rules) word = undefined
+applyRules :: Rules -> String -> String
+applyRules r s = undefined where
+    rules = Map.findWithDefault [] (last s) r
 
 main = do
   args <- getArgs
   let inputFile = args !! 0
       outputFile = args !! 1
   rulesString <- readFile inputFile
-  let rules = parseRules rulesString
+  let (Right rules) = parseRules rulesString
   print rules
   return ()
