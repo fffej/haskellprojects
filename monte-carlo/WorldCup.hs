@@ -4,6 +4,10 @@ import Data.Maybe (fromJust)
 import Data.List (sortBy)
 import qualified Data.Map as Map
 
+import Control.Monad.State
+
+import System.Random
+
 type Ranking = Int
 
 type League = Map.Map Team Int
@@ -30,9 +34,20 @@ data WorldCup = WorldCup [Group] deriving (Show)
 
 data KnockoutStage = KnockoutStage [Team] deriving (Show)
 
--- TODO provide a sensible way of winning
-play :: Team -> Team -> GameResult
-play x y = case result of
+class Model a where
+    play :: a -> Team -> Team -> GameResult
+    winner :: a -> Team -> Team -> Team
+
+data FifaRankingModel = FifaRankingModel {
+      ratings :: [(Team,Ranking)]
+}
+
+instance Model FifaRankingModel where
+    play m t1 t2 = play' t1 t2
+    winner m t1 t2 = winner' t1 t2
+
+play' :: Team -> Team -> GameResult
+play' x y = case result of
              GT -> Win
              LT -> Lose
              EQ -> Lose
@@ -41,13 +56,13 @@ play x y = case result of
       r2 = fromJust $ lookup y rankings28April
       result = compare r1 r2
 
-winner :: Team -> Team -> Team
-winner x y = case result of
+winner' :: Team -> Team -> Team
+winner' x y = case result of
                Win -> x
                Lose -> y
-               Draw -> winner x y
+               Draw -> winner' x y -- TODO slightly infinite
     where
-      result = play x y
+      result = play' x y
 
 -- |Simulate the world cup
 rankings28April :: [(Team,Ranking)]
@@ -91,16 +106,7 @@ groupH :: Group
 groupH = makeGroup H (ESP, SUI, HON, CHI)
 
 worldCup :: WorldCup
-worldCup = WorldCup [
-            groupA
-           ,groupB
-           ,groupC
-           ,groupD
-           ,groupE
-           ,groupF
-           ,groupG
-           ,groupH
-           ]
+worldCup = WorldCup [groupA,groupB,groupC,groupD,groupE,groupF,groupG,groupH]
 
 scoreGame :: League -> ((Team,Team),GameResult) -> League
 scoreGame r ((x,_),Win) = Map.insertWith (+) x 3 r
@@ -116,10 +122,10 @@ fixtures (a,b,c,d) = [(a,b),(a,c),(a,d),(b,c),(b,d),(c,d)]
 initialLeague :: (Team,Team,Team,Team) -> League
 initialLeague (a,b,c,d) = Map.fromList [(a,0),(b,0),(c,0),(d,0)]
 
-playGroup :: (Team -> Team -> GameResult) -> Group -> League
-playGroup resultFunc (Group _ t) = scoreGames (initialLeague t) (zip (fixtures t) results) 
+playGroup :: Model a => a -> Group -> League
+playGroup model (Group _ t) = scoreGames (initialLeague t) (zip (fixtures t) results) 
     where
-      results = map (uncurry resultFunc) (fixtures t) :: [GameResult]    
+      results = map (uncurry (play model)) (fixtures t) :: [GameResult]    
 
 lookupPosition :: [(GroupName,League)] -> (GroupName,Int) -> Team
 lookupPosition s (n,x) | x == 1 = fst $ head sortedList
@@ -129,23 +135,24 @@ lookupPosition s (n,x) | x == 1 = fst $ head sortedList
       l = Map.toList $ fromJust (lookup n s)
       sortedList = sortBy (\(_,a) (_,b) -> compare b a) l
 
-advanceToKnockOut :: WorldCup -> (Team -> Team -> GameResult) -> KnockoutStage
-advanceToKnockOut (WorldCup groups) playFunc = KnockoutStage teams where
-    groupWinners = zip [A .. H] (map (playGroup playFunc) groups) :: [(GroupName,League)]
+advanceToKnockOut :: Model a => WorldCup -> a -> KnockoutStage
+advanceToKnockOut (WorldCup groups) model = KnockoutStage teams where
+    groupWinners = zip [A .. H] (map (playGroup model) groups) :: [(GroupName,League)]
     rules = [(A,1),(F,1),(B,1),(E,1),(C,1),(H,1),(D,1),(G,1),
              (B,2),(E,2),(A,2),(F,2),(D,2),(G,2),(C,2),(H,2)]
     teams = map (lookupPosition groupWinners) rules
 
-nextRound :: (Team -> Team -> Team) -> KnockoutStage -> KnockoutStage
+nextRound :: Model a => a -> KnockoutStage -> KnockoutStage
 nextRound _ (KnockoutStage (x:[])) = KnockoutStage [x]
-nextRound winFunc (KnockoutStage teams) = KnockoutStage results where
+nextRound model (KnockoutStage teams) = KnockoutStage results where
     len = length teams `div` 2
     matchUps = uncurry zip $ splitAt len teams
-    results = map (uncurry winFunc) matchUps
+    results = map (uncurry (winner model)) matchUps
 
 -- simulate worldCup (play) (winner)
-simulate :: WorldCup -> (Team -> Team -> GameResult) -> (Team -> Team -> Team) -> Team
-simulate wc leagueFunc winFunc = head x where
-    knockOut = advanceToKnockOut wc leagueFunc
-    rounds = iterate (nextRound winFunc) knockOut
+simulate :: Model a => WorldCup -> a -> Team
+simulate wc model = head x where
+    knockOut = advanceToKnockOut wc model
+    rounds = iterate (nextRound model) knockOut
     KnockoutStage x = rounds !! 4
+
