@@ -38,13 +38,13 @@ class Model a where
     play :: a -> Team -> Team -> GameResult
     winner :: a -> Team -> Team -> Team
 
-data FifaRankingModel = FifaRankingModel {
+data RankingModel = RankingModel {
       ratings :: [(Team,Ranking)]
 }
 
-instance Model FifaRankingModel where
-    play m t1 t2 = play' t1 t2
-    winner m t1 t2 = winner' t1 t2
+instance Model RankingModel where
+    play m = play'
+    winner m = winner'
 
 play' :: Team -> Team -> GameResult
 play' x y = case result of
