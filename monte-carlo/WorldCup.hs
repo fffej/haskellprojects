@@ -8,7 +8,7 @@ import Control.Monad.State
 
 import System.Random
 
-type Ranking = Int
+type Ranking = Double
 
 type League = Map.Map Team Int
 
@@ -40,29 +40,29 @@ class Model a where
 
 data RankingModel = RankingModel {
       ratings :: [(Team,Ranking)]
-}
+} deriving (Show)
 
 instance Model RankingModel where
-    play m = play'
-    winner m = winner'
+    play = play'
+    winner = winner'
 
-play' :: Team -> Team -> GameResult
-play' x y = case result of
+play' :: RankingModel -> Team -> Team -> GameResult
+play' (RankingModel m) x y = case result of
              GT -> Win
              LT -> Lose
-             EQ -> Lose
+             EQ -> Draw
     where
-      r1 = fromJust $ lookup x rankings28April
-      r2 = fromJust $ lookup y rankings28April
+      r1 = fromJust $ lookup x m
+      r2 = fromJust $ lookup y m
       result = compare r1 r2
 
-winner' :: Team -> Team -> Team
-winner' x y = case result of
-               Win -> x
-               Lose -> y
-               Draw -> winner' x y -- TODO slightly infinite
+winner' :: RankingModel -> Team -> Team -> Team
+winner' m x y = case result of
+                  Win -> x
+                  Lose -> y
+                  Draw -> x 
     where
-      result = play' x y
+      result = play' m x y
 
 -- |Simulate the world cup
 rankings28April :: [(Team,Ranking)]
@@ -123,9 +123,10 @@ initialLeague :: (Team,Team,Team,Team) -> League
 initialLeague (a,b,c,d) = Map.fromList [(a,0),(b,0),(c,0),(d,0)]
 
 playGroup :: Model a => a -> Group -> League
-playGroup model (Group _ t) = scoreGames (initialLeague t) (zip (fixtures t) results) 
+playGroup model (Group _ t) = scoreGames (initialLeague t) (zip matches results) 
     where
-      results = map (uncurry (play model)) (fixtures t) :: [GameResult]    
+      matches = fixtures t
+      results = map (uncurry (play model)) matches :: [GameResult]    
 
 lookupPosition :: [(GroupName,League)] -> (GroupName,Int) -> Team
 lookupPosition s (n,x) | x == 1 = fst $ head sortedList
@@ -149,10 +150,46 @@ nextRound model (KnockoutStage teams) = KnockoutStage results where
     matchUps = uncurry zip $ splitAt len teams
     results = map (uncurry (winner model)) matchUps
 
--- simulate worldCup (play) (winner)
 simulate :: Model a => WorldCup -> a -> Team
 simulate wc model = head x where
     knockOut = advanceToKnockOut wc model
     rounds = iterate (nextRound model) knockOut
-    KnockoutStage x = rounds !! 4
+    KnockoutStage x = rounds !! 8
 
+simulate2 :: Model a => WorldCup -> a -> [Team]
+simulate2 wc model = x where
+    knockOut = advanceToKnockOut wc model
+    rounds = iterate (nextRound model) knockOut
+    KnockoutStage x = rounds !! 3
+
+
+
+simulations :: Model a => WorldCup -> [a] -> League
+simulations wc = foldl (simulateOne wc) Map.empty
+
+simulateOne :: Model a => WorldCup -> League -> a -> League
+simulateOne wc league model = Map.insertWith (+) winner 1 league
+    where 
+      winner = simulate wc model
+
+createRatings :: ([(Team,Ranking)],[Double]) -> ([(Team,Ranking)],[Double])
+createRatings (t,p) = (map (\(x,(w,r)) -> (w,x*r)) (zip rs t),rest) where
+    (rs,rest) = splitAt (length t) p
+
+createRankings :: [RankingModel]
+createRankings = map RankingModel $ map fst $ iterate createRatings (rankings28April,randomDoubles)
+
+seed :: Int
+seed = 32158972315                              
+
+generator :: StdGen
+generator = mkStdGen seed
+  
+randomDoubles :: [Double]
+randomDoubles = map (\x -> (x*0.1) + 0.95) (randoms generator) 
+
+main :: IO ()
+main = do
+  let models = take 1000 createRankings
+      results = simulations worldCup models
+  print results
