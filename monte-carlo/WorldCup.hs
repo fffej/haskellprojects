@@ -158,7 +158,7 @@ simulate :: Model a => WorldCup -> a -> Team
 simulate wc model = head x where
     knockOut = advanceToKnockOut wc model
     rounds = iterate (nextRound model) knockOut
-    KnockoutStage x = rounds !! 8
+    KnockoutStage x = rounds !! 4
 
 simulations :: Model a => WorldCup -> [a] -> League
 simulations wc = foldl (simulateOne wc) Map.empty
