@@ -2,9 +2,8 @@ module WorldCup where
 
 import Data.Maybe (fromJust)
 import Data.List (sortBy)
+import Data.List.Split (splitEvery)
 import qualified Data.Map as Map
-
-import Control.Monad.State
 
 import System.Random
 
@@ -105,8 +104,15 @@ groupG = makeGroup G (BRA, PRK, CIV, POR)
 groupH :: Group
 groupH = makeGroup H (ESP, SUI, HON, CHI)
 
+rules :: [(GroupName,Int)]
+rules = [(A,1),(F,1),(B,1),(E,1),(C,1),(H,1),(D,1),(G,1),
+         (B,2),(E,2),(A,2),(F,2),(D,2),(G,2),(C,2),(H,2)]
+
+wcGroups :: [Group]
+wcGroups = [groupA,groupB,groupC,groupD,groupE,groupF,groupG,groupH]
+
 worldCup :: WorldCup
-worldCup = WorldCup [groupA,groupB,groupC,groupD,groupE,groupF,groupG,groupH]
+worldCup = WorldCup wcGroups
 
 scoreGame :: League -> ((Team,Team),GameResult) -> League
 scoreGame r ((x,_),Win) = Map.insertWith (+) x 3 r
@@ -139,8 +145,6 @@ lookupPosition s (n,x) | x == 1 = fst $ head sortedList
 advanceToKnockOut :: Model a => WorldCup -> a -> KnockoutStage
 advanceToKnockOut (WorldCup groups) model = KnockoutStage teams where
     groupWinners = zip [A .. H] (map (playGroup model) groups) :: [(GroupName,League)]
-    rules = [(A,1),(F,1),(B,1),(E,1),(C,1),(H,1),(D,1),(G,1),
-             (B,2),(E,2),(A,2),(F,2),(D,2),(G,2),(C,2),(H,2)]
     teams = map (lookupPosition groupWinners) rules
 
 nextRound :: Model a => a -> KnockoutStage -> KnockoutStage
@@ -156,28 +160,21 @@ simulate wc model = head x where
     rounds = iterate (nextRound model) knockOut
     KnockoutStage x = rounds !! 8
 
-simulate2 :: Model a => WorldCup -> a -> [Team]
-simulate2 wc model = x where
-    knockOut = advanceToKnockOut wc model
-    rounds = iterate (nextRound model) knockOut
-    KnockoutStage x = rounds !! 3
-
-
-
 simulations :: Model a => WorldCup -> [a] -> League
 simulations wc = foldl (simulateOne wc) Map.empty
 
 simulateOne :: Model a => WorldCup -> League -> a -> League
-simulateOne wc league model = Map.insertWith (+) winner 1 league
+simulateOne wc league model = Map.insertWith (+) w 1 league
     where 
-      winner = simulate wc model
+      w = simulate wc model
 
-createRatings :: ([(Team,Ranking)],[Double]) -> ([(Team,Ranking)],[Double])
-createRatings (t,p) = (map (\(x,(w,r)) -> (w,x*r)) (zip rs t),rest) where
-    (rs,rest) = splitAt (length t) p
+createRatings :: [Double] -> [(Team,Ranking)]
+createRatings p = map (\(x,(w,r)) -> (w,x*r)) (zip p rankings28April) where
 
 createRankings :: [RankingModel]
-createRankings = map RankingModel $ map fst $ iterate createRatings (rankings28April,randomDoubles)
+createRankings = map (RankingModel . createRatings) weightings
+    where
+      weightings = splitEvery 32 randomDoubles
 
 seed :: Int
 seed = 32158972315                              
@@ -186,10 +183,10 @@ generator :: StdGen
 generator = mkStdGen seed
   
 randomDoubles :: [Double]
-randomDoubles = map (\x -> (x*0.1) + 0.95) (randoms generator) 
+randomDoubles = map (\x -> (x*0.6) + 0.70) (randoms generator) 
 
 main :: IO ()
 main = do
-  let models = take 1000 createRankings
+  let models = (take 100000 createRankings)
       results = simulations worldCup models
   print results
