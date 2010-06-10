@@ -53,7 +53,7 @@ play' (RankingModel m) x y = case result of
     where
       r1 = fromJust $ lookup x m
       r2 = fromJust $ lookup y m
-      result = compare r1 r2
+      result = compare (truncate r1 `div` 25) (truncate r2 `div` 25)
 
 winner' :: RankingModel -> Team -> Team -> Team
 winner' m x y = case result of
@@ -104,15 +104,15 @@ groupG = makeGroup G (BRA, PRK, CIV, POR)
 groupH :: Group
 groupH = makeGroup H (ESP, SUI, HON, CHI)
 
-rules :: [(GroupName,Int)]
-rules = [(A,1),(F,1),(B,1),(E,1),(C,1),(H,1),(D,1),(G,1),
-         (B,2),(E,2),(A,2),(F,2),(D,2),(G,2),(C,2),(H,2)]
-
 wcGroups :: [Group]
 wcGroups = [groupA,groupB,groupC,groupD,groupE,groupF,groupG,groupH]
 
 worldCup :: WorldCup
 worldCup = WorldCup wcGroups
+
+rules :: [(GroupName,Int)]
+rules = [(A,1),(F,1),(B,1),(E,1),(C,1),(H,1),(D,1),(G,1),
+         (B,2),(E,2),(A,2),(F,2),(D,2),(G,2),(C,2),(H,2)]
 
 scoreGame :: League -> ((Team,Team),GameResult) -> League
 scoreGame r ((x,_),Win) = Map.insertWith (+) x 3 r
