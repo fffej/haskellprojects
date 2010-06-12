@@ -1,13 +1,13 @@
 module Orbit where
 
-import Data.List (delete)
+import Data.List (delete,(\\),nub,nubBy)
 
 -- Phantom types so as to not mix up quantities
 data Position = Position deriving Eq
 data Velocity = Velocity deriving Eq
 data Force = Force deriving Eq
 
-data Vec a = Vec Double Double deriving Eq
+data Vec a = Vec Double Double deriving (Show,Eq)
 
 data Object = Object {
       position :: Vec Position
@@ -15,7 +15,7 @@ data Object = Object {
     , velocity :: Vec Velocity
     , force :: Vec Force
     , name :: String
-} deriving Eq
+} deriving (Show,Eq)
 
 origin :: Vec a -> Bool
 origin (Vec 0 0) = True
@@ -68,7 +68,7 @@ accumulateForces o os = o {
       forceFunc f target = add f (forceBetween o target)
 
 calculateForcesOnAll :: [Object] -> [Object]
-calculateForcesOnAll os = map (\x -> accumulateForces x os) os
+calculateForcesOnAll os = map (`accumulateForces` os) os
 
 accelerate :: Object -> Object
 accelerate o = o {
@@ -95,30 +95,40 @@ reposition o = o {
 repositionAll :: [Object] -> [Object]     
 repositionAll = map reposition
 
-collided :: Object -> Object -> Bool
-collided x y = distance (position x) (position y) <= 3
+collide :: Object -> Object -> Bool
+collide x y = distance (position x) (position y) <= 3
 
 rotate90 :: Vec a -> Vec a
-rotate90 = undefined
+rotate90 (Vec x y) = Vec (- y) x
 
 merge :: Object -> Object -> Object
 merge x y = Object {
-              position = average (position x) (position y)
+              position = add p1 d
             , mass = mergedMass
             , velocity = scale (add mv1 mv2) (1 / mergedMass)
             , force = add (force x) (force y)
-            , name = (name x) ++ "." ++ (name y)
+            , name = name x ++ "." ++ name y
             }
     where
       mx = mass x
       my = mass y
       mergedMass = mx + my
+      s = mx / mergedMass
+      p1 = position x
+      p2 = position y
+      uv = unit $ sub p2 p1
+      d = scale uv s
       mv1 = scale (velocity x) mx
       mv2 = scale (velocity y) my
-      v = scale (add mv1 mv2) (1 / mergedMass)
 
-collideAll :: [Object] -> [Object]
-collideAll os = os
-      
+-- UI Works, but this function doesn't.
+collideAll :: [Object] -> [Object] 
+collideAll os = merged ++ (os \\ collidedObjects)
+    where
+      pairs = nubBy (\(a,b) (c,d) -> a==d && b == c) [(x,y) | x<-os,y<-os, x/=y] :: [(Object,Object)]
+      collidedPairs = filter (uncurry collide) pairs
+      collidedObjects = nub $ concatMap (\(x,y) -> [x,y]) collidedPairs
+      merged = map (uncurry merge) collidedPairs
+
 updateAll :: [Object] -> [Object]
 updateAll = collideAll . calculateForcesOnAll . accelerateAll . repositionAll

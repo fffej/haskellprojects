@@ -8,18 +8,20 @@ import Control.Monad (unless,when,forM_)
 import Data.IORef (IORef, newIORef)
 import Data.List.Split (chunk)
 
-
 import System.Random
 
 delta :: Int
-delta = 50
+delta = 25
+
+objectCount :: Int
+objectCount = 60
 
 data State = State {
       world :: IORef [O.Object]
-}
+} 
 
 center :: Vec O.Position 
-center = Vec 500 500
+center = Vec 0 0
 
 type ObjectSeed = (Double,Double,Double,Double) 
 
@@ -27,12 +29,12 @@ makeState :: IO State
 makeState = do
   gen <- newStdGen
   let ns = map (\(a:b:c:d:[]) -> (a,b,c,d)) $ chunk 4 (randoms gen :: [Double])
-  p <- newIORef (createWorld (take 300 ns))
+  p <- newIORef (createWorld (take objectCount ns))
   return $ State p
 
 -- Create the world using the given source of randomness
 createWorld :: [ObjectSeed] -> [O.Object]
-createWorld rnds = map (\(s,n) -> randomObject s sun n) $ zip rnds [1..]
+createWorld rnds = sun : (map (\(s,n) -> randomObject s sun n) $ zip rnds [1..])
     where
       sun = O.Object center 30 (Vec 0 0) (Vec 0 0) "sun"
 
@@ -70,15 +72,17 @@ colorByMass m = (Color4 r g b 1) where
     g = 128.0
     
 sizeByMass :: Double -> Double
-sizeByMass = (+) 3                 
+sizeByMass = (+) 3.0 
 
 displayFunc :: State -> DisplayCallback
-displayFunc s = do
+displayFunc state = do
   clear [ColorBuffer,DepthBuffer]
   materialAmbient Front $= Color4 1 0 0 1
   materialDiffuse Front $= Color4 0 1 0 1
   materialSpecular Front $= Color4 1 1 1 1
   materialShininess Front $= 1000
+  s <- G.get (world state)
+  mapM_ drawObject s
   swapBuffers
 
 initGraphics :: IO ()
@@ -95,7 +99,7 @@ initGraphics = do
   specular (Light 0) $= Color4 1 1 1 1
   matrixMode $= Projection
   loadIdentity
-  ortho (-100) 100 (-100) (100) 100 (-100)
+  ortho (-500) 500 (-500) (500) 200 (-200)
 
 timerCallback :: State -> TimerCallback
 timerCallback state = do
