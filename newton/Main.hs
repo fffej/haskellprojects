@@ -34,7 +34,7 @@ makeState = do
 
 -- Create the world using the given source of randomness
 createWorld :: [ObjectSeed] -> [O.Object]
-createWorld rnds = sun : (map (\(s,n) -> randomObject s sun n) $ zip rnds [1..])
+createWorld rnds = sun : map (\(s,n) -> randomObject s sun n) (zip rnds [1..])
     where
       sun = O.Object center 30 (Vec 0 0) (Vec 0 0) "sun"
 
@@ -59,16 +59,16 @@ randomObject (mass,vel,a,b) sun n = o
 -- TODO color
 drawObject :: O.Object -> IO ()
 drawObject o = preservingMatrix $ do
-                 translate $ (Vector3 (realToFrac x) (realToFrac y) 0.0 :: Vector3 GLfloat)
+                 translate (Vector3 (realToFrac x) (realToFrac y) 0.0 :: Vector3 GLfloat)
                  renderObject Solid $ Sphere' radius 100 100
     where
       (Vec x y) = O.position o
       radius = realToFrac $ sizeByMass (mass o)
 
 colorByMass :: Double -> Color4 Double
-colorByMass m = (Color4 r g b 1) where
-    b = (min 255 (20.0 * m)) / 255.0
-    r = (min 100 (255.0 - b)) / 255.0
+colorByMass m = Color4 r g b 1 where
+    b = min 255 (20.0 * m) / 255.0
+    r = min 100 (255.0 - b) / 255.0
     g = 128.0
     
 sizeByMass :: Double -> Double
@@ -99,7 +99,7 @@ initGraphics = do
   specular (Light 0) $= Color4 1 1 1 1
   matrixMode $= Projection
   loadIdentity
-  ortho (-500) 500 (-500) (500) 200 (-200)
+  ortho (-500) 500 (-500) 500 200 (-200)
 
 timerCallback :: State -> TimerCallback
 timerCallback state = do
