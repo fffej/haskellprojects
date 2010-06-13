@@ -36,7 +36,7 @@ makeState = do
 createWorld :: [ObjectSeed] -> [O.Object]
 createWorld rnds = sun : map (\(s,n) -> randomObject s sun n) (zip rnds [1..])
     where
-      sun = O.Object center 30 (Vec 0 0) (Vec 0 0) "sun"
+      sun = O.Object center 30 (Vec 0 0) (Vec 0 0) 
 
 
 randomPosition :: Double -> Double -> Vec O.Position -> Vec O.Position
@@ -53,7 +53,7 @@ randomObject :: (Double,Double,Double,Double) -> O.Object -> Int -> O.Object
 randomObject (mass,vel,a,b) sun n = o
     where
       p = randomPosition a b (O.position sun)      
-      o = O.Object p (mass * 0.2) (randomVelocity vel p sun) zero (show n)
+      o = O.Object p (mass * 0.2) (randomVelocity vel p sun) zero
                
 
 -- TODO color
