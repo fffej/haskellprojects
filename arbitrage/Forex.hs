@@ -35,9 +35,7 @@ data ForexEntry = ForexEntry {
 
 forexHistory :: GenParser Char st [ForexEntry]
 forexHistory = do
-  _ <- header
-  _ <- eol
-  result <- many entry
+  result <- (header >> eol >> many entry)
   eof
   return result
 
@@ -51,7 +49,7 @@ name :: GenParser Char st String
 name = many (noneOf ",\n")
 
 currencyPairParse :: GenParser Char st CurrencyPair
-currencyPairParse = liftM2 (,) currencyParse ((char '/') >> currencyParse)
+currencyPairParse = liftM2 (,) currencyParse (char '/' >> currencyParse)
 
 currencyParse :: GenParser Char st Currency
 currencyParse = do
@@ -63,7 +61,7 @@ entry :: GenParser Char st ForexEntry
 entry = do
   ticker <- parseInteger
   _ <- string ",D,"
-  trade <- currencyPairParse2
+  trade <- currencyPairParse
   _ <- char ','
   time <- timeParser
   _ <- char ','
@@ -99,9 +97,6 @@ readTime s | x == Nothing = error ("Undefined date format for " ++ s)
            | otherwise = fromJust x
     where
       x = parseTime defaultTimeLocale "%F %T" s
-
-dataFileDirectory :: String
-dataFileDirectory = "./data"
 
 parseFile :: FilePath -> IO [ForexEntry]
 parseFile s = do
