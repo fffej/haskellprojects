@@ -2,7 +2,7 @@ module Forex where
 
 import Text.ParserCombinators.Parsec
 
-import Control.Monad (liftM2,liftM5)
+import Control.Monad (liftM,liftM2,liftM5)
 
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
@@ -37,13 +37,13 @@ forexHistory :: GenParser Char st [ForexEntry]
 forexHistory = header >> eol >> endBy entry eol
 
 header :: GenParser Char st [String]
-header = sepBy name (char ',')
+header = sepBy cell (char ',')
 
 eol :: GenParser Char st Char
 eol = char '\n'
 
-name :: GenParser Char st String
-name = many (noneOf ",\n")
+cell :: GenParser Char st String
+cell = many (noneOf ",\n")
 
 currencyPairParse :: GenParser Char st CurrencyPair
 currencyPairParse = liftM2 (,) currencyParse (char '/' >> currencyParse)
@@ -62,14 +62,10 @@ entry = liftM5 ForexEntry parseInteger
                           (char ',' >> parseDouble)
 
 parseInteger :: GenParser Char st Integer
-parseInteger = do
-  s <- many (noneOf ",\n")
-  return (read s)
+parseInteger = liftM read cell
 
 parseDouble :: GenParser Char st Double
-parseDouble = do
-  s <- many (noneOf ",\n")
-  return (readDouble s) 
+parseDouble = liftM readDouble cell
 
 readDouble :: String -> Double
 readDouble s = read x 
@@ -78,9 +74,7 @@ readDouble s = read x
         | otherwise = s
 
 timeParser :: GenParser Char st UTCTime
-timeParser = do
-  s <- many (noneOf ",")
-  return (readTime s)
+timeParser = liftM readTime (many (noneOf ","))
 
 readTime :: String -> UTCTime
 readTime s | x == Nothing = error ("Undefined date format for " ++ s)
