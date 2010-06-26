@@ -34,10 +34,7 @@ data ForexEntry = ForexEntry {
     } deriving Show
 
 forexHistory :: GenParser Char st [ForexEntry]
-forexHistory = do
-  result <- (header >> eol >> many entry)
-  eof
-  return result
+forexHistory = header >> eol >> many entry
 
 header :: GenParser Char st [String]
 header = sepBy name (char ',')
