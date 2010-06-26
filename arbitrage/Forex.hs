@@ -2,6 +2,8 @@ module Forex where
 
 import Text.ParserCombinators.Parsec
 
+import Control.Monad (liftM2)
+
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
 import Data.Maybe
@@ -49,11 +51,7 @@ name :: GenParser Char st String
 name = many (noneOf ",\n")
 
 currencyPairParse :: GenParser Char st CurrencyPair
-currencyPairParse = do
-  source <- currencyParse
-  _ <- (char '/')
-  target <- currencyParse
-  return (source,target)
+currencyPairParse = liftM2 (,) currencyParse ((char '/') >> currencyParse)
 
 currencyParse :: GenParser Char st Currency
 currencyParse = do
@@ -65,7 +63,7 @@ entry :: GenParser Char st ForexEntry
 entry = do
   ticker <- parseInteger
   _ <- string ",D,"
-  trade <- currencyPairParse
+  trade <- currencyPairParse2
   _ <- char ','
   time <- timeParser
   _ <- char ','
