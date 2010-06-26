@@ -1,6 +1,7 @@
 module Forex where
 
 import Text.ParserCombinators.Parsec
+import Text.Parsec.Token
 
 import Control.Monad (liftM,liftM2,liftM5)
 
@@ -49,9 +50,7 @@ currencyPairParse :: GenParser Char st CurrencyPair
 currencyPairParse = liftM2 (,) currencyParse (char '/' >> currencyParse)
 
 currencyParse :: GenParser Char st Currency
-currencyParse = do
-  s <- many (noneOf "/,\n")
-  return (read s)
+currencyParse = liftM read (many (noneOf "/,\n"))
 
 -- 1029209135,D,AUD/CAD,2010-01-03 17:03:04,.944900,.945800
 entry :: GenParser Char st ForexEntry
