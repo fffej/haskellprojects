@@ -87,6 +87,14 @@ parseFile s = do
   case (parse forexHistory "Failed" c) of
     Left _ -> error "Failed to parse"
     Right q -> return q
+
+{-
+
+TODO next time I can't sleep
+
+(1) Use ByteString.  Need parsing to be fast.  There's GB of data to analyse
+
+-}
   
 
 {-
