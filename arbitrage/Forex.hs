@@ -2,7 +2,7 @@ module Forex where
 
 import Text.ParserCombinators.Parsec
 
-import Control.Monad (liftM2)
+import Control.Monad (liftM2,liftM5)
 
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
@@ -34,7 +34,7 @@ data ForexEntry = ForexEntry {
     } deriving Show
 
 forexHistory :: GenParser Char st [ForexEntry]
-forexHistory = header >> eol >> many entry
+forexHistory = header >> eol >> endBy entry eol
 
 header :: GenParser Char st [String]
 header = sepBy name (char ',')
@@ -55,18 +55,11 @@ currencyParse = do
 
 -- 1029209135,D,AUD/CAD,2010-01-03 17:03:04,.944900,.945800
 entry :: GenParser Char st ForexEntry
-entry = do
-  ticker <- parseInteger
-  _ <- string ",D,"
-  trade <- currencyPairParse
-  _ <- char ','
-  time <- timeParser
-  _ <- char ','
-  bid <- parseDouble
-  _ <- char ','
-  ask <- parseDouble
-  _ <- eol
-  return (ForexEntry ticker trade time bid ask)
+entry = liftM5 ForexEntry parseInteger
+                          (string ",D," >> currencyPairParse)
+                          (char ',' >> timeParser)
+                          (char ',' >> parseDouble)
+                          (char ',' >> parseDouble)
 
 parseInteger :: GenParser Char st Integer
 parseInteger = do
