@@ -1,13 +1,14 @@
-module Forex where
+module Forex (main) where
 
 import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
 import Text.Parsec.ByteString
-import Control.Monad (liftM,liftM2,liftM5)
+import Control.Monad (liftM,liftM2,liftM5,forM,filterM)
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
 import Data.Maybe
 import qualified Data.ByteString as B
 
+import System.Directory (getDirectoryContents, doesFileExist)
 import System.Locale (defaultTimeLocale)
 
 data Currency = AUD
@@ -82,11 +83,24 @@ readTime s | x == Nothing = error ("Undefined date format for " ++ s)
 
 parseFile :: FilePath -> IO [ForexEntry]
 parseFile s = do
+  putStrLn $ "Reading" ++ s
   c <- B.readFile s
   case (parse forexHistory "Failed" c) of
     Left _ -> error "Failed to parse"
     Right q -> return q
 
+loadDataFromDirectory :: FilePath -> IO [ForexEntry]
+loadDataFromDirectory dir = do
+  allEntries <- getDirectoryContents dir
+  files <- filterM doesFileExist (map (\x -> dir ++ x) allEntries)
+  print files
+  results <- forM files parseFile
+  return (concat results)
+
+main = do
+  a <- loadDataFromDirectory "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/"
+  print (length a)
+  
 {-
 
 <a href="http://en.wikipedia.org/wiki/Arbitrage">Arbitrage</a> is <quote>the practice of taking advantage of a price difference between two or more markets, striking a combination of matching deals that capitalize upon the imbalance, the profit being the difference between the market prices.  
