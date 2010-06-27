@@ -6,7 +6,7 @@ import Control.Monad (liftM,liftM2,liftM5)
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
 import Data.Maybe
-import Data.ByteString as B
+import qualified Data.ByteString as B
 
 import System.Locale (defaultTimeLocale)
 
@@ -68,7 +68,7 @@ parseDouble = liftM readDouble cell
 readDouble :: String -> Double
 readDouble s = read x 
     where
-      x | Prelude.head s == '.' = '0':s
+      x | head s == '.' = '0':s
         | otherwise = s
 
 timeParser :: GenParser Char st UTCTime
