@@ -1,13 +1,12 @@
 module Forex where
 
-import Text.ParserCombinators.Parsec
-import Text.Parsec.Token
-
+import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
+import Text.Parsec.ByteString
 import Control.Monad (liftM,liftM2,liftM5)
-
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
 import Data.Maybe
+import Data.ByteString as B
 
 import System.Locale (defaultTimeLocale)
 
@@ -69,7 +68,7 @@ parseDouble = liftM readDouble cell
 readDouble :: String -> Double
 readDouble s = read x 
     where
-      x | head s == '.' = '0':s
+      x | Prelude.head s == '.' = '0':s
         | otherwise = s
 
 timeParser :: GenParser Char st UTCTime
@@ -83,19 +82,10 @@ readTime s | x == Nothing = error ("Undefined date format for " ++ s)
 
 parseFile :: FilePath -> IO [ForexEntry]
 parseFile s = do
-  c <- readFile s
+  c <- B.readFile s
   case (parse forexHistory "Failed" c) of
     Left _ -> error "Failed to parse"
     Right q -> return q
-
-{-
-
-TODO next time I can't sleep
-
-(1) Use ByteString.  Need parsing to be fast.  There's GB of data to analyse
-
--}
-  
 
 {-
 
