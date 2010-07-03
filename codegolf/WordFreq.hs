@@ -22,18 +22,18 @@ maxLength :: [(String,Int)] -> Int
 maxLength = snd . head
 
 draw :: [(String,Int)] -> String
-draw w = ' ' : h ++ concatMap (drawItem ww) w
+draw w = (' ' : h ++ concatMap (drawItem ww) w)
     where
-      n = (snd . head) w -- max length
+      n = (snd . head) w -- max occurences of the term 
       lw = foldl1 max (map (length . fst) w) -- longest word
-      wi = 80 - (lw + n)
-      ww = wi `div` n
-      h = take (ww * n) (repeat '_') ++ "\n"
+      wi = 80 - (lw + 3) -- wi is the number of characters we have to fill
+      ww = ((realToFrac wi) / (realToFrac n)) :: Double -- width of each occurence should be max occurences
+      h = take (round (ww * realToFrac n)) (repeat '_') ++ "\n"
 
-drawItem :: Int -> (String,Int) -> String
+drawItem :: Double -> (String,Int) -> String
 drawItem ww (w,n) = "|" ++ (take x (repeat '_')) ++ "| " ++ w ++ "\n"
     where
-      x = n * ww
+      x = round ((realToFrac n) * ww)
 
 main :: IO ()
 main = interact (draw . countWords)

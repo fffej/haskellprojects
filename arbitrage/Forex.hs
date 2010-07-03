@@ -1,14 +1,13 @@
 module Forex (main) where
 
 import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
-import Text.Parsec.ByteString
-import Control.Monad (liftM,liftM2,liftM5,forM,filterM)
+import Text.Parsec.ByteString.Lazy
+import Control.Monad (liftM,liftM2,liftM5)
 import Data.Time.Clock
 import Data.Time.Format (parseTime)
 import Data.Maybe
-import qualified Data.ByteString as B
-
-import System.Directory (getDirectoryContents, doesFileExist)
+import Data.Ix
+import qualified Data.ByteString.Lazy as B
 import System.Locale (defaultTimeLocale)
 
 data Currency = AUD
@@ -22,16 +21,16 @@ data Currency = AUD
               | NOK
               | NZD
               | SEK
-                deriving (Read,Show)
+                deriving (Read,Show,Ord,Ix,Eq)
 
 type CurrencyPair = (Currency,Currency)
 
 data ForexEntry = ForexEntry {
-      lTid :: Integer
+      lTid :: Int
     , currencyPair :: CurrencyPair
     , rateDateTime :: UTCTime
-    , rateBid :: Double
-    , rateAsk :: Double
+    , rateBid :: Double  -- Price to the buyer
+    , rateAsk :: Double  -- Price to the seller
     } deriving Show
 
 forexHistory :: GenParser Char st [ForexEntry]
@@ -52,16 +51,15 @@ currencyPairParse = liftM2 (,) currencyParse (char '/' >> currencyParse)
 currencyParse :: GenParser Char st Currency
 currencyParse = liftM read (many (noneOf "/,\n"))
 
--- 1029209135,D,AUD/CAD,2010-01-03 17:03:04,.944900,.945800
 entry :: GenParser Char st ForexEntry
-entry = liftM5 ForexEntry parseInteger
+entry = liftM5 ForexEntry parseInt
                           (string ",D," >> currencyPairParse)
                           (char ',' >> timeParser)
                           (char ',' >> parseDouble)
                           (char ',' >> parseDouble)
 
-parseInteger :: GenParser Char st Integer
-parseInteger = liftM read cell
+parseInt :: GenParser Char st Int
+parseInt = liftM read cell
 
 parseDouble :: GenParser Char st Double
 parseDouble = liftM readDouble cell
@@ -83,22 +81,46 @@ readTime s | x == Nothing = error ("Undefined date format for " ++ s)
 
 parseFile :: FilePath -> IO [ForexEntry]
 parseFile s = do
-  putStrLn $ "Reading" ++ s
+  putStrLn $ "Reading " ++ s
   c <- B.readFile s
   case (parse forexHistory "Failed" c) of
     Left _ -> error "Failed to parse"
     Right q -> return q
 
-loadDataFromDirectory :: FilePath -> IO [ForexEntry]
-loadDataFromDirectory dir = do
-  allEntries <- getDirectoryContents dir
-  files <- filterM doesFileExist (map (\x -> dir ++ x) allEntries)
-  print files
-  results <- forM files parseFile
-  return (concat results)
+{-
+
+I grabbed the data from http://ratedata.gaincapital.com/ and used wget -r "http://ratedata.gaincapital.com/2010/01%20January/"
+
+You can bung it all together with cat *.csv > foo
+
+Once you've got the data you can "sort -k1,1 -n foo" to group it. 
+
+tail -n +XYZ foo.csv discards the first XYZ lines of a file.
+
+-}
+
+-- The weighted graph
+data Exchange = Exchange {
+      vertices :: [Currency]
+    }
+
+{- 
+
+Floyd-Warshall graph Algorithm.
+
+  Vertices are the currencies
+
+        BUY        SELL
+  GBP ------> USD ------> GBP
+
+  GBP ---> USD ---> EUR ---> GBP
+
+  Construct a graph where each vertex is a nation and there is an edge weighted lg(w(x,y)) from x to y if the exchange rate from currency x to currency y is w(x,y).  In arbitrage, we seek a cycle to convert currencies so that we end up with more money than we started with.
+
+-}
 
 main = do
-  a <- loadDataFromDirectory "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/"
+  a <- parseFile "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/sorted_data.csv"
   print (length a)
   
 {-
