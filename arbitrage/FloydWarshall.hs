@@ -7,7 +7,7 @@ import Data.Maybe
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
 
-import Control.Monad (forM_,liftM,liftM2)
+import Control.Monad (forM_,liftM2)
 
 data Vertex a = Vertex a    
               deriving (Show)
@@ -16,7 +16,7 @@ data Vertex a = Vertex a
 type DVector = M.IOVector Double
 
 -- which carries around the bounds
-data Array = Array Int DVector
+data Array = Array Int DVector DVector
 
 class Enum b => Graph a b | a -> b where
     vertices ::  a -> [Vertex b]
@@ -31,7 +31,8 @@ createArray :: Int -> IO Array
 createArray n = do
   let n2 = n*n 
   v <- GM.unsafeNewWith n2 0
-  return (Array n2 v)
+  p <- GM.unsafeNewWith n2 0
+  return (Array n2 v p)
 
 initializeArray :: (Graph a b) => a -> IO Array
 initializeArray g = do
@@ -54,16 +55,26 @@ floydWarshall g arr = do
          (\i -> forM_ [0..n]
           (\j -> forM_ [0..n]
            (\_ -> do
-              val <- (liftM2 min) (readVal arr (i,j)) (liftM2 (+) (readVal arr (i,k)) (readVal arr (k,j)))
-              _ <- writeVal arr (i,j) val
+              ij <- readVal arr (i,j)
+              ikkj <- liftM2 (+) (readVal arr (i,k)) (readVal arr (k,j))
+              _ <- if (ikkj < ij) then (writeVal arr (i,j) ikkj) else (writePath arr (i,j) (fromIntegral k))
               return ()))))
+
+reconstructPath :: Graph a b => a -> Array -> IO [b]
+reconstructPath = undefined
 
 ix :: Int -> (Int,Int) -> Int
 ix n (i,j) = i*n + j
 
 writeVal :: Array -> (Int,Int) -> Double -> IO ()
-writeVal (Array n vec) p = GM.unsafeWrite vec (ix n p)
+writeVal (Array n vec _) p = GM.unsafeWrite vec (ix n p)
+
+writePath :: Array -> (Int,Int) -> Double -> IO ()
+writePath (Array n _ vec) p = GM.unsafeWrite vec (ix n p)
 
 readVal :: Array -> (Int,Int) -> IO Double 
-readVal (Array n vec) p = GM.unsafeRead vec (ix n p)
+readVal (Array n vec _) p = GM.unsafeRead vec (ix n p)
+
+readPath :: Array -> (Int,Int) -> IO Double
+readPath (Array n _ vec) p = GM.unsafeRead vec (ix n p)
 
