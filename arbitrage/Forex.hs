@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Forex (main) where
 
 import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
@@ -10,6 +11,8 @@ import Data.Ix
 import qualified Data.ByteString.Lazy as B
 import System.Locale (defaultTimeLocale)
 
+import FloydWarshall
+
 data Currency = AUD
               | CAD
               | CHF
@@ -21,7 +24,7 @@ data Currency = AUD
               | NOK
               | NZD
               | SEK
-                deriving (Read,Show,Ord,Ix,Eq)
+                deriving (Read,Show,Ord,Ix,Eq,Enum)
 
 type CurrencyPair = (Currency,Currency)
 
@@ -118,10 +121,11 @@ Floyd-Warshall graph Algorithm.
   Construct a graph where each vertex is a nation and there is an edge weighted lg(w(x,y)) from x to y if the exchange rate from currency x to currency y is w(x,y).  In arbitrage, we seek a cycle to convert currencies so that we end up with more money than we started with.
 
 -}
-
+{-
 main = do
   a <- parseFile "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/sorted_data.csv"
   print (length a)
+-}
   
 {-
 
@@ -133,3 +137,22 @@ A simple example is a tennis match between two evenly matched players.  One book
 Arbitrage situations shouldn't exist in an efficient market, but the <i>arbitrage paradox</i> (Grossman and Stiglitz) says that if arbitrage is never observed, market participants may not have sufficient incentives to watch the market, in which case arbitrage opportunities could arise.  One resolution to this paradox is that opportunities do exist, though they are very short lived.
 
 -}
+
+data ForexExchange = ForexExchange
+
+instance Graph ForexExchange Currency where
+    vertices = vertices'
+    edge = edge'
+    fromInt = fromInt'
+
+vertices' :: ForexExchange -> [Vertex Currency]
+vertices' _ = map Vertex [AUD .. SEK]
+
+edge' :: ForexExchange -> Vertex a -> Vertex a -> Maybe Double
+edge' = undefined
+
+fromInt' :: ForexExchange -> Int -> Vertex a
+fromInt' = undefined 
+
+main = do
+  print "Hello world."
