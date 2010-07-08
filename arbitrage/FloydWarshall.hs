@@ -7,7 +7,7 @@ import Data.Maybe
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
 
-import Control.Monad (forM_,liftM2,when)
+import Control.Monad (forM_,liftM2,liftM3,when)
 
 data Vertex a = Vertex a    
               deriving (Show)
@@ -28,13 +28,9 @@ class Enum b => Graph a b | a -> b where
 infinity :: Double
 infinity = 1000000
 
--- TODO remove do notation with a cunning lift
 createArray :: Int -> IO Array
-createArray n = do
-  let n3 = n*n*n 
-  v <- GM.newWith n3 0 
-  p <- GM.newWith n3 (- 1) 
-  return (Array n v p)
+createArray n = liftM2 (Array n) (GM.newWith n3 0) (GM.newWith n3 (- 1)) where
+    n3 = n * n * n
 
 -- |Fill up the arrays based on the data contained in the graph
 initializeArray :: (Graph a b) => a -> IO Array
@@ -59,9 +55,7 @@ floydWarshall g arr = do
                (\k -> do
                   mij <- readVal arr (m,i,j)
                   temp <- liftM2 (*) (readVal arr (m - 1,i,k)) (readVal arr (0,k,j))
-                  when (mij < temp) (do
-                                      writeVal arr (m,i,j) temp
-                                      writePath arr (m,i,j) k)))))
+                  when (mij < temp) (writeVal arr (m,i,j) temp >> writePath arr (m,i,j) k)))))
 
 printArray :: Graph a b => a -> Array -> IO ()
 printArray g arr = do
