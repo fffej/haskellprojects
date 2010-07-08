@@ -14,13 +14,13 @@ import System.Locale (defaultTimeLocale)
 import FloydWarshall
 
 data Currency = AUD
+              | GBP
+              | USD
               | CAD
               | CHF
               | JPY
-              | USD
               | EUR
               | DKK
-              | GBP
               | NOK
               | NZD
               | SEK
@@ -155,6 +155,7 @@ edge' f (Vertex a) (Vertex b) | a == GBP && b == USD = Just 0.88
                               | a == USD && b == AUD = Just 0.15
                               | a == AUD && b == GBP = Just 0.89
                               | a == AUD && b == USD = Just 5.10
+                              | a == b = Just 1
                               | otherwise = Nothing
 {- 
     GBP  USD  AUD
@@ -167,4 +168,7 @@ fromInt' :: ForexExchange -> Int -> Vertex Currency
 fromInt' f i = Vertex (toEnum i)
 
 main = do
-  print "Hello world."
+  let a = ForexExchange
+  b <- initializeArray a
+  _ <- floydWarshall a b
+  printArray a b
