@@ -1,23 +1,34 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module FloydWarshall where
 
 import Data.Maybe
+import Data.Typeable (Typeable)
+import qualified Data.Vector.Generic as V
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
 
-import Control.Monad (forM_,liftM2,liftM3,when)
+import Control.Exception
+import Control.Monad (forM,forM_,liftM2,liftM3,when)
 
 data Vertex a = Vertex a    
               deriving (Show)
 
--- A mutable vector of doubles represents the 2D array
+-- A mutable vector represents the 3D array
 type DVector = M.IOVector Double
 type IVector = M.IOVector Int
 
 -- which carries around the bounds
 data Array = Array Int DVector IVector
+
+-- Use this to break out of the loop (vomit copiously, but want to get
+-- the code working like the C code before functionalizing it)
+data ArbitrageFound = ArbitrageFound Int
+                      deriving(Show, Typeable)
+
+instance Exception ArbitrageFound
 
 class Enum b => Graph a b | a -> b where
     vertices ::  a -> [Vertex b]
@@ -30,32 +41,44 @@ infinity = 1000000
 
 createArray :: Int -> IO Array
 createArray n = liftM2 (Array n) (GM.newWith n3 0) (GM.newWith n3 (- 1)) where
-    n3 = n * n * n
+    n3 = n*n*n
 
 -- |Fill up the arrays based on the data contained in the graph
 initializeArray :: (Graph a b) => a -> IO Array
 initializeArray g = do
-  arr <- createArray (length (vertices g))
   let n = (length $ vertices g) - 1
+  arr <- createArray (n+1)
   forM_ [0..n]
         (\i -> forM_ [0..n]
-         (\j -> do
+         (\j -> do -- TODO simplify
             let w = edge g (fromInt g i) (fromInt g j)
                 v = maybe infinity (const (fromJust w)) w          
             writeVal arr (0,i,j) v))
   return arr
 
-floydWarshall :: Graph a b => a -> Array -> IO ()
+findArbitrage :: (Graph a b) => a -> IO (Maybe [b])
+findArbitrage g = do
+  a <- initializeArray g
+  result <- floydWarshall g a
+  print result
+  return Nothing
+
+floydWarshall :: Graph a b => a -> Array -> IO (Maybe Int)
 floydWarshall g arr = do
   let n = (length $ vertices g) - 1
-  forM_ [1..n]
-            (\m -> forM_ [0..n]
-             (\i -> forM_ [0..n]
-              (\j -> forM_ [0..n]
-               (\k -> do
-                  mij <- readVal arr (m,i,j)
-                  temp <- liftM2 (*) (readVal arr (m - 1,i,k)) (readVal arr (0,k,j))
-                  when (mij < temp) (writeVal arr (m,i,j) temp >> writePath arr (m,i,j) k)))))
+  let x = forM_ [1..n]
+          (\m -> forM_ [0..n]
+           (\i -> forM_ [0..n]
+            (\j -> forM_ [0..n]
+             (\k -> do
+                mij <- readVal arr (m,i,j)
+                temp <- liftM2 (*) (readVal arr (m - 1,i,k)) (readVal arr (0,k,j))
+                when (mij < temp) 
+                         (writeVal arr (m,i,j) temp >> writePath arr (m,i,j) k)
+                currentVal <- readVal arr (m,i,i)
+                when (currentVal > 1.01) 
+                         (throw (ArbitrageFound i))))))
+  handle (\(ArbitrageFound i) -> return $ Just i) (x >> return Nothing)
 
 printArray :: Graph a b => a -> Array -> IO ()
 printArray g arr = do
@@ -82,4 +105,3 @@ readVal (Array n vec _) p = GM.read vec (ix n p)
 
 readPath :: Array -> (Int,Int,Int) -> IO Int
 readPath (Array n _ vec) p = GM.read vec (ix n p)
-

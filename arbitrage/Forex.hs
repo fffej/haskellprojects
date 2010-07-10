@@ -167,8 +167,6 @@ AUD 1.10 0.15 1.00
 fromInt' :: ForexExchange -> Int -> Vertex Currency
 fromInt' f i = Vertex (toEnum i)
 
-main = do
-  let a = ForexExchange
-  b <- initializeArray a
-  _ <- floydWarshall a b
-  printArray a b
+main = findArbitrage (ForexExchange)
+  
+  
