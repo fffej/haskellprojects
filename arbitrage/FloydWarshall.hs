@@ -46,7 +46,7 @@ createArray n = liftM2 (Array n) (GM.newWith n3 0) (GM.newWith n3 (- 1)) where
 -- |Fill up the arrays based on the data contained in the graph
 initializeArray :: (Graph a b) => a -> IO Array
 initializeArray g = do
-  let n = (length $ vertices g) - 1
+  let n = length (vertices g) - 1
   arr <- createArray (n+1)
   forM_ [0..n]
         (\i -> forM_ [0..n]
@@ -86,7 +86,7 @@ findArbitrage g = do
 
 floydWarshall :: Graph a b => a -> Array -> IO (Maybe ArbitrageFound)
 floydWarshall g arr = do
-  let n = (length $ vertices g) - 1
+  let n = length (vertices g) - 1
   let x = forM_ [1..n]
           (\m -> forM_ [0..n]
            (\i -> forM_ [0..n]
@@ -103,7 +103,7 @@ floydWarshall g arr = do
 
 printArray :: Graph a b => a -> Array -> IO ()
 printArray g arr = do
-  let n = (length $ vertices g) - 1
+  let n = length (vertices g) - 1
   forM_ [0..n]
              (\k -> forM_ [0..n]
               (\i -> forM_ [0..n]

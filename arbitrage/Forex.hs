@@ -167,6 +167,6 @@ AUD 1.10 0.15 1.00
 fromInt' :: ForexExchange -> Int -> Vertex Currency
 fromInt' f i = Vertex (toEnum i)
 
-main = findArbitrage (ForexExchange)
+main = findArbitrage ForexExchange
   
   
