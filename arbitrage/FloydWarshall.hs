@@ -11,7 +11,7 @@ import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
 
 import Control.Exception
-import Control.Monad (forM,forM_,liftM2,liftM3,when)
+import Control.Monad (forM,forM_,liftM,liftM2,liftM3,when)
 
 data Vertex a = Vertex a    
               deriving (Show)
@@ -25,7 +25,7 @@ data Array = Array Int DVector IVector
 
 -- Use this to break out of the loop (vomit copiously, but want to get
 -- the code working like the C code before functionalizing it)
-data ArbitrageFound = ArbitrageFound Int
+data ArbitrageFound = ArbitrageFound Int Int
                       deriving(Show, Typeable)
 
 instance Exception ArbitrageFound
@@ -56,14 +56,35 @@ initializeArray g = do
             writeVal arr (0,i,j) v))
   return arr
 
+getPath :: (Graph a b) => ArbitrageFound -> a -> Array -> IO [b]
+getPath (ArbitrageFound steps i) g a = do
+  let Vertex v = fromInt g i
+  j <- readPath a (steps,i,i)
+  _ <- printArray g a
+  rest <- getPath' g a i (steps - 1) j
+  return (v:rest)
+
+getPath' :: (Graph a b) => a -> Array -> Int -> Int -> Int -> IO [b]
+getPath' g a i 0 j = return [v] 
+    where
+      (Vertex v) = fromInt g i
+
+getPath' g a i steps j = do
+  print (steps,i,j)
+  pathVal <- readPath a (steps,i,j)
+  let (Vertex v) = fromInt g pathVal
+  vs <- getPath' g a i (steps - 1) pathVal
+  return (v:vs)
+  
 findArbitrage :: (Graph a b) => a -> IO (Maybe [b])
 findArbitrage g = do
   a <- initializeArray g
   result <- floydWarshall g a
-  print result
-  return Nothing
+  case result of
+    Nothing -> return Nothing
+    Just i -> liftM Just (getPath i g a)               
 
-floydWarshall :: Graph a b => a -> Array -> IO (Maybe Int)
+floydWarshall :: Graph a b => a -> Array -> IO (Maybe ArbitrageFound)
 floydWarshall g arr = do
   let n = (length $ vertices g) - 1
   let x = forM_ [1..n]
@@ -77,8 +98,8 @@ floydWarshall g arr = do
                          (writeVal arr (m,i,j) temp >> writePath arr (m,i,j) k)
                 currentVal <- readVal arr (m,i,i)
                 when (currentVal > 1.01) 
-                         (throw (ArbitrageFound i))))))
-  handle (\(ArbitrageFound i) -> return $ Just i) (x >> return Nothing)
+                         (throw (ArbitrageFound (1 + m) i))))))
+  handle (\i -> return $ Just i) (x >> return Nothing)
 
 printArray :: Graph a b => a -> Array -> IO ()
 printArray g arr = do
