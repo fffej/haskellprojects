@@ -6,12 +6,11 @@ module FloydWarshall where
 
 import Data.Maybe
 import Data.Typeable (Typeable)
-import qualified Data.Vector.Generic as V
 import qualified Data.Vector.Unboxed.Mutable as M
 import qualified Data.Vector.Generic.Mutable as GM
 
 import Control.Exception
-import Control.Monad (forM,forM_,liftM,liftM2,liftM3,when)
+import Control.Monad (forM_,liftM,liftM2,when)
 
 data Vertex a = Vertex a    
               deriving (Show)
@@ -65,7 +64,7 @@ getPath (ArbitrageFound steps i) g a = do
   return (v:rest)
 
 getPath' :: (Graph a b) => a -> Array -> Int -> Int -> Int -> IO [b]
-getPath' g a i 0 j = return [v] 
+getPath' g _ i 0 _ = return [v] 
     where
       (Vertex v) = fromInt g i
 
