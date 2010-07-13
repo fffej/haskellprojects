@@ -15,6 +15,14 @@ class Enum b => Graph a b | a -> b where
 infinity :: Double
 infinity = 1000000
 
+findArbitrage :: Graph a b => a -> Maybe [b]
+findArbitrage g | Nothing == maybePath = Nothing
+                | otherwise = Just sq
+    where
+      res = floydWarshall g
+      maybePath = arbChances res
+      sq = map (fromInt g) (steps res (fst $ fromJust maybePath))
+
 -- When the steps is zero it's simply the edge weights
 type FWResult = Array (Int,Int,Int) (Double,Int)
 
