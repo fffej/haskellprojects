@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Forex (main) where
+module Forex where
 
 import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
 import Text.Parsec.ByteString.Lazy
@@ -167,6 +167,5 @@ AUD 1.10 0.15 1.00
 fromInt' :: ForexExchange -> Int -> Vertex Currency
 fromInt' f i = Vertex (toEnum i)
 
-main = findArbitrage ForexExchange
   
   
