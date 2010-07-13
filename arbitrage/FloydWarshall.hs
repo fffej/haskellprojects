@@ -5,6 +5,7 @@ module FloydWarshall where
 
 import Data.Maybe
 import Data.Array
+import Data.List (maximumBy)
 
 class Enum b => Graph a b | a -> b where
     vertices ::  a -> [b]
@@ -29,32 +30,32 @@ type FWResult = Array (Int,Int,Int) (Double,Int)
 floydWarshall :: Graph a b => a -> FWResult
 floydWarshall g = arr
     where 
-      arr = array ((0,0,0),(n,n,n)) [((m,i,j),f m i j k) | 
+      arr = array ((0,0,0),(n,n,n)) [((m,i,j),f m i j) | 
                                      m <- [0..n],
                                      i <- [0..n],
-                                     j <- [0..n], 
-                                     k <- [0..n]]
+                                     j <- [0..n]]
       n = length (vertices g) - 1 
       f = floydWarshallStep g arr 
       
 
-floydWarshallStep :: Graph a b => a -> FWResult -> Int -> Int -> Int -> Int -> (Double,Int)
+floydWarshallStep :: Graph a b => a -> FWResult -> Int -> Int -> Int -> (Double,Int)
 
 -- |The base case simply initializes to the edges
-floydWarshallStep g _ 0 i j _ = (d,- 1)
+floydWarshallStep g _ 0 i j | i == j = (1,-1)
+                            | otherwise = (d,-1)
     where
       w = edge g (fromInt g i) (fromInt g j)
       d = maybe infinity (const (fromJust w)) w
 
 -- |The recursive case is defined in terms of the previous ones
-floydWarshallStep g prev m i j k = (bestVal,pathVal)
+floydWarshallStep g prev m i j = (bestVal,pathVal)
     where
-      best1 = (fst $ prev ! (m-1,i,k))
-      best2 = fst $ prev ! (0,k,j)
-      mij = 0 -- fst $ prev ! (m,i,j)
-      temp = best1 * best2
-      pathVal = if mij < temp then k else -1
-      bestVal = if mij < temp then temp else 0.0
+      n = length (vertices g) - 1 
+      bests1 = [fst $ prev ! (m-1,i,k) | k <- [0..n]]
+      bests2 = [fst $ prev ! (0,k,j) | k <- [0..n]]
+      bests = zip (zipWith (*) bests1 bests2) [0..n] -- maximum value
+      (bestVal,pathVal) = maximumBy (\(v,i) (x,j) -> compare v x) bests
+
 
 arbChances :: FWResult -> Maybe ((Int,Int,Int),(Double,Int))
 arbChances a | null c = Nothing
