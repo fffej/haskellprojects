@@ -1,19 +1,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 
 module FloydWarshall where
 
 import Data.Maybe
 import Data.Array
 
-data Vertex a = Vertex a    
-              deriving (Show)
-
 class Enum b => Graph a b | a -> b where
-    vertices ::  a -> [Vertex b]
-    edge :: a -> Vertex b -> Vertex b -> Maybe Double
-    fromInt :: a -> Int -> Vertex b
+    vertices ::  a -> [b]
+    edge :: a -> b -> b -> Maybe Double
+    fromInt :: a -> Int -> b
 
 -- An arbitrary representation of infinity!
 infinity :: Double
@@ -67,3 +63,7 @@ steps' a (1,i,j) = []
 steps' a (s,i,j) = v : (steps' a (s - 1,i,v))
     where
       v = snd $ a ! (s,i,j)
+
+
+
+

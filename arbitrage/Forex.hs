@@ -145,18 +145,18 @@ instance Graph ForexExchange Currency where
     edge = edge'
     fromInt = fromInt'
 
-vertices' :: ForexExchange -> [Vertex Currency]
-vertices' _ = [Vertex AUD, Vertex GBP, Vertex USD]
+vertices' :: ForexExchange -> [Currency]
+vertices' _ = [AUD, GBP, USD]
 
-edge' :: ForexExchange -> Vertex Currency -> Vertex Currency -> Maybe Double
-edge' f (Vertex a) (Vertex b) | a == GBP && b == USD = Just 0.88
-                              | a == GBP && b == AUD = Just 1.10
-                              | a == USD && b == GBP = Just 1.20
-                              | a == USD && b == AUD = Just 0.15
-                              | a == AUD && b == GBP = Just 0.89
-                              | a == AUD && b == USD = Just 5.10
-                              | a == b = Just 1
-                              | otherwise = Nothing
+edge' :: ForexExchange -> Currency -> Currency -> Maybe Double
+edge' f a b | a == GBP && b == USD = Just 0.88
+            | a == GBP && b == AUD = Just 1.10
+            | a == USD && b == GBP = Just 1.20
+            | a == USD && b == AUD = Just 0.15
+            | a == AUD && b == GBP = Just 0.89
+            | a == AUD && b == USD = Just 5.10
+            | a == b = Just 1
+            | otherwise = Nothing
 {- 
     GBP  USD  AUD
 GBP 1.00 1.20 0.89
@@ -164,8 +164,8 @@ USD 0.88 1.00 5.10
 AUD 1.10 0.15 1.00
 -}
 
-fromInt' :: ForexExchange -> Int -> Vertex Currency
-fromInt' f i = Vertex (toEnum i)
+fromInt' :: ForexExchange -> Int -> Currency
+fromInt' f i = toEnum i
 
   
   
