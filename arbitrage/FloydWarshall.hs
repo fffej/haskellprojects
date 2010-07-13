@@ -6,6 +6,7 @@ module FloydWarshall where
 import Data.Maybe
 import Data.Array
 import Data.List (maximumBy)
+import Debug.Trace
 
 class Enum b => Graph a b | a -> b where
     vertices ::  a -> [b]
@@ -41,20 +42,27 @@ floydWarshall g = arr
 floydWarshallStep :: Graph a b => a -> FWResult -> Int -> Int -> Int -> (Double,Int)
 
 -- |The base case simply initializes to the edges
-floydWarshallStep g _ 0 i j | i == j = (1,-1)
+floydWarshallStep g _ 0 i j | i == j = (1.0,-1)
                             | otherwise = (d,-1)
     where
       w = edge g (fromInt g i) (fromInt g j)
       d = maybe infinity (const (fromJust w)) w
 
 -- |The recursive case is defined in terms of the previous ones
-floydWarshallStep g prev m i j = (bestVal,pathVal)
+floydWarshallStep g a m i j = (bestVal,pathVal)
     where
       n = length (vertices g) - 1 
-      bests1 = [fst $ prev ! (m-1,i,k) | k <- [0..n]]
-      bests2 = [fst $ prev ! (0,k,j) | k <- [0..n]]
+      bests1 = [fst $ a ! (m-1,i,k) | k <- [0..n]]
+      bests2 = [fst $ a ! (0,k,j) | k <- [0..n]]
       bests = zip (zipWith (*) bests1 bests2) [0..n] -- maximum value
-      (bestVal,pathVal) = maximumBy (\(v,i) (x,j) -> compare v x) bests
+      (bestVal, pathVal) = foldl f (0.0,-1) [0..n]
+          where
+            f :: (Double,Int) -> Int -> (Double,Int)
+            f (b,p) k | b < (mik*okj) = (mik*okj,k)
+                      | otherwise = (b,p)
+                where
+                  mik = fst $ a ! (m-1,i,k)
+                  okj = fst $ a ! (0,k,j)
 
 
 arbChances :: FWResult -> Maybe ((Int,Int,Int),(Double,Int))
@@ -64,15 +72,15 @@ arbChances a | null c = Nothing
       c = filter (\((steps,i,j),(best,path)) -> steps > 1 && i == j && best > 1.01) (assocs a)
 
 -- #steps i to j
+-- THIS IS WRONG
 steps :: FWResult -> (Int,Int,Int) -> [Int]
-steps a (s,i,j) = i : steps' a (s,i,j) ++ [i]
+steps a (s,i,j) = i : (steps' a (s,i,j))
 
 steps' :: FWResult -> (Int,Int,Int) -> [Int]
-steps' a (1,i,j) = []
-steps' a (s,i,j) = v : (steps' a (s - 1,i,v))
+steps' a (0,i,j) = []
+steps' a (s,i,j) = p : steps' a (s-1,i,p)
     where
-      v = snd $ a ! (s,i,j)
-
+      p = snd $ a ! (s,i,j)
 
 
 

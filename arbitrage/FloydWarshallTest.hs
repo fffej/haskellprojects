@@ -10,6 +10,7 @@ import Data.List (nub)
 import Data.Map (Map,keys)
 import Data.Ix (Ix)
 import qualified Data.Map as Map
+import Data.Array
 
 data Unit = A | B | C | D | E | F | G 
             deriving (Read,Show,Ord,Ix,Eq,Enum)
@@ -37,12 +38,12 @@ fromInt' g = toEnum
 basicExchangeData :: Exchange
 basicExchangeData = Exchange (Map.fromList d)
     where
-      d = [((A,B), 0.88)
-          ,((A,C), 1.10)
-          ,((B,A), 1.20)
-          ,((B,C), 0.15)
-          ,((C,A), 0.89)
-          ,((C,B), 5.10)]
+      d = [((A,B), 1.2)
+          ,((A,C), 0.89)
+          ,((B,A), 0.88)
+          ,((B,C), 5.10)
+          ,((C,A), 1.1)
+          ,((C,B), 0.15)]
 
 moreComplex :: Exchange
 moreComplex = Exchange (Map.fromList d)
