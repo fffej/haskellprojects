@@ -5,8 +5,6 @@ module FloydWarshall where
 
 import Data.Maybe
 import Data.Array
-import Data.List (maximumBy)
-import Debug.Trace
 
 class Enum b => Graph a b | a -> b where
     vertices ::  a -> [b]
@@ -52,9 +50,6 @@ floydWarshallStep g _ 0 i j | i == j = (1.0,-1)
 floydWarshallStep g a m i j = (bestVal,pathVal)
     where
       n = length (vertices g) - 1 
-      bests1 = [fst $ a ! (m-1,i,k) | k <- [0..n]]
-      bests2 = [fst $ a ! (0,k,j) | k <- [0..n]]
-      bests = zip (zipWith (*) bests1 bests2) [0..n] -- maximum value
       (bestVal, pathVal) = foldl f (0.0,-1) [0..n]
           where
             f :: (Double,Int) -> Int -> (Double,Int)
@@ -69,17 +64,17 @@ arbChances :: FWResult -> Maybe ((Int,Int,Int),(Double,Int))
 arbChances a | null c = Nothing
              | otherwise = Just (head c)
     where
-      c = filter (\((steps,i,j),(best,path)) -> steps >= 1 && i == j && best > 1.01) (assocs a)
+      c = filter (\((s,i,j),(best,_)) -> s >= 1 && i == j && best > 1.01) (assocs a)
 
 -- #steps i to j
 -- THIS IS WRONG
 steps :: FWResult -> (Int,Int,Int) -> [Int]
-steps a (s,i,j) = reverse $ i : x  : (steps' a (s - 1,i,x)) ++ [i]
+steps a (s,i,j) = reverse $ i : x  : steps' a (s - 1,i,x) ++ [i]
     where
       x = snd $ a ! (s,i,j)
 
 steps' :: FWResult -> (Int,Int,Int) -> [Int]
-steps' a (0,i,j) = []
+steps' _ (0,_,_) = []
 steps' a (s,i,j) = p : steps' a (s-1,i,p)
     where
       p = snd $ a ! (s,i,j)

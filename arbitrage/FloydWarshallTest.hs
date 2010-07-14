@@ -1,5 +1,4 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module FloydWarshallTest where
 
@@ -8,7 +7,6 @@ import FloydWarshall
 import Test.HUnit
 import Data.List (nub)
 import Data.Map (Map,keys)
-import Data.Ix (Ix)
 import qualified Data.Map as Map
 import Data.Array
 
@@ -33,7 +31,7 @@ edge' :: Exchange -> Unit -> Unit -> Maybe Double
 edge' (Exchange d) x y = Map.lookup (x,y) d
 
 fromInt' :: Exchange -> Int -> Unit
-fromInt' g = toEnum
+fromInt' _ = toEnum
 
 basicExchangeData :: Exchange
 basicExchangeData = Exchange (Map.fromList d)
@@ -71,4 +69,21 @@ simpleOpportunity = Exchange (Map.fromList d)
     where
       d = [((A,B), 1.1), ((B,A), 0.95)]
 
-test1 = TestCase (assertEqual "Basic test case 1" (Just [A,C,A]) (findArbitrage basicExchangeData))
+test1 :: Test
+test1 = TestCase (assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage basicExchangeData))
+
+test2 :: Test
+test2 = TestCase (assertEqual "Basic test case 1" (Just [A,B,D,A]) (findArbitrage moreComplex))
+
+test3 :: Test
+test3 = TestCase (assertEqual "Basic test case 1" Nothing (findArbitrage noOpportunity))
+
+test4 :: Test
+test4 = TestCase (assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage simpleOpportunity))
+
+tests :: Test
+tests = TestList [TestLabel "test1" test1
+                 ,TestLabel "test2" test2
+                 ,TestLabel "test3" test3
+                 ,TestLabel "test4" test4]
+

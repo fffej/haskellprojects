@@ -138,34 +138,5 @@ Arbitrage situations shouldn't exist in an efficient market, but the <i>arbitrag
 
 -}
 
-data ForexExchange = ForexExchange
-
-instance Graph ForexExchange Currency where
-    vertices = vertices'
-    edge = edge'
-    fromInt = fromInt'
-
-vertices' :: ForexExchange -> [Currency]
-vertices' _ = [AUD, GBP, USD]
-
-edge' :: ForexExchange -> Currency -> Currency -> Maybe Double
-edge' f a b | a == GBP && b == USD = Just 0.88
-            | a == GBP && b == AUD = Just 1.10
-            | a == USD && b == GBP = Just 1.20
-            | a == USD && b == AUD = Just 0.15
-            | a == AUD && b == GBP = Just 0.89
-            | a == AUD && b == USD = Just 5.10
-            | a == b = Just 1
-            | otherwise = Nothing
-{- 
-    GBP  USD  AUD
-GBP 1.00 1.20 0.89
-USD 0.88 1.00 5.10
-AUD 1.10 0.15 1.00
--}
-
-fromInt' :: ForexExchange -> Int -> Currency
-fromInt' f i = toEnum i
-
   
   
