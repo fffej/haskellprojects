@@ -1,14 +1,14 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-
 module FloydWarshallTest where
 
 import FloydWarshall
 
 import Test.HUnit
-import Data.List (nub)
+import Data.List (nub,(\\))
 import Data.Map (Map,keys)
 import qualified Data.Map as Map
-import Data.Array
+import Data.Array 
+import Data.Maybe (catMaybes)
 
 data Unit = A | B | C | D | E | F | G 
             deriving (Read,Show,Ord,Ix,Eq,Enum)
@@ -70,20 +70,31 @@ simpleOpportunity = Exchange (Map.fromList d)
       d = [((A,B), 1.1), ((B,A), 0.95)]
 
 test1 :: Test
-test1 = TestCase (assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage basicExchangeData))
+test1 = TestCase (do
+                   assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage basicExchangeData)
+                   assertBool "Makes money" (runOpportunity basicExchangeData [A,B,A] > 1.0))
 
 test2 :: Test
-test2 = TestCase (assertEqual "Basic test case 1" (Just [A,B,D,A]) (findArbitrage moreComplex))
+test2 = TestCase (do
+                   assertEqual "Basic test case 1" (Just [A,B,D,A]) (findArbitrage moreComplex)
+                   assertBool "Makes money" (runOpportunity moreComplex [A,B,D,A] > 1.0))                               
 
 test3 :: Test
 test3 = TestCase (assertEqual "Basic test case 1" Nothing (findArbitrage noOpportunity))
 
 test4 :: Test
-test4 = TestCase (assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage simpleOpportunity))
+test4 = TestCase (do
+                   assertEqual "Basic test case 1" (Just [A,B,A]) (findArbitrage simpleOpportunity)
+                   assertBool "Makes money" (runOpportunity simpleOpportunity [A,B,A] > 1.0))
 
 tests :: Test
 tests = TestList [TestLabel "test1" test1
                  ,TestLabel "test2" test2
                  ,TestLabel "test3" test3
                  ,TestLabel "test4" test4]
+
+-- If there is an opportunity it should make money!
+runOpportunity :: Exchange -> [Unit] -> Double
+runOpportunity (Exchange m) x = product $ catMaybes (map (flip Map.lookup m) (zip x (tail x)))
+
 
