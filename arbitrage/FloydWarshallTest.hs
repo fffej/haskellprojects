@@ -66,4 +66,9 @@ noOpportunity = Exchange (Map.fromList d)
     where
       d = [((A,B), 2.0), ((B,A), 0.45)]
 
+simpleOpportunity :: Exchange
+simpleOpportunity = Exchange (Map.fromList d)
+    where
+      d = [((A,B), 1.1), ((B,A), 0.95)]
+
 test1 = TestCase (assertEqual "Basic test case 1" (Just [A,C,A]) (findArbitrage basicExchangeData))

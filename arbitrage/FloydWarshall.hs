@@ -69,12 +69,14 @@ arbChances :: FWResult -> Maybe ((Int,Int,Int),(Double,Int))
 arbChances a | null c = Nothing
              | otherwise = Just (head c)
     where
-      c = filter (\((steps,i,j),(best,path)) -> steps > 1 && i == j && best > 1.01) (assocs a)
+      c = filter (\((steps,i,j),(best,path)) -> steps >= 1 && i == j && best > 1.01) (assocs a)
 
 -- #steps i to j
 -- THIS IS WRONG
 steps :: FWResult -> (Int,Int,Int) -> [Int]
-steps a (s,i,j) = i : (steps' a (s,i,j))
+steps a (s,i,j) = reverse $ i : x  : (steps' a (s - 1,i,x)) ++ [i]
+    where
+      x = snd $ a ! (s,i,j)
 
 steps' :: FWResult -> (Int,Int,Int) -> [Int]
 steps' a (0,i,j) = []
