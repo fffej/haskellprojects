@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-module Forex where
+module Forex (main) where
 
 import Text.ParserCombinators.Parsec (endBy,sepBy,char,many,noneOf,string,parse)
 import Text.Parsec.ByteString.Lazy
@@ -11,19 +11,14 @@ import Data.Ix
 import qualified Data.ByteString.Lazy as B
 import System.Locale (defaultTimeLocale)
 
+import Data.Map (Map,keys)
+import qualified Data.Map as Map
+import Data.List (nub)
+
 import FloydWarshall
 
-data Currency = AUD
-              | GBP
-              | USD
-              | CAD
-              | CHF
-              | JPY
-              | EUR
-              | DKK
-              | NOK
-              | NZD
-              | SEK
+data Currency = AUD | GBP | USD | CAD | CHF | JPY | EUR | DKK 
+              | NOK | NZD | SEK | SGD | HKD | XAU | XAG
                 deriving (Read,Show,Ord,Ix,Eq,Enum)
 
 type CurrencyPair = (Currency,Currency)
@@ -90,43 +85,45 @@ parseFile s = do
     Left _ -> error "Failed to parse"
     Right q -> return q
 
-{-
+type ExchangePair = (Currency,Currency)
+type ExchangeData = Map ExchangePair Double
+data Exchange = Exchange ExchangeData
 
-I grabbed the data from http://ratedata.gaincapital.com/ and used wget -r "http://ratedata.gaincapital.com/2010/01%20January/"
+instance Graph Exchange Currency where
+    vertices = vertices'
+    edge = edge'
+    fromInt = fromInt'
 
-You can bung it all together with cat *.csv > foo
+instance Show Exchange where
+    show (Exchange s) = show s
 
-Once you've got the data you can "sort -k1,1 -n foo" to group it. 
+vertices' :: Exchange -> [Currency]
+vertices' (Exchange d) = nub $ map snd (keys d)
 
-tail -n +XYZ foo.csv discards the first XYZ lines of a file.
+edge' :: Exchange -> Currency -> Currency -> Maybe Double
+edge' (Exchange d) x y = Map.lookup (x,y) d
 
--}
+fromInt' :: Exchange -> Int -> Currency
+fromInt' _ = toEnum
 
--- The weighted graph
-data Exchange = Exchange {
-      vertices :: [Currency]
-    }
+update :: Exchange -> ForexEntry -> Exchange
+update (Exchange m) f = Exchange (Map.insert (b,a) sell 
+                                  (Map.insert (a,b) (1 / buy) m))
+    where
+      (a,b) = currencyPair f
+      buy = rateBid f
+      sell = rateAsk f
 
-{- 
+parseRecs :: [ForexEntry] -> [(Maybe [Currency], Exchange)]
+parseRecs recs = v
+    where
+      exchanges = scanl update (Exchange Map.empty) recs
+      opportunities = zip (map findArbitrage exchanges) exchanges
+      v = filter (\(x,y) -> x /= Nothing) opportunities
 
-Floyd-Warshall graph Algorithm.
-
-  Vertices are the currencies
-
-        BUY        SELL
-  GBP ------> USD ------> GBP
-
-  GBP ---> USD ---> EUR ---> GBP
-
-  Construct a graph where each vertex is a nation and there is an edge weighted lg(w(x,y)) from x to y if the exchange rate from currency x to currency y is w(x,y).  In arbitrage, we seek a cycle to convert currencies so that we end up with more money than we started with.
-
--}
-{-
 main = do
-  a <- parseFile "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/sorted_data.csv"
-  print (length a)
--}
-  
+  recs <- parseFile "/home/jeff/workspace/Haskell/haskellprojects/arbitrage/data/small_sorted_set.csv"
+  print (take 10 $ parseRecs recs)
 {-
 
 <a href="http://en.wikipedia.org/wiki/Arbitrage">Arbitrage</a> is <quote>the practice of taking advantage of a price difference between two or more markets, striking a combination of matching deals that capitalize upon the imbalance, the profit being the difference between the market prices.  

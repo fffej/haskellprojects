@@ -4,7 +4,7 @@ module FloydWarshallTest where
 import FloydWarshall
 
 import Test.HUnit
-import Data.List (nub,(\\))
+import Data.List (nub)
 import Data.Map (Map,keys)
 import qualified Data.Map as Map
 import Data.Array 

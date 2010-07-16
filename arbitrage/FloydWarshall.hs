@@ -13,7 +13,7 @@ class Enum b => Graph a b | a -> b where
 
 -- An arbitrary representation of infinity!
 infinity :: Double
-infinity = 1000000
+infinity = 10000000
 
 findArbitrage :: Graph a b => a -> Maybe [b]
 findArbitrage g | Nothing == maybePath = Nothing
@@ -47,27 +47,24 @@ floydWarshallStep g _ 0 i j | i == j = (1.0,-1)
       d = maybe infinity (const (fromJust w)) w
 
 -- |The recursive case is defined in terms of the previous ones
-floydWarshallStep g a m i j = (bestVal,pathVal)
+floydWarshallStep g a m i j = foldl f (0.0,-1) [0..n]
     where
       n = length (vertices g) - 1 
-      (bestVal, pathVal) = foldl f (0.0,-1) [0..n]
-          where
-            f :: (Double,Int) -> Int -> (Double,Int)
-            f (b,p) k | b < (mik*okj) = (mik*okj,k)
-                      | otherwise = (b,p)
-                where
-                  mik = fst $ a ! (m-1,i,k)
-                  okj = fst $ a ! (0,k,j)
+      f :: (Double,Int) -> Int -> (Double,Int)
+      f (b,p) k | b < (mik*okj) = (mik*okj,k)
+              | otherwise = (b,p)
+        where
+          mik = fst $ a ! (m-1,i,k)
+          okj = fst $ a ! (0,k,j)
 
 
 arbChances :: FWResult -> Maybe ((Int,Int,Int),(Double,Int))
 arbChances a | null c = Nothing
              | otherwise = Just (head c)
     where
-      c = filter (\((s,i,j),(best,_)) -> s >= 1 && i == j && best > 1.01) (assocs a)
+      c = filter (\((s,i,j),(best,_)) -> s >= 1 && i == j && best > 1.01 && best < infinity) 
+          (assocs a)
 
--- #steps i to j
--- THIS IS WRONG
 steps :: FWResult -> (Int,Int,Int) -> [Int]
 steps a (s,i,j) = reverse $ i : x  : steps' a (s - 1,i,x) ++ [i]
     where
