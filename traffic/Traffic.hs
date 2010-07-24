@@ -56,7 +56,7 @@ updateCars :: Environment -> [Car] -> [Car]
 updateCars env = map (updateCar env)
 
 updateCar :: Environment -> Car -> Car
-updateCar e c = (updateCarPosition e c)
+updateCar e c = updateCarPosition e c
 
 -- |Cars follow simple logic
 updateCarSpeed :: Environment -> Car -> Car
