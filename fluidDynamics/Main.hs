@@ -99,7 +99,6 @@ trun h i = realToFrac ((i-0.5) * h) :: GLfloat
 
 drawVelocity :: (Grid,Grid) -> IO ()
 drawVelocity (u,v) = do
-  color3f (Color3 1 1 1)
   lineWidth $= 1.0
   let h = 1.0 / realToFrac n
   let f = trun h
@@ -216,7 +215,7 @@ reshapeFunc size@(Size _ height) =
       viewport $= (Position 0 0, size)
       matrixMode $= Projection
       loadIdentity
-      ortho2D 0 1 0 1
+      ortho2D 0 256 0 256
       clearColor $= Color4 0 0 0 1
 
 setMouseData :: State -> Key -> (Int,Int) -> IO ()

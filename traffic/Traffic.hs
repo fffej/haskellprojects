@@ -17,22 +17,34 @@ type Route = Map (Location,Location) Speed
 data Location = Location {
       position :: Position
     , name :: String
-} deriving (Eq,Ord)
+} deriving (Eq,Ord,Show)
      
 data Car = Car {
       distanceToDestination :: Double
     , speed :: Speed
     , route :: (Location,Location)
-} deriving Eq
+} deriving (Eq,Show)
 
 data Environment = Environment {
       locations :: [Location]
     , routes :: Route
     , cars :: [Car]
-}
+} deriving (Show)
 
-createEnvironment :: Environment
-createEnvironment = undefined
+{- Some sample data -}
+lA = Location (10,50) "A"
+lB = Location (110,50) "B"
+routesEx = M.fromList [((lA,lB), 70)]
+carA = Car 50 0.001 (lA,lB)
+
+createEnvironment = Environment {
+                      locations = [lA,lB]
+                    , routes = routesEx
+                    , cars = [carA]
+                    }
+
+
+{- Actual Logic of simulation -}
 
 update :: Environment -> Environment
 update env = env { cars = updateCars env (cars env) }
@@ -44,13 +56,13 @@ updateCars :: Environment -> [Car] -> [Car]
 updateCars env = map (updateCar env)
 
 updateCar :: Environment -> Car -> Car
-updateCar = undefined
+updateCar e c = (updateCarPosition e c)
 
 -- |Cars follow simple logic
 updateCarSpeed :: Environment -> Car -> Car
 updateCarSpeed env car | null nearestCars = car 
-                       | distanceBetween < 5 = car { speed = min maxSpeed (speed car + 0.5) }
-                       | distanceBetween > 5 = car { speed = max 0 (speed car - 0.5) }
+                       | distanceBetween < 5 = car { speed = min maxSpeed (speed car * 1.001) }
+                       | distanceBetween > 5 = car { speed = max 0 (speed car * 0.999) }
                        | otherwise = car
     where
       maxSpeed = fromJust $ M.lookup (route car) (routes env)
@@ -60,7 +72,7 @@ updateCarSpeed env car | null nearestCars = car
       distanceBetween  = distanceToDestination (head nearestCars) - distanceToDestination car
 
 updateCarPosition :: Environment -> Car -> Car
-updateCarPosition _ car | distanceToGo <= 0 = undefined
+updateCarPosition _ car | distanceToGo <= 0 = car
                         | otherwise = car { distanceToDestination = distanceToGo }
     where
       distanceToGo = distanceToDestination car - speed car
@@ -72,16 +84,11 @@ carPosition (Car d _ (start,finish)) = (x1+p*(x2-x1), y1+p*(y2-y1))
       e@(x2,y2) = position finish
       p = 1 - (d / distanceBetween s e)
 
-{-
- Boring helper code that plays no part in the *real* work
--}
-
+{-  Boring helper code that plays no part in the *real* work -}
 distanceBetween :: Position -> Position -> Double
 distanceBetween (x1,y1) (x2,y2) = sqrt ((x1-x2)^2 + (y1-y2)^2)
 
-{-
- Testing code.
--}
+{- Testing code. -}
 getCarLocation :: Double -> Position -> Position -> Position
 getCarLocation d s e = carPosition (Car d 0 (Location s "Start",Location e "End"))
 
