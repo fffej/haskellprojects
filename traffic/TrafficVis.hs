@@ -16,6 +16,10 @@ data State = State {
       env :: IORef Environment
 }
 
+-- |Timeout in ms for callback
+tick :: Int
+tick = 50
+
 makeState :: IO State
 makeState = liftM State (newIORef createEnvironment)
 
@@ -70,10 +74,11 @@ drawLocation (Location (x,y) _) = do
                   
 -- remember to postRedisplay Nothing if changed
 -- no logic should go here
-idleFunc :: State -> IdleCallback
-idleFunc s = do
+timerFunc :: State -> IO ()
+timerFunc s = do
   env s $~ update
   postRedisplay Nothing
+  addTimerCallback tick (timerFunc s)
 
 reshapeFunc :: ReshapeCallback
 reshapeFunc size@(Size _ height) =
@@ -96,7 +101,8 @@ main = do
   state <- makeState
 
   displayCallback $= displayFunc state
-  idleCallback $= Just (idleFunc state)
   reshapeCallback $= Just reshapeFunc
+
+  addTimerCallback tick (timerFunc state)
 
   mainLoop

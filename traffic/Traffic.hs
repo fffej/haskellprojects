@@ -35,7 +35,7 @@ data Environment = Environment {
 lA = Location (10,50) "A"
 lB = Location (110,50) "B"
 routesEx = M.fromList [((lA,lB), 70)]
-carA = Car 50 0.001 (lA,lB)
+carA = Car 50 1.0 (lA,lB)
 
 createEnvironment = Environment {
                       locations = [lA,lB]
