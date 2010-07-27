@@ -41,25 +41,26 @@ lC = Location (170,150) "C"
 lD = Location (120,150) "D"
 lE = Location (70,75) "E"
 
-routesEx = [((lA,lB), 70)
-           ,((lB,lC), 70)
-           ,((lC,lD), 70)
-           ,((lD,lE), 70)
-           ,((lE,lA), 70)]
-carA = Car 50 1.0 (lA,lB)
-carB = Car 10 1.0 (lB,lC)
-carC = Car 10 1.0 (lC,lD)
-carD = Car 10 1.0 (lE,lA)
-carE = Car 10 1.0 (lD,lE)
+createLocations :: [Location]
+createLocations = map (\z -> Location (x z,y z) "X")  [0,0.35 .. (1.8*pi)]
+    where
+      x theta = 100 * cos theta + 125
+      y theta = 100 * sin theta + 125
+
+makeRoutes :: [Location] -> Route
+makeRoutes locations = M.fromList (zip (zip locations (cycle $ tail locations)) (repeat 70))
+
+makeCars :: Route -> [Car]
+makeCars r = map (\((s,f),_) -> Car 1.0 1.0 (s,f)) (M.fromList r)
 
 -- TODO only 
 createRoutes :: [((Location,Location), Speed)] -> Route
 createRoutes r = M.fromList $ concatMap (\((x,y),s) -> [((x,y),s), ((y,x),s)]) r
 
 createEnvironment = Environment {
-                      locations = [lA,lB,lC,lD,lE]
-                    , routes = createRoutes routesEx
-                    , cars = [carA, carB, carC, carD, carE]
+                      locations = createLocations
+                    , routes = makeRoutes (createLocations)
+                    , cars = []
                     , noise = randoms (mkStdGen 100)
                     }
 
