@@ -42,7 +42,7 @@ lD = Location (120,150) "D"
 lE = Location (70,75) "E"
 
 createLocations :: [Location]
-createLocations = map (\z -> Location (x z,y z) "X")  [0,0.35 .. (1.8*pi)]
+createLocations = map (\z -> Location (x z,y z) "X")  [0,(pi/15) .. (2*pi)]
     where
       x theta = 100 * cos theta + 125
       y theta = 100 * sin theta + 125
@@ -51,7 +51,7 @@ makeRoutes :: [Location] -> Route
 makeRoutes locations = M.fromList (zip (zip locations (cycle $ tail locations)) (repeat 70))
 
 makeCars :: Route -> [Car]
-makeCars r = map (\((s,f),_) -> Car 1.0 1.0 (s,f)) (M.fromList r)
+makeCars r = map (\((s,f),_) -> Car 1.0 1.0 (s,f)) (M.toList r)
 
 -- TODO only 
 createRoutes :: [((Location,Location), Speed)] -> Route
@@ -59,8 +59,8 @@ createRoutes r = M.fromList $ concatMap (\((x,y),s) -> [((x,y),s), ((y,x),s)]) r
 
 createEnvironment = Environment {
                       locations = createLocations
-                    , routes = makeRoutes (createLocations)
-                    , cars = []
+                    , routes = makeRoutes createLocations
+                    , cars = makeCars (makeRoutes createLocations)
                     , noise = randoms (mkStdGen 100)
                     }
 

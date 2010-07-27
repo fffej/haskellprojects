@@ -48,9 +48,12 @@ drawCars = mapM_ drawCar
 drawCar :: Car -> IO ()
 drawCar car = do
   let (x,y) = carPosition car
-  color3f (Color3 0 0 1)
-  pointSize $= realToFrac 10
-  renderPrimitive Points (vertex2f (vertex2d x y))
+  color3f (Color3 1 0 0)
+  pointSize $= realToFrac 20
+  renderPrimitive Triangles $ do
+                vertex2f (vertex2d x y)
+                vertex2f (vertex2d (x - 5) y)
+                vertex2f (vertex2d x (y + 5))
 
 drawRoutes :: Route -> IO ()
 drawRoutes route = mapM_ (\((l1,l2),speed) -> drawRoute l1 l2 speed) (M.toList route)
@@ -68,8 +71,8 @@ drawLocations = mapM_ drawLocation
 
 drawLocation :: Location -> IO ()
 drawLocation (Location (x,y) _) = do
-  color3f (Color3 1 0 0)
-  pointSize $= realToFrac 20
+  color3f (Color3 0 0 1)
+  pointSize $= realToFrac 10
   renderPrimitive Points (vertex2f (vertex2d x y))
                   
 -- remember to postRedisplay Nothing if changed
