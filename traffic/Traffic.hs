@@ -7,6 +7,8 @@ import Data.List (sortBy)
 import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 
+import System.Random
+
 import Test.QuickCheck
 import Debug.Trace
 
@@ -29,6 +31,7 @@ data Environment = Environment {
       locations :: [Location]
     , routes :: Route
     , cars :: [Car]
+    , noise :: [Double] -- infinite list of randomness
 } deriving (Show)
 
 {- Some sample data -}
@@ -45,29 +48,31 @@ createEnvironment = Environment {
                       locations = [lA,lB]
                     , routes = createRoutes routesEx
                     , cars = [carA]
+                    , noise = randoms (mkStdGen 100)
                     }
-
 
 {- Actual Logic of simulation -}
 
 update :: Environment -> Environment
-update env = env { cars = updateCars env (cars env) }
+update env = env' { cars = updateCars env (cars env) }
+    where
+      env' = env { noise = drop (length (cars env)) (noise env) }
 
 carsOnRoute :: Car -> [Car] -> [Car]
 carsOnRoute car = filter (\c -> route c == route car && c /= car) 
                
 updateCars :: Environment -> [Car] -> [Car]
-updateCars env = map (updateCar env)
+updateCars env cars = map (\(c,n) -> updateCar env n c) (zip cars (noise env))
 
-updateCar :: Environment -> Car -> Car
-updateCar e c = updateCarPosition e c
+updateCar :: Environment -> Double -> Car -> Car
+updateCar env d car = updateCarSpeed env d (updateCarPosition env d car)
 
 -- |Cars follow simple logic
-updateCarSpeed :: Environment -> Car -> Car
-updateCarSpeed env car | null nearestCars = car 
-                       | distanceBetween < 5 = car { speed = min maxSpeed (speed car * 1.001) }
-                       | distanceBetween > 5 = car { speed = max 0 (speed car * 0.999) }
-                       | otherwise = car
+updateCarSpeed :: Environment -> Double -> Car -> Car
+updateCarSpeed env d car | null nearestCars = car 
+                         | distanceBetween < 5 = car { speed = min maxSpeed (speed car * 1.001) }
+                         | distanceBetween > 5 = car { speed = max 0 (speed car * 0.999) }
+                         | otherwise = car
     where
       maxSpeed = fromJust $ M.lookup (route car) (routes env)
       nearestCars = sortBy 
@@ -75,17 +80,17 @@ updateCarSpeed env car | null nearestCars = car
                     (carsOnRoute car (cars env))
       distanceBetween  = distanceToDestination (head nearestCars) - distanceToDestination car
 
-updateCarPosition :: Environment -> Car -> Car
-updateCarPosition env car | distanceToGo <= 0 = updateLocation env car
-                          | otherwise = car { distanceToDestination = distanceToGo }
+updateCarPosition :: Environment -> Double -> Car -> Car
+updateCarPosition env choice car | distanceToGo <= 0 = updateLocation env choice car
+                                 | otherwise = car { distanceToDestination = distanceToGo }
     where
       distanceToGo = distanceToDestination car - speed car
 
-updateLocation :: Environment -> Car -> Car
-updateLocation env car = car { 
-                           distanceToDestination = distanceToGo
-                         , route = (finish,newDestination)
-                         }
+updateLocation :: Environment -> Double -> Car -> Car
+updateLocation env choice car = car { 
+                                  distanceToDestination = distanceToGo
+                                , route = (finish,newDestination)
+                                }
     where
       (start,finish) = route car
       newDestination = chooseNewDestination env start
