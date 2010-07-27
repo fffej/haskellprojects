@@ -34,12 +34,16 @@ data Environment = Environment {
 {- Some sample data -}
 lA = Location (10,50) "A"
 lB = Location (110,50) "B"
-routesEx = M.fromList [((lA,lB), 70)]
+routesEx = [((lA,lB), 70)]
 carA = Car 50 1.0 (lA,lB)
+
+-- TODO only 
+createRoutes :: [((Location,Location), Speed)] -> Route
+createRoutes r = M.fromList $ concatMap (\((x,y),s) -> [((x,y),s), ((y,x),s)]) r
 
 createEnvironment = Environment {
                       locations = [lA,lB]
-                    , routes = routesEx
+                    , routes = createRoutes routesEx
                     , cars = [carA]
                     }
 
@@ -72,10 +76,26 @@ updateCarSpeed env car | null nearestCars = car
       distanceBetween  = distanceToDestination (head nearestCars) - distanceToDestination car
 
 updateCarPosition :: Environment -> Car -> Car
-updateCarPosition _ car | distanceToGo <= 0 = car
-                        | otherwise = car { distanceToDestination = distanceToGo }
+updateCarPosition env car | distanceToGo <= 0 = updateLocation env car
+                          | otherwise = car { distanceToDestination = distanceToGo }
     where
       distanceToGo = distanceToDestination car - speed car
+
+updateLocation :: Environment -> Car -> Car
+updateLocation env car = car { 
+                           distanceToDestination = distanceToGo
+                         , route = (finish,newDestination)
+                         }
+    where
+      (start,finish) = route car
+      newDestination = chooseNewDestination env start
+      distanceToGo = distanceBetween (position finish) (position newDestination)
+
+-- |TODO non-determinism and unsafe code assuming a root backwards
+chooseNewDestination :: Environment -> Location -> Location
+chooseNewDestination env s = snd $ fst $ head choices
+    where
+      choices = filter (\((x,_),_) -> x == s) (M.toList (routes env))
 
 carPosition :: Car -> Position
 carPosition (Car d _ (start,finish)) = (x1+p*(x2-x1), y1+p*(y2-y1))
