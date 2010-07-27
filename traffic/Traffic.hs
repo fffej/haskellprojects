@@ -37,17 +37,29 @@ data Environment = Environment {
 {- Some sample data -}
 lA = Location (10,50) "A"
 lB = Location (110,50) "B"
-routesEx = [((lA,lB), 70)]
+lC = Location (170,150) "C"
+lD = Location (120,150) "D"
+lE = Location (70,75) "E"
+
+routesEx = [((lA,lB), 70)
+           ,((lB,lC), 70)
+           ,((lC,lD), 70)
+           ,((lD,lE), 70)
+           ,((lE,lA), 70)]
 carA = Car 50 1.0 (lA,lB)
+carB = Car 10 1.0 (lB,lC)
+carC = Car 10 1.0 (lC,lD)
+carD = Car 10 1.0 (lE,lA)
+carE = Car 10 1.0 (lD,lE)
 
 -- TODO only 
 createRoutes :: [((Location,Location), Speed)] -> Route
 createRoutes r = M.fromList $ concatMap (\((x,y),s) -> [((x,y),s), ((y,x),s)]) r
 
 createEnvironment = Environment {
-                      locations = [lA,lB]
+                      locations = [lA,lB,lC,lD,lE]
                     , routes = createRoutes routesEx
-                    , cars = [carA]
+                    , cars = [carA, carB, carC, carD, carE]
                     , noise = randoms (mkStdGen 100)
                     }
 
@@ -70,8 +82,8 @@ updateCar env d car = updateCarSpeed env d (updateCarPosition env d car)
 -- |Cars follow simple logic
 updateCarSpeed :: Environment -> Double -> Car -> Car
 updateCarSpeed env d car | null nearestCars = car 
-                         | distanceBetween < 5 = car { speed = min maxSpeed (speed car * 1.001) }
-                         | distanceBetween > 5 = car { speed = max 0 (speed car * 0.999) }
+                         | distanceBetween < 5 = car { speed = min maxSpeed (speed car * (1 + d * 0.002)) }
+                         | distanceBetween > 5 = car { speed = max 0 (speed car * (1 - d * 0.002)) }
                          | otherwise = car
     where
       maxSpeed = fromJust $ M.lookup (route car) (routes env)
@@ -93,14 +105,15 @@ updateLocation env choice car = car {
                                 }
     where
       (start,finish) = route car
-      newDestination = chooseNewDestination env start
+      newDestination = chooseNewDestination env choice finish
       distanceToGo = distanceBetween (position finish) (position newDestination)
 
 -- |TODO non-determinism and unsafe code assuming a root backwards
-chooseNewDestination :: Environment -> Location -> Location
-chooseNewDestination env s = snd $ fst $ head choices
+chooseNewDestination :: Environment -> Double -> Location -> Location
+chooseNewDestination env choice s = snd $ fst (choices !! truncate (choice * realToFrac (length choices)))
     where
       choices = filter (\((x,_),_) -> x == s) (M.toList (routes env))
+
 
 carPosition :: Car -> Position
 carPosition (Car d _ (start,finish)) = (x1+p*(x2-x1), y1+p*(y2-y1))
