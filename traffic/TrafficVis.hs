@@ -99,14 +99,11 @@ reshapeFunc size@(Size _ height) =
       clearColor $= Color4 0 0 0 1
 
 keyboardMouseHandler :: State -> KeyboardMouseCallback
-keyboardMouseHandler state (Char '+') Down _ _ = alterEnvironment state (changeSpeedLimit (* 1.01))
-keyboardMouseHandler state (Char '-') Down _ _ = alterEnvironment state (changeSpeedLimit (* 0.99))
-keyboardMouseHandler state (Char 'a') Down _ _ = alterEnvironment state addCar
-keyboardMouseHandler state (Char 'd') Down _ _ = alterEnvironment state removeCar
+keyboardMouseHandler state (Char '+') Down _ _ = env state $~ (changeSpeedLimit (* 1.01))
+keyboardMouseHandler state (Char '-') Down _ _ = env state $~ (changeSpeedLimit (* 0.99))
+keyboardMouseHandler state (Char 'a') Down _ _ = env state $~ addCar
+keyboardMouseHandler state (Char 'd') Down _ _ = env state $~ removeCar
 keyboardMouseHandler _     _          _    _ _ = return ()
-
-alterEnvironment :: State -> (Environment -> Environment) -> IO ()
-alterEnvironment s f = env s $~ f
 
 main :: IO ()
 main = do
