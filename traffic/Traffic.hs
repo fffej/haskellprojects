@@ -127,6 +127,23 @@ carPosition (Car d _ (start,finish)) = (x1+p*(x2-x1), y1+p*(y2-y1))
       e@(x2,y2) = position finish
       p = 1 - (d / distanceBetween s e)
 
+
+changeSpeedLimit :: (Speed -> Speed) -> Environment -> Environment
+changeSpeedLimit d e = e { routes = updatedRoutes }
+    where
+      updatedRoutes = M.map d (routes e)
+
+addCar :: Environment -> Environment
+addCar e = e { cars = cars'  }
+    where
+      cars' = Car 1.0 1.0 (s,f) : (cars e)
+      ((s,f),_) = head (M.toList (routes e))
+
+removeCar :: Environment -> Environment
+removeCar e = e { cars = cars' }
+    where
+      cars' = drop 1 (cars e)
+
 {-  Boring helper code that plays no part in the *real* work -}
 distanceBetween :: Position -> Position -> Double
 distanceBetween (x1,y1) (x2,y2) = sqrt ((x1-x2)^2 + (y1-y2)^2)

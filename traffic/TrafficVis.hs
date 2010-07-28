@@ -98,6 +98,16 @@ reshapeFunc size@(Size _ height) =
       ortho2D 0 256 0 256
       clearColor $= Color4 0 0 0 1
 
+keyboardMouseHandler :: State -> KeyboardMouseCallback
+keyboardMouseHandler state (Char '+') Down _ _ = alterEnvironment state (changeSpeedLimit (* 1.01))
+keyboardMouseHandler state (Char '-') Down _ _ = alterEnvironment state (changeSpeedLimit (* 0.99))
+keyboardMouseHandler state (Char 'a') Down _ _ = alterEnvironment state addCar
+keyboardMouseHandler state (Char 'd') Down _ _ = alterEnvironment state removeCar
+keyboardMouseHandler _     _          _    _ _ = return ()
+
+alterEnvironment :: State -> (Environment -> Environment) -> IO ()
+alterEnvironment s f = env s $~ f
+
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
@@ -111,7 +121,7 @@ main = do
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc
-
+  keyboardMouseCallback $= Just (keyboardMouseHandler state)
   addTimerCallback tick (timerFunc state)
 
   mainLoop
