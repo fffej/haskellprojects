@@ -44,16 +44,15 @@ lE = Location (70,75) "E"
 createLocations :: [Location]
 createLocations = map (\z -> Location (x z,y z) "X")  [0,(pi/15) .. (2*pi)]
     where
-      x theta = 100 * cos theta + 125
-      y theta = 100 * sin theta + 125
+      x theta = 100 * cos theta + 128
+      y theta = 100 * sin theta + 128
 
 makeRoutes :: [Location] -> Route
-makeRoutes locations = M.fromList (zip (zip locations (cycle $ tail locations)) (repeat 70))
+makeRoutes locations = M.fromList (zip (zip locations (cycle $ tail locations)) (repeat 5))
 
 makeCars :: Route -> [Car]
 makeCars r = map (\((s,f),_) -> Car 1.0 1.0 (s,f)) (M.toList r)
 
--- TODO only 
 createRoutes :: [((Location,Location), Speed)] -> Route
 createRoutes r = M.fromList $ concatMap (\((x,y),s) -> [((x,y),s), ((y,x),s)]) r
 
@@ -65,6 +64,11 @@ createEnvironment = Environment {
                     }
 
 {- Actual Logic of simulation -}
+stats :: Environment -> String
+stats e = "Average speed: " ++ show avgSpeed
+    where
+      c = cars e
+      avgSpeed = sum (map speed c) / realToFrac (length c)
 
 update :: Environment -> Environment
 update env = env' { cars = updateCars env (cars env) }
@@ -83,8 +87,8 @@ updateCar env d car = updateCarSpeed env d (updateCarPosition env d car)
 -- |Cars follow simple logic
 updateCarSpeed :: Environment -> Double -> Car -> Car
 updateCarSpeed env d car | null nearestCars = car 
-                         | distanceBetween < 5 = car { speed = min maxSpeed (speed car * (1 + d * 0.002)) }
-                         | distanceBetween > 5 = car { speed = max 0 (speed car * (1 - d * 0.002)) }
+                         | distanceBetween < 3 = car { speed = min maxSpeed (speed car * (1 + d*0.025)) }
+                         | distanceBetween > 3 = car { speed = max 0 (speed car * (1 - d*0.025)) }
                          | otherwise = car
     where
       maxSpeed = fromJust $ M.lookup (route car) (routes env)

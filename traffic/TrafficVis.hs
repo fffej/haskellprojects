@@ -18,7 +18,7 @@ data State = State {
 
 -- |Timeout in ms for callback
 tick :: Int
-tick = 50
+tick = 25
 
 makeState :: IO State
 makeState = liftM State (newIORef createEnvironment)
@@ -30,6 +30,7 @@ displayFunc s = do
   _ <- drawCars (cars environment)
   _ <- drawRoutes (routes environment)
   _ <- drawLocations (locations environment)
+  _ <- drawInfo environment
   flush
   swapBuffers
 
@@ -60,7 +61,7 @@ drawRoutes route = mapM_ (\((l1,l2),speed) -> drawRoute l1 l2 speed) (M.toList r
 
 drawRoute :: Location -> Location -> Double -> IO ()
 drawRoute (Location (x1,y1) _) (Location (x2,y2) _) m = do
-  lineWidth $= realToFrac 0.5 -- (m / 50.0) -- A guess
+  lineWidth $= realToFrac 0.5
   color3f (Color3 0 1 0)
   renderPrimitive Lines $ do
     vertex2f (vertex2d x1 y1) 
@@ -72,8 +73,13 @@ drawLocations = mapM_ drawLocation
 drawLocation :: Location -> IO ()
 drawLocation (Location (x,y) _) = do
   color3f (Color3 0 0 1)
-  pointSize $= realToFrac 10
+  pointSize $= realToFrac 3
   renderPrimitive Points (vertex2f (vertex2d x y))
+
+drawInfo :: Environment -> IO ()
+drawInfo e = do
+  rasterPos (vertex2d 5 240)
+  renderString Fixed8By13 (stats e)
                   
 -- remember to postRedisplay Nothing if changed
 -- no logic should go here
