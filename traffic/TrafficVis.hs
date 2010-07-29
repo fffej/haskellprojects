@@ -7,13 +7,14 @@ import Traffic
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith, ExitCode(ExitSuccess))
-import Control.Monad (unless, when, forM_,liftM)
+import Control.Monad (unless, when, forM_,liftM,liftM2)
 import Data.IORef (IORef, newIORef)
 
 import qualified Data.Map as M
 
 data State = State {
       env :: IORef Environment
+    , run :: IORef Bool
 }
 
 -- |Timeout in ms for callback
@@ -21,7 +22,7 @@ tick :: Int
 tick = 25
 
 makeState :: IO State
-makeState = liftM State (newIORef createEnvironment)
+makeState = liftM2 State (newIORef createEnvironment) (newIORef False)
 
 displayFunc :: State -> DisplayCallback
 displayFunc s = do
@@ -85,7 +86,8 @@ drawInfo e = do
 -- no logic should go here
 timerFunc :: State -> IO ()
 timerFunc s = do
-  env s $~ update
+  shouldRun <- G.get (run s)
+  when shouldRun (env s $~ update)
   postRedisplay Nothing
   addTimerCallback tick (timerFunc s)
 
@@ -103,6 +105,7 @@ keyboardMouseHandler state (Char '+') Down _ _ = env state $~ (changeSpeedLimit 
 keyboardMouseHandler state (Char '-') Down _ _ = env state $~ (changeSpeedLimit (* 0.99))
 keyboardMouseHandler state (Char 'a') Down _ _ = env state $~ addCar
 keyboardMouseHandler state (Char 'd') Down _ _ = env state $~ removeCar
+keyboardMouseHandler state (Char ' ') Down _ _ = run state $~ not
 keyboardMouseHandler _     _          _    _ _ = return ()
 
 main :: IO ()

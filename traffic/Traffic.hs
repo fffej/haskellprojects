@@ -8,6 +8,7 @@ import Data.Maybe (fromJust)
 import Data.Ord (comparing)
 
 import System.Random
+import Text.Printf
 
 import Test.QuickCheck
 import Debug.Trace
@@ -34,13 +35,6 @@ data Environment = Environment {
     , noise :: [Double] -- infinite list of randomness
 } deriving (Show)
 
-{- Some sample data -}
-lA = Location (10,50) "A"
-lB = Location (110,50) "B"
-lC = Location (170,150) "C"
-lD = Location (120,150) "D"
-lE = Location (70,75) "E"
-
 createLocations :: [Location]
 createLocations = map (\z -> Location (x z,y z) "X")  [0,(pi/15) .. (2*pi)]
     where
@@ -64,12 +58,6 @@ createEnvironment = Environment {
                     }
 
 {- Actual Logic of simulation -}
-stats :: Environment -> String
-stats e = "Average speed: " ++ show avgSpeed
-    where
-      c = cars e
-      avgSpeed = sum (map speed c) / realToFrac (length c)
-
 update :: Environment -> Environment
 update env = env' { cars = updateCars env (cars env) }
     where
@@ -84,17 +72,18 @@ updateCars env cars = map (\(c,n) -> updateCar env n c) (zip cars (noise env))
 updateCar :: Environment -> Double -> Car -> Car
 updateCar env d car = updateCarSpeed env d (updateCarPosition env d car)
 
--- |Cars follow simple logic
 updateCarSpeed :: Environment -> Double -> Car -> Car
 updateCarSpeed env d car | null nearestCars = car 
-                         | distanceBetween < 3 = car { speed = min maxSpeed (speed car * (1 + d*0.025)) }
-                         | distanceBetween > 3 = car { speed = max 0 (speed car * (1 - d*0.025)) }
+                         | distanceBetween < 3 = car { speed = min maxSpeed (speed car * (1 + d*0.001)) }
+                         | distanceBetween > 3 = car { speed = max 0.1 (speed car * (1 - d*0.01)) }
                          | otherwise = car
     where
-      maxSpeed = fromJust $ M.lookup (route car) (routes env)
+      maxSpeed = min maximumAhead (fromJust $ M.lookup (route car) (routes env))
       nearestCars = sortBy 
                     (comparing distanceToDestination)
                     (carsOnRoute car (cars env))
+      carAhead = head nearestCars
+      maximumAhead = abs ((speed carAhead + distanceToDestination carAhead) - distanceToDestination car)
       distanceBetween  = distanceToDestination (head nearestCars) - distanceToDestination car
 
 updateCarPosition :: Environment -> Double -> Car -> Car
@@ -113,7 +102,6 @@ updateLocation env choice car = car {
       newDestination = chooseNewDestination env choice finish
       distanceToGo = distanceBetween (position finish) (position newDestination)
 
--- |TODO non-determinism and unsafe code assuming a root backwards
 chooseNewDestination :: Environment -> Double -> Location -> Location
 chooseNewDestination env choice s = snd $ fst (choices !! truncate (choice * realToFrac (length choices)))
     where
@@ -127,7 +115,10 @@ carPosition (Car d _ (start,finish)) = (x1+p*(x2-x1), y1+p*(y2-y1))
       e@(x2,y2) = position finish
       p = 1 - (d / distanceBetween s e)
 
+distanceBetween :: Position -> Position -> Double
+distanceBetween (x1,y1) (x2,y2) = sqrt ((x1-x2)^2 + (y1-y2)^2)
 
+{- Functions for manipulating the environment -}
 changeSpeedLimit :: (Speed -> Speed) -> Environment -> Environment
 changeSpeedLimit d e = e { routes = updatedRoutes }
     where
@@ -144,9 +135,11 @@ removeCar e = e { cars = cars' }
     where
       cars' = drop 1 (cars e)
 
-{-  Boring helper code that plays no part in the *real* work -}
-distanceBetween :: Position -> Position -> Double
-distanceBetween (x1,y1) (x2,y2) = sqrt ((x1-x2)^2 + (y1-y2)^2)
+stats :: Environment -> String
+stats e = "Average speed: " ++ (printf "%.3f" avgSpeed)
+    where
+      c = cars e
+      avgSpeed = sum (map speed c) / realToFrac (length c)
 
 {- Testing code. -}
 getCarLocation :: Double -> Position -> Position -> Position
