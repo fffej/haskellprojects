@@ -44,9 +44,9 @@ displayFunc s = do
   swapBuffers
 
 pickColor :: Agent -> Color3 GLfloat
-pickColor (Goal x) = Color3 1 0 0
-pickColor (Pursuer s) = Color3 0 1 0
-pickColor (Path s) = Color3 0 0 1
+pickColor (Goal s) = Color3 (realToFrac s) 0 0
+pickColor (Pursuer s) = Color3 0 (realToFrac s) 0
+pickColor (Path s) = Color3 0 0 (realToFrac s)
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
@@ -67,6 +67,8 @@ drawGrid (Environment g b) = do
 
 timerFunc :: State -> IO ()
 timerFunc s = do
+  env s $~ update
+  postRedisplay Nothing
   addTimerCallback tick (timerFunc s)
 
 reshapeFunc :: ReshapeCallback
