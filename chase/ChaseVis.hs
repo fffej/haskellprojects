@@ -50,7 +50,7 @@ pickColor (Path s) = Color3 0 0 (realToFrac s)
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
-drawGrid (Environment g b) = do
+drawGrid (Environment g b _) = do
   lineWidth $= realToFrac 0.1
   let sqSize = (fromIntegral winHeight / fromIntegral b)
   let f i = ((fromIntegral i - 0.5 :: GLfloat) * sqSize)

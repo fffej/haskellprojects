@@ -31,6 +31,7 @@ data AgentStack = AgentStack {
 data Environment = Environment {
       board :: Map Point AgentStack
     , size :: Int
+    , pursuers :: [Point]
 } deriving Show
 
 scent :: Agent -> Scent
@@ -39,7 +40,7 @@ scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
 
-createEnvironment size = Environment b size
+createEnvironment size = Environment b size [(1,1),(size-1,size-1)]
     where
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..size], y <- [0..size] ]
       mkAgent x y | x == 0 || y == 0 || x == size || y == size = AgentStack Obstacle []
@@ -49,15 +50,27 @@ createEnvironment size = Environment b size
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
-update e@(Environment b size) = e { board = c }
+update e@(Environment b size _) = e { board = c }
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
 
 updatePursuers :: Environment -> Environment
-updatePursuers
+updatePursuers (Environment b _ pursuitTeam) = undefined
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
-diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours xs originalGrid p)
+diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours' xs originalGrid p)
+
+neighbours' :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
+neighbours' xs m (x,y) = map top $ catMaybes [M.lookup (x-1,y) xs
+                                             ,M.lookup (x,y-1) xs
+                                             ,M.lookup (x+1,y) m
+                                             ,M.lookup (x,y+1) m]
+
+neighbours :: Map Point AgentStack -> Point -> [Agent]
+neighbours m (x,y) = map top $ catMaybes [M.lookup (x-1,y) m
+                                         ,M.lookup (x,y-1) m
+                                         ,M.lookup (x+1,y) m
+                                         ,M.lookup (x,y+1) m]
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
 diffusePoint (AgentStack (Goal d) r) n = AgentStack (Goal d) r
@@ -67,9 +80,3 @@ diffusePoint (AgentStack (Pursuer d) r) n = AgentStack (Pursuer $ diffusedScent 
 
 diffusedScent :: Scent -> [Agent] -> Scent
 diffusedScent s xs = s + diffusionRate * sum (map (\x -> scent x - s) xs)
-
-neighbours :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
-neighbours xs m (x,y) = map top $ catMaybes [M.lookup (x-1,y) xs
-                                            ,M.lookup (x,y-1) xs
-                                            ,M.lookup (x+1,y) m
-                                            ,M.lookup (x,y+1) m]
