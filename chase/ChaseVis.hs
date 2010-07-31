@@ -15,7 +15,7 @@ data State = State {
 }
 
 makeState :: IO State
-makeState = liftM State (newIORef $ createEnvironment 100)
+makeState = liftM State (newIORef $ createEnvironment 64)
 
 winHeight :: Int
 winHeight = 512

@@ -53,6 +53,9 @@ update e@(Environment b size) = e { board = c }
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
 
+updatePursuers :: Environment -> Environment
+updatePursuers
+
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
 diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours xs originalGrid p)
 
@@ -65,8 +68,6 @@ diffusePoint (AgentStack (Pursuer d) r) n = AgentStack (Pursuer $ diffusedScent 
 diffusedScent :: Scent -> [Agent] -> Scent
 diffusedScent s xs = s + diffusionRate * sum (map (\x -> scent x - s) xs)
 
--- So I can lazily build a list to do Map.fromList
--- TODO I want to lazily build a map?  This is SO INEFFICIENT...
 neighbours :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
 neighbours xs m (x,y) = map top $ catMaybes [M.lookup (x-1,y) xs
                                             ,M.lookup (x,y-1) xs
