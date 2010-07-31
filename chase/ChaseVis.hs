@@ -15,7 +15,7 @@ data State = State {
 }
 
 makeState :: IO State
-makeState = liftM State (newIORef $ createEnvironment 32)
+makeState = liftM State (newIORef $ createEnvironment 64)
 
 winHeight :: Int
 winHeight = 512
@@ -45,7 +45,7 @@ displayFunc s = do
 
 pickColor :: Agent -> Color3 GLfloat
 pickColor (Goal s) = Color3 (realToFrac s) 0 0
-pickColor (Pursuer s) = Color3 0 (realToFrac s) 0
+pickColor (Pursuer s) = Color3 0 1 0
 pickColor (Path s) = Color3 0 0 (realToFrac s)
 pickColor Obstacle = Color3 1 1 1
 

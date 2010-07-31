@@ -49,19 +49,12 @@ createEnvironment size = Environment b size
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
-update (Environment b size) = Environment (M.fromList c) size
+update e@(Environment b size) = e { board = c }
     where
-      c = [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
+      c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
 
-diffusePoint' :: Point -> [(Point,AgentStack)] -> Map Point AgentStack -> AgentStack
+diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
 diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours xs originalGrid p)
-
-{-
-Need to go through in order and adjust based on the previous values
-   xs = assocs b
-
-   foo = [((x,y), diffusePoint  | x <- [0..size], y<-[0..size] ]
--}
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
 diffusePoint (AgentStack (Goal d) r) n = AgentStack (Goal d) r
@@ -73,9 +66,9 @@ diffusedScent :: Scent -> [Agent] -> Scent
 diffusedScent s xs = s + diffusionRate * sum (map (\x -> scent x - s) xs)
 
 -- So I can lazily build a list to do Map.fromList
--- TODO I want to lazily build a map?
-neighbours :: [(Point,AgentStack)] -> Map Point AgentStack -> Point -> [Agent]
-neighbours xs m (x,y) = map top $ catMaybes [lookup (x-1,y) xs
-                                            ,lookup (x,y-1) xs
+-- TODO I want to lazily build a map?  This is SO INEFFICIENT...
+neighbours :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
+neighbours xs m (x,y) = map top $ catMaybes [M.lookup (x-1,y) xs
+                                            ,M.lookup (x,y-1) xs
                                             ,M.lookup (x+1,y) m
                                             ,M.lookup (x,y+1) m]
