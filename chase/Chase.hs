@@ -3,7 +3,9 @@ module Chase where
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe,catMaybes)
+import Data.List (maximumBy)
+import Data.Ord (comparing)
 
 import Debug.Trace
 
@@ -40,13 +42,16 @@ scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
 
+addPoint :: Point -> Point -> Point
+addPoint (x,y) (dx,dy) = (x+dx,y+dy)
+
 createEnvironment size = Environment b size [(1,1),(size-1,size-1)]
     where
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..size], y <- [0..size] ]
       mkAgent x y | x == 0 || y == 0 || x == size || y == size = AgentStack Obstacle []
-                  | x == (size `div` 2) && y == (size `div` 2) = AgentStack (Goal 1000) []
-                  | x == 1 && y == 1 = AgentStack (Pursuer 0) []
-                  | x == (size - 1) && y == (size - 1) = AgentStack (Pursuer 0) []
+                  | x == (size `div` 2) && y == (size `div` 2) = AgentStack (Goal 1000) [Path 0]
+                  | x == 1 && y == 1 = AgentStack (Pursuer 0) [Path 0]
+                  | x == (size - 1) && y == (size - 1) = AgentStack (Pursuer 0) [Path 0]
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
@@ -55,22 +60,28 @@ update e@(Environment b size _) = e { board = c }
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
 
 updatePursuers :: Environment -> Environment
-updatePursuers (Environment b _ pursuitTeam) = undefined
+updatePursuers env = foldl updatePursuer env (pursuers env)
+
+updatePursuer :: Environment -> Point -> Environment
+updatePursuer e p = undefined
+    where
+      n = neighbours (board e) p -- zip with neighbourPoints
+      maxScent = maximumBy (\x y -> comparing scent x y) n
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
 diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours' xs originalGrid p)
 
+neighbourPoints :: [Point]
+neighbourPoints = [(-1,0), (0,-1), (1,0), (0, 1)]
+
 neighbours' :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
-neighbours' xs m (x,y) = map top $ catMaybes [M.lookup (x-1,y) xs
-                                             ,M.lookup (x,y-1) xs
-                                             ,M.lookup (x+1,y) m
-                                             ,M.lookup (x,y+1) m]
+neighbours' xs m (x,y) = map top $ catMaybes [M.lookup (addPoint (x,y) (-1, 0 )) xs
+                                             ,M.lookup (addPoint (x,y) (0 , -1)) xs
+                                             ,M.lookup (addPoint (x,y) (1 , 0) ) m
+                                             ,M.lookup (addPoint (x,y) (0 , 1) ) m]
 
 neighbours :: Map Point AgentStack -> Point -> [Agent]
-neighbours m (x,y) = map top $ catMaybes [M.lookup (x-1,y) m
-                                         ,M.lookup (x,y-1) m
-                                         ,M.lookup (x+1,y) m
-                                         ,M.lookup (x,y+1) m]
+neighbours m (x,y) = map top $ mapMaybe (`M.lookup` m) (map (addPoint (x,y)) neighbourPoints)
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
 diffusePoint (AgentStack (Goal d) r) n = AgentStack (Goal d) r
