@@ -3,7 +3,7 @@ module Chase where
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import Data.Maybe (mapMaybe,catMaybes)
+import Data.Maybe (mapMaybe,catMaybes,fromJust)
 import Data.List (maximumBy,delete)
 import Data.Ord (comparing)
 
@@ -20,7 +20,7 @@ data Agent = Goal Desirability
            | Pursuer Scent
            | Path Scent
            | Obstacle
-             deriving (Show)
+             deriving (Eq,Show)
 
 -- |An attempt to enforce that this can't be empty
 data AgentStack = AgentStack {
@@ -46,7 +46,7 @@ addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
 pop :: AgentStack -> AgentStack
 pop (AgentStack _ (x:xs)) = AgentStack x xs
-pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack" ++ show x)
+pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack " ++ show x)
 
 push :: Agent -> AgentStack -> AgentStack
 push a (AgentStack t r) = AgentStack a (t:r)
@@ -67,9 +67,18 @@ update e@(Environment b s _ _) = updatePursuers (e { board = c })
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
 moveGoal :: Point -> Environment -> Environment
-moveGoal p e = undefined
+moveGoal p e | targetSuitable = e {
+                                  board = M.insert (goal e) (pop src) 
+                                          (M.insert dest (push (top src) (fromJust target)) b)
+                                , goal = dest
+                                }
+             | otherwise = e
     where
-      dest = undefined
+      b = board e
+      dest = addPoint p (goal e)
+      src = b M.! (goal e)
+      target = M.lookup dest b
+      targetSuitable = maybe False (\x -> top x /= Obstacle) target -- TODO move to top level
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
