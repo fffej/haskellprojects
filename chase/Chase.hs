@@ -76,7 +76,7 @@ moveGoal p e | targetSuitable = e {
     where
       b = board e
       dest = addPoint p (goal e)
-      src = b M.! (goal e)
+      src = b M.! goal e
       target = M.lookup dest b
       targetSuitable = maybe False (\x -> top x /= Obstacle) target -- TODO move to top level
 

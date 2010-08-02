@@ -84,10 +84,10 @@ reshapeFunc s@(Size _ height) =
 keyboardMouseHandler :: State -> KeyboardMouseCallback
 keyboardMouseHandler _ (Char 'q') Down _ _ = exitWith ExitSuccess
 keyboardMouseHandler s (Char ' ') Down _ _ = run s $~ not
-keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ (moveGoal (-1,0))
-keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ (moveGoal (1,0))
-keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ (moveGoal (0,1))
-keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ (moveGoal (0,-1))
+keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
+keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
+keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
+keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 main :: IO ()
