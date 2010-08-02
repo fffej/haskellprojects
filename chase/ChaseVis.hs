@@ -100,7 +100,7 @@ motionHandler s (Position x y) = do
   e <- G.get (edit s)
   let clickCoords = (fromIntegral (x `div` truncate sqSize),
                      gridSize - fromIntegral (y `div` truncate sqSize))
-  when e (env s $~ flickObstancle clickCoords)
+  when e (env s $~ flickObstacle clickCoords)
 
 
 main :: IO ()
