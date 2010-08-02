@@ -4,7 +4,7 @@ import Chase
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith, ExitCode(ExitSuccess))
-import Control.Monad (when,unless,forM_,liftM,liftM2)
+import Control.Monad (when,unless,forM_,liftM,liftM2,liftM3)
 import Data.IORef (IORef, newIORef)
 
 import Data.Map ((!))
@@ -13,6 +13,7 @@ import qualified Data.Map as M
 data State = State {
       env :: IORef Environment
     , run :: IORef Bool
+    , edit :: IORef Bool
 }
 
 -- Various top-level configuration parameters
@@ -33,7 +34,7 @@ sqSize :: GLfloat
 sqSize = fromIntegral winHeight / fromIntegral gridSize
 
 makeState :: IO State
-makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
+makeState = liftM3 State (newIORef (createEnvironment gridSize)) (newIORef False) (newIORef False)
 
 color3f :: Color3 GLfloat -> IO ()
 color3f = color
@@ -90,11 +91,17 @@ keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
 keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
 keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
-keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = env s $~ flickObstacle clickCoords
-    where
-      clickCoords = (fromIntegral (x `div` truncate sqSize),
-                     gridSize - fromIntegral (y `div` truncate sqSize))
+keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = edit s $~ (const True)
+keyboardMouseHandler s (MouseButton LeftButton) Up _ (Position x y) = edit s $~ (const False)
 keyboardMouseHandler _ _ _ _ _ = return ()
+
+motionHandler :: State -> Position -> IO ()
+motionHandler s (Position x y) = do
+  e <- G.get (edit s)
+  let clickCoords = (fromIntegral (x `div` truncate sqSize),
+                     gridSize - fromIntegral (y `div` truncate sqSize))
+  when e (env s $~ flickObstancle clickCoords)
+
 
 main :: IO ()
 main = do
@@ -109,6 +116,8 @@ main = do
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc
   keyboardMouseCallback $= Just (keyboardMouseHandler state)
+  motionCallback $= Just (motionHandler state)
+
   addTimerCallback tick (timerFunc state)
 
   mainLoop
