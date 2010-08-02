@@ -3,7 +3,7 @@ module Chase where
 import Data.Map (Map)
 import qualified Data.Map as M
 
-import Data.Maybe (mapMaybe,catMaybes,fromJust)
+import Data.Maybe (mapMaybe,catMaybes)
 import Data.List (maximumBy,delete)
 import Data.Ord (comparing)
 
@@ -67,43 +67,46 @@ update e@(Environment b s _ _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
-canMove :: Environment -> Maybe AgentStack -> Bool
-canMove e Nothing = False
-canMove e (Just x) = case x of
-                       AgentStack (Path _) _ -> True
-                       _ -> False
+-- TODO simplify
+canMove :: Maybe AgentStack -> Bool
+canMove Nothing = False
+canMove (Just x) = case x of
+                     AgentStack (Path _) _ -> True
+                     _ -> False
                           
 setObstacle :: Point -> Environment -> Environment
 setObstacle p e = e 
 
+move :: Map Point AgentStack -> Point -> Point -> Map Point AgentStack
+move e src tgt = M.insert src (pop srcA)
+                 (M.insert tgt (push (top srcA) (e M.! tgt)) e) 
+    where
+      srcA = e M.! src
+
 moveGoal :: Point -> Environment -> Environment
 moveGoal p e | targetSuitable = e {
-                                  board = M.insert (goal e) (pop src) 
-                                          (M.insert dest (push (top src) (fromJust target)) b)
+                                  board = move b (goal e) dest
                                 , goal = dest
                                 }
              | otherwise = e
     where
       b = board e
       dest = addPoint p (goal e)
-      src = b M.! goal e
       target = M.lookup dest b
-      targetSuitable = canMove e target
+      targetSuitable = canMove target
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
 updatePursuer :: Environment -> Point -> Environment
 updatePursuer e p = e { 
-                      board = M.insert p source (M.insert m target b) 
+                      board = move b p m 
                     , pursuers = m : delete p (pursuers e)
                     }
     where
       b = board e
       n = filter (`M.member` b) $ neighbouringPoints p
       m = maximumBy (\x y -> comparing (scent . top) (b M.! x) (b M.! y)) n
-      source = pop (b M.! p) 
-      target = push (top (b M.! p)) (b M.! m)
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
 diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours' xs originalGrid p)

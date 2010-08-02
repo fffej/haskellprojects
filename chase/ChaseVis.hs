@@ -30,7 +30,7 @@ tick :: Int
 tick = 25
 
 sqSize :: GLfloat
-sqSize = (fromIntegral winHeight / fromIntegral gridSize)
+sqSize = fromIntegral winHeight / fromIntegral gridSize
 
 makeState :: IO State
 makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
