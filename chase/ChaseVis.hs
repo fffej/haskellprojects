@@ -53,16 +53,11 @@ pickColor Obstacle = Color3 1 1 1
 drawGrid :: Environment -> IO ()
 drawGrid (Environment g b _ _) = do
   lineWidth $= realToFrac 0.1
-  let sqSize = (fromIntegral winHeight / fromIntegral b)
-  let f i = ((fromIntegral i - 0.5 :: GLfloat) * sqSize)
+  let sq = (fromIntegral winHeight / fromIntegral b)
+  let f i = ((fromIntegral i - 0.5 :: GLfloat) * sq)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
-                      (\(i,j) ->
-                             do
-                               let c = pickColor (top $ g ! (i,j))
-                               colorVertex c (Vertex2 (f i) (f j))
-                               colorVertex c (Vertex2 (f i+sqSize) (f j))
-                               colorVertex c (Vertex2 (f i+sqSize) (f j+sqSize))
-                               colorVertex c (Vertex2 (f i) (f j+sqSize)))
+                      (\(i,j) -> mapM (colorVertex (pickColor (top $ g ! (i,j))))
+                                      [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sq,0),(sq,sq),(0,sq)]])
   flush
     
 
