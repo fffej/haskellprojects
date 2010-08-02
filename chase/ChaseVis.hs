@@ -15,8 +15,10 @@ data State = State {
     , run :: IORef Bool
 }
 
-makeState :: IO State
-makeState = liftM2 State (newIORef (createEnvironment 64)) (newIORef False)
+-- Various top-level configuration parameters
+
+gridSize :: Int
+gridSize = 64
 
 winHeight :: Int
 winHeight = 512
@@ -26,6 +28,12 @@ winWidth = 512
 
 tick :: Int
 tick = 25
+
+sqSize :: GLfloat
+sqSize = (fromIntegral winHeight / fromIntegral gridSize)
+
+makeState :: IO State
+makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
 
 color3f :: Color3 GLfloat -> IO ()
 color3f = color
@@ -53,11 +61,10 @@ pickColor Obstacle = Color3 1 1 1
 drawGrid :: Environment -> IO ()
 drawGrid (Environment g b _ _) = do
   lineWidth $= realToFrac 0.1
-  let sq = (fromIntegral winHeight / fromIntegral b)
-  let f i = ((fromIntegral i - 0.5 :: GLfloat) * sq)
+  let f i = ((fromIntegral i - 0.5 :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
                       (\(i,j) -> mapM (colorVertex (pickColor (top $ g ! (i,j))))
-                                      [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sq,0),(sq,sq),(0,sq)]])
+                                      [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sqSize,0),(sqSize,sqSize),(0,sqSize)]])
   flush
     
 
@@ -83,6 +90,10 @@ keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
 keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
 keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
+keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = env s $~ setObstacle clickCoords
+    where
+      clickCoords = (fromIntegral (x `div` truncate sqSize),
+                     fromIntegral (y `div` truncate sqSize))
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 main :: IO ()

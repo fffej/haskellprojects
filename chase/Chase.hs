@@ -51,6 +51,7 @@ pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack " ++ show x)
 push :: Agent -> AgentStack -> AgentStack
 push a (AgentStack t r) = AgentStack a (t:r)
 
+-- |Builds a basic environment
 createEnvironment :: Int -> Environment
 createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (s `div` 2, s `div` 2)
     where
@@ -66,6 +67,15 @@ update e@(Environment b s _ _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
+canMove :: Environment -> Maybe AgentStack -> Bool
+canMove e Nothing = False
+canMove e (Just x) = case x of
+                       AgentStack (Path _) _ -> True
+                       _ -> False
+                          
+setObstacle :: Point -> Environment -> Environment
+setObstacle p e = e 
+
 moveGoal :: Point -> Environment -> Environment
 moveGoal p e | targetSuitable = e {
                                   board = M.insert (goal e) (pop src) 
@@ -78,7 +88,7 @@ moveGoal p e | targetSuitable = e {
       dest = addPoint p (goal e)
       src = b M.! goal e
       target = M.lookup dest b
-      targetSuitable = maybe False (\x -> top x /= Obstacle) target -- TODO move to top level
+      targetSuitable = canMove e target
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
