@@ -90,10 +90,10 @@ keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
 keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
 keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
-keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = env s $~ setObstacle clickCoords
+keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = env s $~ flickObstacle clickCoords
     where
       clickCoords = (fromIntegral (x `div` truncate sqSize),
-                     fromIntegral (y `div` truncate sqSize))
+                     gridSize - fromIntegral (y `div` truncate sqSize))
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 main :: IO ()

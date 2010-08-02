@@ -74,8 +74,12 @@ canMove (Just x) = case x of
                      AgentStack (Path _) _ -> True
                      _ -> False
                           
-setObstacle :: Point -> Environment -> Environment
-setObstacle p e = e 
+flickObstacle :: Point -> Environment -> Environment
+flickObstacle p e | top (b M.! p) /= Obstacle  = e { board = M.insert p (push Obstacle $ b M.! p) b }
+                  | null $ rest (b M.! p)      = e
+                  | otherwise                  = e { board = M.insert p (pop $ b M.! p) b }
+    where
+      b = board e
 
 move :: Map Point AgentStack -> Point -> Point -> Map Point AgentStack
 move e src tgt = M.insert src (pop srcA)
