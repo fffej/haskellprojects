@@ -58,7 +58,7 @@ createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (mx,my)
       (mx,my) = (s `div` 2, s `div` 2)
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
       mkAgent x y | x == 0 || y == 0 || x == s || y == s = AgentStack Obstacle []
-                  | x == mx && y == my = AgentStack (Goal 255) [Path 0]
+                  | x == mx && y == my = AgentStack (Goal 1) [Path 0]
                   | x == 1 && y == 1 = AgentStack (Pursuer 0) [Path 0]
                   | x == (s-1) && y == (s-1) = AgentStack (Pursuer 0) [Path 0]
                   | otherwise = AgentStack (Path 0) []
