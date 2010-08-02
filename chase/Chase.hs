@@ -65,6 +65,9 @@ update e@(Environment b s _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
+moveGoal :: Point -> Environment -> Environment
+moveGoal = undefined
+
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
