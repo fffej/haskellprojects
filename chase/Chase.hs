@@ -32,6 +32,7 @@ data Environment = Environment {
       board :: Map Point AgentStack
     , size :: Int
     , pursuers :: [Point]
+    , goal :: Point
 } deriving Show
 
 scent :: Agent -> Scent
@@ -51,7 +52,7 @@ push :: Agent -> AgentStack -> AgentStack
 push a (AgentStack t r) = AgentStack a (t:r)
 
 createEnvironment :: Int -> Environment
-createEnvironment s = Environment b s [(1,1),(s-1,s-1)]
+createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (s `div` 2, s `div` 2)
     where
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
       mkAgent x y | x == 0 || y == 0 || x == s || y == s = AgentStack Obstacle []
@@ -61,12 +62,14 @@ createEnvironment s = Environment b s [(1,1),(s-1,s-1)]
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
-update e@(Environment b s _) = updatePursuers (e { board = c })
+update e@(Environment b s _ _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
 moveGoal :: Point -> Environment -> Environment
-moveGoal = undefined
+moveGoal p e = undefined
+    where
+      dest = undefined
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
