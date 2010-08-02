@@ -45,7 +45,7 @@ addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
 pop :: AgentStack -> AgentStack
 pop (AgentStack _ (x:xs)) = AgentStack x xs
-pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack" ++ (show x))
+pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack" ++ show x)
 
 push :: Agent -> AgentStack -> AgentStack
 push a (AgentStack t r) = AgentStack a (t:r)
@@ -71,7 +71,7 @@ updatePursuers env = foldl updatePursuer env (pursuers env)
 updatePursuer :: Environment -> Point -> Environment
 updatePursuer e p = e { 
                       board = M.insert p source (M.insert m target b) 
-                    , pursuers = m : (delete p (pursuers e))
+                    , pursuers = m : delete p (pursuers e)
                     }
     where
       b = board e
@@ -96,8 +96,8 @@ neighbours :: Map Point AgentStack -> Point -> [Agent]
 neighbours m p = map top $ mapMaybe (`M.lookup` m) (neighbouringPoints p)
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
-diffusePoint (AgentStack (Goal d) r) n = AgentStack (Goal d) r
-diffusePoint (AgentStack Obstacle r) n = AgentStack Obstacle r
+diffusePoint (AgentStack (Goal d) r) _ = AgentStack (Goal d) r
+diffusePoint (AgentStack Obstacle r) _ = AgentStack Obstacle r
 diffusePoint (AgentStack (Path d) r) n = AgentStack (Path $ diffusedScent d n) r
 diffusePoint (AgentStack (Pursuer d) r) n = AgentStack (Pursuer $ diffusedScent d n) r
 

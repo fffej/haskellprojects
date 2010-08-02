@@ -4,18 +4,19 @@ import Chase
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith, ExitCode(ExitSuccess))
-import Control.Monad (unless, when, forM_,liftM,liftM2)
+import Control.Monad (when,unless,forM_,liftM,liftM2)
 import Data.IORef (IORef, newIORef)
 
-import Data.Map (Map,(!))
+import Data.Map ((!))
 import qualified Data.Map as M
 
 data State = State {
       env :: IORef Environment
+    , run :: IORef Bool
 }
 
 makeState :: IO State
-makeState = liftM State (newIORef $ createEnvironment 64)
+makeState = liftM2 State (newIORef (createEnvironment 64)) (newIORef False)
 
 winHeight :: Int
 winHeight = 512
@@ -67,20 +68,23 @@ drawGrid (Environment g b _) = do
 
 timerFunc :: State -> IO ()
 timerFunc s = do
-  env s $~ update
+  e <- G.get (run s)
+  when e (env s $~ update)
   postRedisplay Nothing
   addTimerCallback tick (timerFunc s)
 
 reshapeFunc :: ReshapeCallback
-reshapeFunc size@(Size _ height) = 
+reshapeFunc s@(Size _ height) = 
     unless (height == 0) $ do
-      viewport $= (Position 0 0, size)
+      viewport $= (Position 0 0, s)
       loadIdentity
       ortho2D 0 512 0 512
       clearColor $= Color4 0 0 0 1
 
 keyboardMouseHandler :: State -> KeyboardMouseCallback
-keyboardMouseHandler  _ _ _ _ _ = return ()
+keyboardMouseHandler _ (Char 'q') Down _ _ = exitWith ExitSuccess
+keyboardMouseHandler s (Char ' ') Down _ _ = run s $~ not
+keyboardMouseHandler _ _ _ _ _ = return ()
 
 main :: IO ()
 main = do
