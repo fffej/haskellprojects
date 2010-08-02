@@ -4,10 +4,8 @@ import Data.Map (Map)
 import qualified Data.Map as M
 
 import Data.Maybe (mapMaybe,catMaybes)
-import Data.List (maximumBy)
+import Data.List (maximumBy,delete)
 import Data.Ord (comparing)
-
-import Debug.Trace
 
 -- Colloborate Diffusion
 -- http://en.wikipedia.org/wiki/Antiobjects
@@ -45,34 +43,48 @@ scent _ = 0
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
-createEnvironment size = Environment b size [(1,1),(size-1,size-1)]
+pop :: AgentStack -> AgentStack
+pop (AgentStack _ (x:xs)) = AgentStack x xs
+pop x@(AgentStack _ _)    =  error ("Cannot pop an empty stack" ++ (show x))
+
+push :: Agent -> AgentStack -> AgentStack
+push a (AgentStack t r) = AgentStack a (t:r)
+
+createEnvironment :: Int -> Environment
+createEnvironment s = Environment b s [(1,1),(s-1,s-1)]
     where
-      b = M.fromList [((x,y),mkAgent x y) | x <- [0..size], y <- [0..size] ]
-      mkAgent x y | x == 0 || y == 0 || x == size || y == size = AgentStack Obstacle []
-                  | x == (size `div` 2) && y == (size `div` 2) = AgentStack (Goal 1000) [Path 0]
+      b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
+      mkAgent x y | x == 0 || y == 0 || x == s || y == s = AgentStack Obstacle []
+                  | x == (s `div` 2) && y == (s `div` 2) = AgentStack (Goal 1000) [Path 0]
                   | x == 1 && y == 1 = AgentStack (Pursuer 0) [Path 0]
-                  | x == (size - 1) && y == (size - 1) = AgentStack (Pursuer 0) [Path 0]
+                  | x == (s-1) && y == (s-1) = AgentStack (Pursuer 0) [Path 0]
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
-update e@(Environment b size _) = e { board = c }
+update e@(Environment b s _) = updatePursuers (e { board = c })
     where
-      c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..size], x <- [0..size]]
+      c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
 updatePursuer :: Environment -> Point -> Environment
-updatePursuer e p = undefined
+updatePursuer e p = e { 
+                      board = M.insert p source (M.insert m target b) 
+                    , pursuers = m : (delete p (pursuers e))
+                    }
     where
-      n = neighbours (board e) p -- zip with neighbourPoints
-      maxScent = maximumBy (\x y -> comparing scent x y) n
+      b = board e
+      n = filter (`M.member` b) $ neighbouringPoints p
+      m = maximumBy (\x y -> comparing (scent . top) (b M.! x) (b M.! y)) n
+      source = pop (b M.! p) 
+      target = push (top (b M.! p)) (b M.! m)
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
 diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours' xs originalGrid p)
 
-neighbourPoints :: [Point]
-neighbourPoints = [(-1,0), (0,-1), (1,0), (0, 1)]
+neighbouringPoints :: Point -> [Point]
+neighbouringPoints p = map (addPoint p) [(-1,0), (0,-1), (1,0), (0, 1)]
 
 neighbours' :: Map Point AgentStack -> Map Point AgentStack -> Point -> [Agent]
 neighbours' xs m (x,y) = map top $ catMaybes [M.lookup (addPoint (x,y) (-1, 0 )) xs
@@ -81,12 +93,12 @@ neighbours' xs m (x,y) = map top $ catMaybes [M.lookup (addPoint (x,y) (-1, 0 ))
                                              ,M.lookup (addPoint (x,y) (0 , 1) ) m]
 
 neighbours :: Map Point AgentStack -> Point -> [Agent]
-neighbours m (x,y) = map top $ mapMaybe (`M.lookup` m) (map (addPoint (x,y)) neighbourPoints)
+neighbours m p = map top $ mapMaybe (`M.lookup` m) (neighbouringPoints p)
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
 diffusePoint (AgentStack (Goal d) r) n = AgentStack (Goal d) r
 diffusePoint (AgentStack Obstacle r) n = AgentStack Obstacle r
-diffusePoint (AgentStack (Path d) r) n = AgentStack (Path $ diffusedScent d n) r -- TODO
+diffusePoint (AgentStack (Path d) r) n = AgentStack (Path $ diffusedScent d n) r
 diffusePoint (AgentStack (Pursuer d) r) n = AgentStack (Pursuer $ diffusedScent d n) r
 
 diffusedScent :: Scent -> [Agent] -> Scent
