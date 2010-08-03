@@ -44,7 +44,7 @@ scent (Goal s) = s
 scent _ = 0
 
 isPursuer :: Agent -> Bool
-isPursuer (Pursuer s) = True
+isPursuer (Pursuer _) = True
 isPursuer _ = False
 
 addPoint :: Point -> Point -> Point
@@ -123,13 +123,14 @@ updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
 updatePursuer :: Environment -> Point -> Environment
-updatePursuer e p = e { 
-                      board = move b p m 
-                    , pursuers = m : delete p (pursuers e)
-                    }
+updatePursuer e p | null n = e
+                  | otherwise = e { 
+                                  board = move b p m 
+                                , pursuers = m : delete p (pursuers e)
+                                }
     where
       b = board e
-      n = filter (`M.member` b) $ neighbouringPoints p -- TODO Further filtering
+      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p -- TODO Further filtering
       m = maximumBy (\x y -> comparing (scent . top) (b M.! x) (b M.! y)) n
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
