@@ -14,12 +14,13 @@ import Debug.Trace
 data State = State {
       env :: IORef Environment
     , run :: IORef Bool
+    , heatMap :: IORef Bool
 }
 
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 64
+gridSize = 16
 
 winHeight :: Int
 winHeight = 512
@@ -36,7 +37,7 @@ sqSize = a
       a = (fromIntegral winHeight / fromIntegral gridSize) 
 
 makeState :: IO State
-makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
+makeState = liftM3 State (newIORef (createEnvironment gridSize)) (newIORef False) (newIORef False)
 
 color3f :: Color3 GLfloat -> IO ()
 color3f = color
@@ -58,18 +59,33 @@ displayFunc s = do
   swapBuffers
 
 pickColor :: Agent -> Color3 GLfloat
-pickColor (Goal s) = Color3 (realToFrac s / 1000) 0 0
+pickColor (Goal s) = Color3 0 0 1
 pickColor Pursuer = Color3 0 1 0
-pickColor (Path s) = Color3 0 0 (realToFrac s / 1000)
+pickColor (Path s) = Color3 (realToFrac s / 1000) 0 0
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
 drawGrid (Environment g b _ _) = do
-  lineWidth $= realToFrac 0.1
   let f i = ((fromIntegral i :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
                       (\(i,j) -> mapM (colorVertex (pickColor (top $ g ! (i,j))))
                                       [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sqSize,0),(sqSize,sqSize),(0,sqSize)]])
+  flush
+
+-- TODO draw a heat map
+drawHeatMap :: Environment -> IO ()
+drawHeatMap (Environment g b _ _) = do
+  let f i = ((fromIntegral i :: GLfloat) * sqSize)
+  renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
+                      (\(i,j) -> do
+                         let c1 = Color3 1 1 1
+                         let c2 = Color3 1 0 1
+                         let c3 = Color3 1 0 1
+                         let c4 = Color3 0 1 1 
+                         colorVertex c1 (Vertex2 (f i) (f j))
+                         colorVertex c2 (Vertex2 (f i + sqSize) (f j))
+                         colorVertex c3 (Vertex2 (f i + sqSize) (f j + sqSize))
+                         colorVertex c4 (Vertex2 (f i) (f j + sqSize)))
   flush
     
 
@@ -91,6 +107,7 @@ reshapeFunc s@(Size _ height) =
 keyboardMouseHandler :: State -> KeyboardMouseCallback
 keyboardMouseHandler _ (Char 'q') Down _ _ = exitWith ExitSuccess
 keyboardMouseHandler s (Char ' ') Down _ _ = run s $~ not
+keyboardMouseHandler s (Char 'h') Down _ _ = heatMap s $~ not
 keyboardMouseHandler s (Char 'a') Down _ _ = env s $~ update
 keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
