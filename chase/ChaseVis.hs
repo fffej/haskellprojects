@@ -13,13 +13,12 @@ import qualified Data.Map as M
 data State = State {
       env :: IORef Environment
     , run :: IORef Bool
-    , edit :: IORef Bool
 }
 
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 64
+gridSize = 16
 
 winHeight :: Int
 winHeight = 512
@@ -34,7 +33,7 @@ sqSize :: GLfloat
 sqSize = fromIntegral winHeight / fromIntegral gridSize
 
 makeState :: IO State
-makeState = liftM3 State (newIORef (createEnvironment gridSize)) (newIORef False) (newIORef False)
+makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
 
 color3f :: Color3 GLfloat -> IO ()
 color3f = color
@@ -44,6 +43,8 @@ vertex2f = vertex :: Vertex2 GLfloat -> IO ()
 
 colorVertex :: Color3 GLfloat ->  Vertex2 GLfloat -> IO ()  
 colorVertex c v = color3f c >> vertex v
+
+-- Actual logic of environment appears here
 
 displayFunc :: State -> DisplayCallback
 displayFunc s = do
@@ -87,21 +88,18 @@ reshapeFunc s@(Size _ height) =
 keyboardMouseHandler :: State -> KeyboardMouseCallback
 keyboardMouseHandler _ (Char 'q') Down _ _ = exitWith ExitSuccess
 keyboardMouseHandler s (Char ' ') Down _ _ = run s $~ not
+keyboardMouseHandler s (Char 'a') Down _ _ = env s $~ update
 keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
 keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
 keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
-keyboardMouseHandler s (MouseButton LeftButton) Down _ (Position x y) = edit s $~ (const True)
-keyboardMouseHandler s (MouseButton LeftButton) Up _ (Position x y) = edit s $~ (const False)
+keyboardMouseHandler s (MouseButton LeftButton) Down _ p = env s $~ (flipObstacle (convertCoords p))
+keyboardMouseHandler s (MouseButton RightButton) Down _ p = env s $~ (flipPursuer (convertCoords p))
 keyboardMouseHandler _ _ _ _ _ = return ()
 
-motionHandler :: State -> Position -> IO ()
-motionHandler s (Position x y) = do
-  e <- G.get (edit s)
-  let clickCoords = (fromIntegral (x `div` truncate sqSize),
-                     gridSize - fromIntegral (y `div` truncate sqSize))
-  when e (env s $~ flickObstacle clickCoords)
-
+convertCoords :: Position -> (Int,Int)
+convertCoords (Position x y) = (fromIntegral (x `div` truncate sqSize),
+                                gridSize - fromIntegral (y `div` truncate sqSize))
 
 main :: IO ()
 main = do
@@ -116,7 +114,6 @@ main = do
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc
   keyboardMouseCallback $= Just (keyboardMouseHandler state)
-  motionCallback $= Just (motionHandler state)
 
   addTimerCallback tick (timerFunc state)
 

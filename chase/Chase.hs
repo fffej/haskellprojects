@@ -7,6 +7,8 @@ import Data.Maybe (mapMaybe,catMaybes)
 import Data.List (maximumBy,delete)
 import Data.Ord (comparing)
 
+import Debug.Trace
+
 -- Colloborate Diffusion
 -- http://en.wikipedia.org/wiki/Antiobjects
 type Desirability = Double
@@ -14,7 +16,7 @@ type Scent = Double
 type Point = (Int,Int)
 
 diffusionRate :: Double
-diffusionRate = 0.025
+diffusionRate = 0.25
 
 data Agent = Goal Desirability
            | Pursuer Scent
@@ -41,6 +43,10 @@ scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
 
+isPursuer :: Agent -> Bool
+isPursuer (Pursuer s) = True
+isPursuer _ = False
+
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
@@ -58,7 +64,7 @@ createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (mx,my)
       (mx,my) = (s `div` 2, s `div` 2)
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
       mkAgent x y | x == 0 || y == 0 || x == s || y == s = AgentStack Obstacle []
-                  | x == mx && y == my = AgentStack (Goal 1) [Path 0]
+                  | x == mx && y == my = AgentStack (Goal 1000) [Path 0]
                   | x == 1 && y == 1 = AgentStack (Pursuer 0) [Path 0]
                   | x == (s-1) && y == (s-1) = AgentStack (Pursuer 0) [Path 0]
                   | otherwise = AgentStack (Path 0) []
@@ -75,12 +81,25 @@ canMove (Just x) = case x of
                      AgentStack (Path _) _ -> True
                      _ -> False
                           
-flickObstacle :: Point -> Environment -> Environment
-flickObstacle p e | top (b M.! p) /= Obstacle  = e { board = M.insert p (push Obstacle $ b M.! p) b }
-                  | null $ rest (b M.! p)      = e
-                  | otherwise                  = e { board = M.insert p (pop $ b M.! p) b }
+flipObstacle :: Point -> Environment -> Environment
+flipObstacle p e | top x /= Obstacle  = e { board = M.insert p (push Obstacle x) b }
+                 | null (rest x)      = e
+                 | otherwise          = e { board = M.insert p (pop x) b }
     where
       b = board e
+      x = b M.! p
+
+flipPursuer :: Point -> Environment -> Environment
+flipPursuer p e | not $ isPursuer (top x) = e { board = M.insert p (push (Pursuer 0) x) b 
+                                              , pursuers = p : pursuers e }
+                | null (rest x)           = e
+                | otherwise               = e { board = M.insert p (pop x) b
+                                              , pursuers = delete p (pursuers e) }
+    where
+      b = board e
+      x = b M.! p
+      
+                  
 
 move :: Map Point AgentStack -> Point -> Point -> Map Point AgentStack
 move e src tgt = M.insert src (pop srcA)
@@ -110,7 +129,7 @@ updatePursuer e p = e {
                     }
     where
       b = board e
-      n = filter (`M.member` b) $ neighbouringPoints p
+      n = filter (`M.member` b) $ neighbouringPoints p -- TODO Further filtering
       m = maximumBy (\x y -> comparing (scent . top) (b M.! x) (b M.! y)) n
 
 diffusePoint' :: Point -> Map Point AgentStack -> Map Point AgentStack -> AgentStack
