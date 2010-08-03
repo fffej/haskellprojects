@@ -16,10 +16,10 @@ type Scent = Double
 type Point = (Int,Int)
 
 diffusionRate :: Double
-diffusionRate = 0.25
+diffusionRate = 0.4
 
 data Agent = Goal Desirability
-           | Pursuer Scent
+           | Pursuer 
            | Path Scent
            | Obstacle
              deriving (Eq,Show)
@@ -38,14 +38,9 @@ data Environment = Environment {
 } deriving Show
 
 scent :: Agent -> Scent
-scent (Pursuer s) = s
 scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
-
-isPursuer :: Agent -> Bool
-isPursuer (Pursuer _) = True
-isPursuer _ = False
 
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (dx,dy) = (x+dx,y+dy)
@@ -65,8 +60,8 @@ createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (mx,my)
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
       mkAgent x y | x == 0 || y == 0 || x == s || y == s = AgentStack Obstacle []
                   | x == mx && y == my = AgentStack (Goal 1000) [Path 0]
-                  | x == 1 && y == 1 = AgentStack (Pursuer 0) [Path 0]
-                  | x == (s-1) && y == (s-1) = AgentStack (Pursuer 0) [Path 0]
+                  | x == 1 && y == 1 = AgentStack Pursuer [Path 0]
+                  | x == (s-1) && y == (s-1) = AgentStack Pursuer [Path 0]
                   | otherwise = AgentStack (Path 0) []
 
 update :: Environment -> Environment
@@ -90,10 +85,10 @@ flipObstacle p e | top x /= Obstacle  = e { board = M.insert p (push Obstacle x)
       x = b M.! p
 
 flipPursuer :: Point -> Environment -> Environment
-flipPursuer p e | not $ isPursuer (top x) = e { board = M.insert p (push (Pursuer 0) x) b 
-                                              , pursuers = p : pursuers e }
-                | null (rest x)           = e
-                | otherwise               = e { board = M.insert p (pop x) b
+flipPursuer p e | top x /= Pursuer = e { board = M.insert p (push Pursuer x) b 
+                                       , pursuers = p : pursuers e }
+                | null (rest x)    = e
+                | otherwise        = e { board = M.insert p (pop x) b
                                               , pursuers = delete p (pursuers e) }
     where
       b = board e
@@ -149,10 +144,8 @@ neighbours :: Map Point AgentStack -> Point -> [Agent]
 neighbours m p = map top $ mapMaybe (`M.lookup` m) (neighbouringPoints p)
 
 diffusePoint :: AgentStack -> [Agent] -> AgentStack
-diffusePoint (AgentStack (Goal d) r) _ = AgentStack (Goal d) r
-diffusePoint (AgentStack Obstacle r) _ = AgentStack Obstacle r
 diffusePoint (AgentStack (Path d) r) n = AgentStack (Path $ diffusedScent d n) r
-diffusePoint (AgentStack (Pursuer d) r) n = AgentStack (Pursuer $ diffusedScent d n) r
+diffusePoint p _ = p
 
 diffusedScent :: Scent -> [Agent] -> Scent
 diffusedScent s xs = s + diffusionRate * sum (map (\x -> scent x - s) xs)

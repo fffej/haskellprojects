@@ -9,6 +9,7 @@ import Data.IORef (IORef, newIORef)
 
 import Data.Map ((!))
 import qualified Data.Map as M
+import Debug.Trace
 
 data State = State {
       env :: IORef Environment
@@ -18,7 +19,7 @@ data State = State {
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 8
+gridSize = 64
 
 winHeight :: Int
 winHeight = 512
@@ -30,7 +31,9 @@ tick :: Int
 tick = 25
 
 sqSize :: GLfloat
-sqSize = fromIntegral winHeight / fromIntegral gridSize
+sqSize = a 
+    where 
+      a = (fromIntegral winHeight / fromIntegral gridSize) 
 
 makeState :: IO State
 makeState = liftM2 State (newIORef (createEnvironment gridSize)) (newIORef False)
@@ -55,15 +58,15 @@ displayFunc s = do
   swapBuffers
 
 pickColor :: Agent -> Color3 GLfloat
-pickColor (Goal s) = Color3 (realToFrac s) 0 0
-pickColor (Pursuer s) = Color3 0 1 0
-pickColor (Path s) = Color3 0 0 (realToFrac s)
+pickColor (Goal s) = Color3 (realToFrac s / 1000) 0 0
+pickColor Pursuer = Color3 0 1 0
+pickColor (Path s) = Color3 0 0 (realToFrac s / 1000)
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
 drawGrid (Environment g b _ _) = do
   lineWidth $= realToFrac 0.1
-  let f i = ((fromIntegral i - 0.5 :: GLfloat) * sqSize)
+  let f i = ((fromIntegral i :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
                       (\(i,j) -> mapM (colorVertex (pickColor (top $ g ! (i,j))))
                                       [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sqSize,0),(sqSize,sqSize),(0,sqSize)]])
@@ -98,10 +101,8 @@ keyboardMouseHandler s (MouseButton RightButton) Down _ p = env s $~ flipPursuer
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 convertCoords :: Position -> (Int,Int)
-convertCoords (Position x y) = debugShow ((x,y),sqSize)
-    
-    (truncate (realToFrac x / sqSize),
-     gridSize - truncate (realToFrac y / sqSize))
+convertCoords (Position x y) = (truncate (realToFrac x / sqSize),
+                                (gridSize - 1)- truncate (realToFrac y / sqSize))
 
 main :: IO ()
 main = do

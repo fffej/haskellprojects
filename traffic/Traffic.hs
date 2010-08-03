@@ -74,16 +74,15 @@ updateCar env d car = updateCarSpeed env d (updateCarPosition env d car)
 
 updateCarSpeed :: Environment -> Double -> Car -> Car
 updateCarSpeed env d car | null nearestCars = car 
-                         | distanceBetween < 3 = car { speed = min maxSpeed (speed car * (1 + d*0.001)) }
+                         | distanceBetween < 3 = car { speed = min maxSpeed (speed car * (1 + d*0.01)) }
                          | distanceBetween > 3 = car { speed = max 0.1 (speed car * (1 - d*0.01)) }
                          | otherwise = car
     where
       maxSpeed = min maximumAhead (fromJust $ M.lookup (route car) (routes env))
-      nearestCars = sortBy 
-                    (comparing distanceToDestination)
-                    (carsOnRoute car (cars env))
+      nearestCars = filter (\x -> distanceToDestination x > (distanceToDestination car))
+                    $ sortBy (comparing distanceToDestination) (carsOnRoute car (cars env))
       carAhead = head nearestCars
-      maximumAhead = abs ((speed carAhead + distanceToDestination carAhead) - distanceToDestination car)
+      maximumAhead = ((speed carAhead + distanceToDestination carAhead) - distanceToDestination car)
       distanceBetween  = distanceToDestination (head nearestCars) - distanceToDestination car
 
 updateCarPosition :: Environment -> Double -> Car -> Car
