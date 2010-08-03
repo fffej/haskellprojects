@@ -98,8 +98,10 @@ keyboardMouseHandler s (MouseButton RightButton) Down _ p = env s $~ flipPursuer
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 convertCoords :: Position -> (Int,Int)
-convertCoords (Position x y) = (truncate (realToFrac x / sqSize),
-                                gridSize - truncate (realToFrac y / sqSize))
+convertCoords (Position x y) = debugShow ((x,y),sqSize)
+    
+    (truncate (realToFrac x / sqSize),
+     gridSize - truncate (realToFrac y / sqSize))
 
 main :: IO ()
 main = do
