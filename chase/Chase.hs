@@ -74,7 +74,7 @@ flipPursuer p e | head x /= Pursuer = e { board = M.insert p (Pursuer:x) b
                                        , pursuers = p : pursuers e }
                 | null (tail x)    = e
                 | otherwise        = e { board = M.insert p (tail x) b
-                                              , pursuers = delete p (pursuers e) }
+                                       , pursuers = delete p (pursuers e) }
     where
       b = board e
       x = b M.! p
@@ -88,16 +88,13 @@ move e src tgt = M.insert src (tail srcA)
       srcA = e M.! src
 
 moveGoal :: Point -> Environment -> Environment
-moveGoal p e | targetSuitable = e {
-                                  board = move b (goal e) dest
-                                , goal = dest
-                                }
+moveGoal p e | targetSuitable = e { board = move b (goal e) dest
+                                  , goal = dest }
              | otherwise = e
     where
       b = board e
       dest = addPoint p (goal e)
-      target = M.lookup dest b
-      targetSuitable = canMove target
+      targetSuitable = canMove (M.lookup dest b)
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
