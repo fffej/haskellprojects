@@ -20,7 +20,7 @@ data State = State {
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 16
+gridSize = 12
 
 winHeight :: Int
 winHeight = 512
@@ -111,8 +111,8 @@ keyboardMouseHandler s (SpecialKey KeyLeft) Down _ _ = env s $~ moveGoal (-1,0)
 keyboardMouseHandler s (SpecialKey KeyRight) Down _ _ = env s $~ moveGoal (1,0)
 keyboardMouseHandler s (SpecialKey KeyUp) Down _ _ = env s $~ moveGoal (0,1)
 keyboardMouseHandler s (SpecialKey KeyDown) Down _ _ = env s $~ moveGoal (0,-1)
-keyboardMouseHandler s (MouseButton LeftButton) Down _ p = env s $~ flipObstacle (convertCoords p)
-keyboardMouseHandler s (MouseButton RightButton) Down _ p = env s $~ flipPursuer (convertCoords p)
+keyboardMouseHandler s (MouseButton LeftButton) Down _ p = env s $~ flipAgent Obstacle (convertCoords p)
+keyboardMouseHandler s (MouseButton RightButton) Down _ p = env s $~ flipAgent Pursuer (convertCoords p)
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 convertCoords :: Position -> (Int,Int)
