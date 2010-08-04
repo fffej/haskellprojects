@@ -101,10 +101,8 @@ updatePursuers env = foldl updatePursuer env (pursuers env)
 
 updatePursuer :: Environment -> Point -> Environment
 updatePursuer e p | null n = e
-                  | otherwise = e { 
-                                  board = move b p m 
-                                , pursuers = m : delete p (pursuers e)
-                                }
+                  | otherwise = e { board = move b p m 
+                                  , pursuers = m : delete p (pursuers e) }
     where
       b = board e
       n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p -- TODO Further filtering
