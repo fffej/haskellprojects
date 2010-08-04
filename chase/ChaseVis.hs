@@ -20,7 +20,7 @@ data State = State {
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 16
+gridSize = 64
 
 winHeight :: Int
 winHeight = 512

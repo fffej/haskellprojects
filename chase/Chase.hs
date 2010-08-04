@@ -60,7 +60,7 @@ update e@(Environment b s _ _) = updatePursuers (e { board = c })
 canMove :: Maybe [Agent] -> Bool
 canMove (Just (Path _:xs)) = True
 canMove _ = False
-                          
+
 flipObstacle :: Point -> Environment -> Environment
 flipObstacle p e | head x /= Obstacle = e { board = M.insert p (Obstacle:x) b }
                  | null (tail x)      = e
@@ -74,7 +74,7 @@ flipPursuer p e | head x /= Pursuer = e { board = M.insert p (Pursuer:x) b
                                        , pursuers = p : pursuers e }
                 | null (tail x)    = e
                 | otherwise        = e { board = M.insert p (tail x) b
-                                              , pursuers = delete p (pursuers e) }
+                                       , pursuers = delete p (pursuers e) }
     where
       b = board e
       x = b M.! p
@@ -88,10 +88,8 @@ move e src tgt = M.insert src (tail srcA)
       srcA = e M.! src
 
 moveGoal :: Point -> Environment -> Environment
-moveGoal p e | targetSuitable = e {
-                                  board = move b (goal e) dest
-                                , goal = dest
-                                }
+moveGoal p e | targetSuitable = e { board = move b (goal e) dest
+                                  , goal = dest }
              | otherwise = e
     where
       b = board e
@@ -102,15 +100,14 @@ moveGoal p e | targetSuitable = e {
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
+-- Ensure we only move if there is a better scent available
 updatePursuer :: Environment -> Point -> Environment
-updatePursuer e p | null n = e
-                  | otherwise = e { 
-                                  board = move b p m 
-                                , pursuers = m : delete p (pursuers e)
-                                }
+updatePursuer e p | null n || (scent.head) (b M.! p) > (scent.head) (b M.! m) = e
+                  | otherwise = e { board = move b p m 
+                                  , pursuers = m : delete p (pursuers e) }
     where
       b = board e
-      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p -- TODO Further filtering
+      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p 
       m = maximumBy (\x y -> comparing (scent . head) (b M.! x) (b M.! y)) n
 
 diffusePoint' :: Point -> Map Point [Agent] -> Map Point [Agent] -> [Agent]
@@ -120,10 +117,10 @@ neighbouringPoints :: Point -> [Point]
 neighbouringPoints p = map (addPoint p) [(-1,0), (0,-1), (1,0), (0, 1)]
 
 neighbours' :: Map Point [Agent] -> Map Point [Agent] -> Point -> [Agent]
-neighbours' xs m (x,y) = map head $ catMaybes [M.lookup (addPoint (x,y) (-1, 0 )) xs
-                                              ,M.lookup (addPoint (x,y) (0 , -1)) xs
-                                              ,M.lookup (addPoint (x,y) (1 , 0) ) m
-                                              ,M.lookup (addPoint (x,y) (0 , 1) ) m]
+neighbours' xs m p = map head $ catMaybes [M.lookup (addPoint p (-1, 0 )) xs
+                                          ,M.lookup (addPoint p (0 , -1)) xs
+                                          ,M.lookup (addPoint p (1 , 0) ) m
+                                          ,M.lookup (addPoint p (0 , 1) ) m]
 
 neighbours :: Map Point [Agent] -> Point -> [Agent]
 neighbours m p = map head $ mapMaybe (`M.lookup` m) (neighbouringPoints p)
