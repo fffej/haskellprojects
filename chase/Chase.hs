@@ -27,6 +27,7 @@ data Agent = Goal Desirability
 data Environment = Environment {
       board :: Map Point [Agent]
     , size :: Int
+    , pursuers :: [Point]
     , goal :: Point
 } deriving Show
 
@@ -38,12 +39,9 @@ scent _ = 0
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
-pursuers :: Environment -> [Point]
-pursuers e = M.keys $ M.filter (\x -> not $ null x && head x == Pursuer) (board e)
-
 -- |Builds a basic environment
 createEnvironment :: Int -> Environment
-createEnvironment s = Environment b s (mx,my)
+createEnvironment s = Environment b s [(1,1),(s-1,s-1)] (mx,my)
     where
       (mx,my) = (s `div` 2, s `div` 2)
       b = M.fromList [((x,y),mkAgent x y) | x <- [0..s], y <- [0..s] ]
@@ -54,21 +52,34 @@ createEnvironment s = Environment b s (mx,my)
                   | otherwise = [Path 0]
 
 update :: Environment -> Environment
-update e@(Environment b s _) = traceShow (updatePursuers (e { board = c })) updatePursuers (e { board = c })
+update e@(Environment b s _ _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
+-- TODO simplify
 canMove :: Maybe [Agent] -> Bool
 canMove (Just (Path _:xs)) = True
 canMove _ = False
-
-flipAgent :: Agent -> Point -> Environment -> Environment
-flipAgent a p e | head x /= a    = e { board = M.insert p (a:x) b }
-                | null (tail x)  = e
-                | otherwise      = e { board = M.insert p (tail x) b }
+                          
+flipObstacle :: Point -> Environment -> Environment
+flipObstacle p e | head x /= Obstacle = e { board = M.insert p (Obstacle:x) b }
+                 | null (tail x)      = e
+                 | otherwise          = e { board = M.insert p (tail x) b }
     where
       b = board e
       x = b M.! p
+
+flipPursuer :: Point -> Environment -> Environment
+flipPursuer p e | head x /= Pursuer = e { board = M.insert p (Pursuer:x) b 
+                                       , pursuers = p : pursuers e }
+                | null (tail x)    = e
+                | otherwise        = e { board = M.insert p (tail x) b
+                                              , pursuers = delete p (pursuers e) }
+    where
+      b = board e
+      x = b M.! p
+      
+                  
 
 move :: Map Point [Agent] -> Point -> Point -> Map Point [Agent]
 move e src tgt = M.insert src (tail srcA)
@@ -77,27 +88,33 @@ move e src tgt = M.insert src (tail srcA)
       srcA = e M.! src
 
 moveGoal :: Point -> Environment -> Environment
-moveGoal p e | targetSuitable = e { board = move b (goal e) dest
-                                  , goal = dest }
+moveGoal p e | targetSuitable = e {
+                                  board = move b (goal e) dest
+                                , goal = dest
+                                }
              | otherwise = e
     where
       b = board e
       dest = addPoint p (goal e)
-      targetSuitable = canMove (M.lookup dest b)
+      target = M.lookup dest b
+      targetSuitable = canMove target
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
 updatePursuer :: Environment -> Point -> Environment
 updatePursuer e p | null n = e
-                  | otherwise = e { board = move b p m }
+                  | otherwise = e { 
+                                  board = move b p m 
+                                , pursuers = m : delete p (pursuers e)
+                                }
     where
       b = board e
-      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p 
+      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p -- TODO Further filtering
       m = maximumBy (\x y -> comparing (scent . head) (b M.! x) (b M.! y)) n
 
 diffusePoint' :: Point -> Map Point [Agent] -> Map Point [Agent] -> [Agent]
-diffusePoint' p xs og = diffusePoint (og M.! p) (neighbours' xs og p)
+diffusePoint' p xs originalGrid = diffusePoint (originalGrid M.! p) (neighbours' xs originalGrid p)
 
 neighbouringPoints :: Point -> [Point]
 neighbouringPoints p = map (addPoint p) [(-1,0), (0,-1), (1,0), (0, 1)]
@@ -117,5 +134,3 @@ diffusePoint p _ = p
 
 diffusedScent :: Scent -> [Agent] -> Scent
 diffusedScent s xs = s + diffusionRate * sum (map (\x -> scent x - s) xs)
-
--- test
