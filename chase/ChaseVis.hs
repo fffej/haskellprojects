@@ -61,14 +61,14 @@ displayFunc s = do
 pickColor :: Agent -> Color3 GLfloat
 pickColor (Goal s) = Color3 0 0 1
 pickColor Pursuer = Color3 0 1 0
-pickColor (Path s) = Color3 (realToFrac s / 1000) 0 0
+pickColor (Path s) = Color3 (log (realToFrac s / 333)) 0 0
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
 drawGrid (Environment g b _ _) = do
   let f i = ((fromIntegral i :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
-                      (\(i,j) -> mapM (colorVertex (pickColor (top $ g ! (i,j))))
+                      (\(i,j) -> mapM (colorVertex (pickColor (head $ g ! (i,j))))
                                       [Vertex2 (f i + x) (f j + y) | (x,y) <- [(0,0),(sqSize,0),(sqSize,sqSize),(0,sqSize)]])
   flush
 
