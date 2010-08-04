@@ -63,7 +63,7 @@ pickColor (Path s) = Color3 (log (realToFrac s / 333)) 0 0
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()
-drawGrid (Environment g b _ _) = do
+drawGrid (Environment g b _) = do
   let f i = ((fromIntegral i :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
                       (\(i,j) -> mapM (colorVertex (pickColor (head $ g ! (i,j))))
@@ -72,7 +72,7 @@ drawGrid (Environment g b _ _) = do
 
 -- TODO draw a heat map
 drawHeatMap :: Environment -> IO ()
-drawHeatMap (Environment g b _ _) = do
+drawHeatMap (Environment g b _) = do
   let f i = ((fromIntegral i :: GLfloat) * sqSize)
   renderPrimitive Quads $ forM_ [(x,y) | x <- [0..b], y <- [0..b]]
                       (\(i,j) -> do
