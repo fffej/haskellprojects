@@ -36,6 +36,10 @@ scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
 
+topScent :: [Agent] -> Scent
+topScent (x:xs) = scent x
+topScent _ = 0
+
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (dx,dy) = (x+dx,y+dy)
 
@@ -56,7 +60,7 @@ update e@(Environment b s _ _) = updatePursuers (e { board = c })
     where
       c = M.fromList [((x,y), diffusePoint' (x,y) c b) | y <- [0..s], x <- [0..s]]
 
--- TODO simplify
+-- TODO simplify?
 canMove :: Maybe [Agent] -> Bool
 canMove (Just (Path _:xs)) = True
 canMove _ = False
@@ -94,20 +98,21 @@ moveGoal p e | targetSuitable = e { board = move b (goal e) dest
     where
       b = board e
       dest = addPoint p (goal e)
-      target = M.lookup dest b
-      targetSuitable = canMove target
+      targetSuitable = canMove $ M.lookup dest b
 
 updatePursuers :: Environment -> Environment
 updatePursuers env = foldl updatePursuer env (pursuers env)
 
 -- Ensure we only move if there is a better scent available
 updatePursuer :: Environment -> Point -> Environment
-updatePursuer e p | null n || (scent.head) (b M.! p) > (scent.head) (b M.! m) = e
+updatePursuer e p | null n    = e
                   | otherwise = e { board = move b p m 
                                   , pursuers = m : delete p (pursuers e) }
     where
       b = board e
-      n = filter (canMove . (`M.lookup` b)) $ neighbouringPoints p 
+      currentScent = topScent (b M.! p)
+      n = filter (\x -> topScent (b M.! x) >= currentScent ) $ 
+          filter (canMove . (`M.lookup` b)) $ neighbouringPoints p  -- can simplify here
       m = maximumBy (\x y -> comparing (scent . head) (b M.! x) (b M.! y)) n
 
 diffusePoint' :: Point -> Map Point [Agent] -> Map Point [Agent] -> [Agent]
