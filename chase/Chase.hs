@@ -2,6 +2,7 @@ module Chase where
 
 import Data.Map (Map)
 import qualified Data.Map as M
+import Data.Array
 
 import Data.Maybe (mapMaybe,catMaybes)
 import Data.List (maximumBy,delete)
@@ -15,9 +16,6 @@ type Desirability = Double
 type Scent = Double
 type Point = (Int,Int)
 
-diffusionRate :: Double
-diffusionRate = 0.4
-
 data Agent = Goal Desirability
            | Pursuer 
            | Path Scent
@@ -30,6 +28,9 @@ data Environment = Environment {
     , pursuers :: [Point]
     , goal :: Point
 } deriving Show
+
+diffusionRate :: Double
+diffusionRate = 0.4
 
 scent :: Agent -> Scent
 scent (Path s) = s
