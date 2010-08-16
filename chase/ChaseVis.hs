@@ -20,7 +20,7 @@ data State = State {
 -- Various top-level configuration parameters
 
 gridSize :: Int
-gridSize = 64
+gridSize = 16
 
 winHeight :: Int
 winHeight = 512
@@ -59,7 +59,7 @@ displayFunc s = do
 pickColor :: Agent -> Color3 GLfloat
 pickColor (Goal s) = Color3 0 0 1
 pickColor Pursuer = Color3 0 1 0
-pickColor (Path s) = Color3 (log (realToFrac s / 333)) 0 0
+pickColor (Path s) = Color3 (realToFrac s / 1000) 0 0
 pickColor Obstacle = Color3 1 1 1
 
 drawGrid :: Environment -> IO ()

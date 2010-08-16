@@ -30,12 +30,20 @@ data Environment = Environment {
 } deriving Show
 
 diffusionRate :: Double
-diffusionRate = 0.4
+diffusionRate = 0.1
 
 scent :: Agent -> Scent
 scent (Path s) = s
 scent (Goal s) = s
 scent _ = 0
+
+zeroScent :: Agent -> Agent
+zeroScent (Path s) = Path 0
+zeroScent x = x
+
+zeroScents :: [Agent] -> [Agent]
+zeroScents (x:xs) = zeroScent x : xs
+zeroScents x = x
 
 topScent :: [Agent] -> Scent
 topScent (x:xs) = scent x
@@ -74,6 +82,7 @@ flipObstacle p e | head x /= Obstacle = e { board = M.insert p (Obstacle:x) b }
       b = board e
       x = b M.! p
 
+-- |Hides the scent underneath
 flipPursuer :: Point -> Environment -> Environment
 flipPursuer p e | head x /= Pursuer = e { board = M.insert p (Pursuer:x) b 
                                        , pursuers = p : pursuers e }
@@ -87,7 +96,7 @@ flipPursuer p e | head x /= Pursuer = e { board = M.insert p (Pursuer:x) b
                   
 
 move :: Map Point [Agent] -> Point -> Point -> Map Point [Agent]
-move e src tgt = M.insert src (tail srcA)
+move e src tgt = M.insert src (zeroScents $ tail srcA)
                  (M.insert tgt (head srcA : e M.! tgt) e) 
     where
       srcA = e M.! src
