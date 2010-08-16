@@ -1,0 +1,19 @@
+html { 
+       margin: 0;
+       padding: 0 100px 0 100px;
+}
+
+body { 
+       font: 75% arial, sans-serif;
+       background-color: #A9D0F5
+       padding: 0 100px 0 100px;
+}
+
+h1 { 
+     font-size: 32pt;
+     text-align: center;
+}
+
+#output { 
+  margin: 0;
+}

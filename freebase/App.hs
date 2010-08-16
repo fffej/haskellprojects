@@ -26,6 +26,7 @@ getHomeR = hamletToRepHtml [$hamlet|
 %html
   %head
     %title Album Lister
+    %link!rel="stylesheet"!href=@StaticR.albums_css@
     %script!src="http://code.jquery.com/jquery-1.4.2.min.js"
     %script!src=@StaticR.script_js@
   %body
@@ -34,6 +35,9 @@ getHomeR = hamletToRepHtml [$hamlet|
     %input!type=text!onchange="listAlbums(this.value)"
     %hr
     #output
+    %hr
+    %p Written using 
+        %a!href="http://docs.yesodweb.com/Yesod" Yesod Web Framework
 |]              
 
 getAlbumsR :: String -> Handler AlbumLister RepJson
