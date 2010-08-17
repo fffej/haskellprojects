@@ -31,17 +31,6 @@ mqlReadUri = "http://api.freebase.com/api/service/mqlread"
 makeQuery :: JSValue -> IO (Result JSValue)
 makeQuery s = liftM decode (simpleHTTP (getRequest (mqlReadUri ++ "?query=" ++ urlEncode (encode s))) >>= getResponseBody) 
 
-musicQuery :: JSValue
-musicQuery = mkSimpleQuery [("type",showJSON "/music/artist"),("name",showJSON "Iggy Pop"), ("album",JSArray [])]
-
-filmQuery :: JSValue
-filmQuery = mkSimpleQuery [("type",showJSON "/film/director"),("name",showJSON "John Woo"), ("film",JSArray [])]
-
-actorQuery :: JSValue
-actorQuery = mkSimpleQuery [("type",showJSON "/tv/tv_character")
-                           ,("name",showJSON "Kathryn Janeway"),
-                            ("reason_for_final_tv_appearance",JSArray [])]
-
 mkSimpleQuery :: [(String,JSValue)] -> JSValue
 mkSimpleQuery x = JSObject $ toJSObject [("query", JSObject $ toJSObject x)]
 
@@ -52,3 +41,11 @@ getAlbumList artist = do
                                         ,("album", JSArray [])]
   let albums = (lookupValue (lookupValue response "result") "album")
   return (fmap (map (\(JSString x) -> fromJSString x)) albums)
+
+getReleaseDate :: String -> IO (Result String)
+getReleaseDate film = do
+  response <- makeQuery $ mkSimpleQuery [("type", showJSON "/film/film")
+                                        ,("name", showJSON film)
+                                        ,("initial_release_date",  JSNull)]
+  let releaseDate = (lookupValue (lookupValue response "result") "initial_release_date")
+  return (fmap fromJSString releaseDate)
