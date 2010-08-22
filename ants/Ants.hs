@@ -69,6 +69,10 @@ clearAnt cell = cell { ant = Nothing }
 incPher :: Cell -> Cell
 incPher cell = cell { pheromone = succ (pheromone cell) }
 
+hasAnt :: Cell -> Bool
+hasAnt (Cell _ _ (Just ant) _) = True
+hasAnt _ = False
+
 delta :: Direction -> (Int,Int)
 delta N  = (0,-1)
 delta NE = (1,-1)

@@ -7,6 +7,8 @@ import System.Exit (exitWith,ExitCode(ExitSuccess))
 import Control.Monad
 import Data.IORef
 
+import Data.Array
+
 import Control.Concurrent.STM
 
 -- state is the world
@@ -16,10 +18,26 @@ tick :: Int
 tick = 100
 
 displayFunc :: World -> DisplayCallback
-displayFunc w = undefined
+displayFunc w = forM_ (assocs $ cells w) (uncurry drawPlace)
 
 timerFunc :: World -> IO ()
-timerFunc w = undefined
+timerFunc w = do
+  postRedisplay Nothing
+  addTimerCallback tick (timerFunc w)
+  return ()
+
+drawAnt :: (Int,Int) -> Ant -> IO ()
+drawAnt loc ant = undefined
+
+drawPlace :: (Int,Int) -> TCell -> IO ()
+drawPlace loc tcell = do
+  cell <- atomically $ readTVar tcell
+  when (pheromone cell > 0)
+           (print "Color in cell blue ish based on the pheromone")
+  when (food cell > 0)
+           (print "Color in cell red based on the amount of food")
+  when (hasAnt cell)
+           (print "Return the ant")
 
 keyboardMouseHandler :: World -> KeyboardMouseCallback
 keyboardMouseHandler _ _ _ _ _ = return ()

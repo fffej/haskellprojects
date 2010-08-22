@@ -21,6 +21,10 @@ data State = State {
 tick :: Int
 tick = 25
 
+-- |Pixels per world cell
+scale :: Int
+scale = 5
+
 makeState :: IO State
 makeState = liftM2 State (newIORef createEnvironment) (newIORef False)
 
