@@ -189,7 +189,7 @@ dropFood w loc = atomically $ do
 
 -- |Move the ant in the direction it is heading
 -- TODO assert that the way is clear
-move  :: World -> (Int,Int) -> IO (Int,Int)
+move :: World -> (Int,Int) -> IO (Int,Int)
 move w loc = atomically $ do
                cell <- readTVar src
                let dir    = direction $ fromJust $ ant cell
@@ -215,12 +215,13 @@ turn w loc amt = atomically $ updateTVar src (turnAnt amt)
     where
       src = place w loc
 
-forage :: World -> Cell -> STM (Int,Int)
-forage w loc = undefined
-  
+forage :: World -> Cell -> IO (Int,Int)
+forage w loc = do
+  return loc
 
-goHome :: World -> Cell -> STM (Int,Int)
-goHome w loc = undefined
+goHome :: World -> Cell -> IO (Int,Int)
+goHome w loc = do
+  return loc
 -- If we are home, drop food and turn around
 -- Otherwise search based on pheromene
 -- Return new location
@@ -235,8 +236,8 @@ behave w loc = atomically $ do
                  aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
                  let places = [ahead,aheadLeft,aheadRight]
                  if (hasFood a)
-                    then goHome w cell
-                    else forage w cell
+                    then goHome loc cell
+                    else forage loc cell
                            
 {- notes about stm
   
