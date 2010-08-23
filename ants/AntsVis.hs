@@ -6,19 +6,37 @@ import Graphics.UI.GLUT as G
 import System.Exit (exitWith,ExitCode(ExitSuccess))
 import Control.Monad
 import Data.IORef
+import Data.Maybe (fromJust)
 
 import Data.Array
 
 import Control.Concurrent.STM
 
--- state is the world
+color4f :: Color4 GLfloat -> IO ()
+color4f = color
 
+vertex2f :: Vertex2 GLfloat -> IO ()
+vertex2f = vertex :: Vertex2 GLfloat -> IO ()
+
+colorVertex :: Color4 GLfloat -> Vertex2 GLfloat -> IO ()  
+colorVertex c v = do
+  color4f c
+  vertex v
+
+-- state is the world
 -- |Timeout in ms for the callback
 tick :: Int
 tick = 100
 
+gridSize :: GLfloat
+gridSize = 5
+
 displayFunc :: World -> DisplayCallback
-displayFunc w = forM_ (assocs $ cells w) (uncurry drawPlace)
+displayFunc w = do
+  clear [ColorBuffer]
+  forM_ (assocs $ cells w) (uncurry drawPlace) 
+  flush
+  swapBuffers
 
 timerFunc :: World -> IO ()
 timerFunc w = do
@@ -27,17 +45,28 @@ timerFunc w = do
   return ()
 
 drawAnt :: (Int,Int) -> Ant -> IO ()
-drawAnt loc ant = undefined
+drawAnt loc ant = return ()
+
+fillCell :: (Int,Int) -> Color4 GLfloat -> IO ()
+fillCell (i,j) c = do
+  let x = fromIntegral i *  gridSize
+      y = fromIntegral j *  gridSize
+  renderPrimitive Quads $ do
+
+                     colorVertex c (Vertex2 x y)
+                     colorVertex c (Vertex2 (x + gridSize) y)
+                     colorVertex c (Vertex2 (x + gridSize) (y + gridSize))
+                     colorVertex c (Vertex2 x (y + gridSize))
 
 drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
   when (pheromone cell > 0)
-           (print "Color in cell blue ish based on the pheromone")
+       (fillCell loc (Color4 0 1 0 0))
   when (food cell > 0)
-           (print "Color in cell red based on the amount of food")
+       (fillCell loc (Color4 1 0 0 0))
   when (hasAnt cell)
-           (print "Return the ant")
+       (drawAnt loc (fromJust $ ant cell))
 
 keyboardMouseHandler :: World -> KeyboardMouseCallback
 keyboardMouseHandler _ _ _ _ _ = return ()
@@ -48,7 +77,7 @@ reshapeFunc size@(Size _ height) =
       viewport $= (Position 0 0, size)
       matrixMode $= Projection
       loadIdentity
-      ortho2D 0 (fromIntegral dim) 0 (fromIntegral dim)
+      ortho2D 0 400 0 400 -- (fromIntegral dim) 0 (fromIntegral dim)
       clearColor $= Color4 0 0 0 1
 
 main :: IO ()
@@ -60,7 +89,8 @@ main = do
   _ <- createWindow "Ants in Haskell."
   clearColor $= Color4 0 0 0 1
 
-  world <- atomically mkWorld
+  world <- mkWorld
+  _ <- populateWorld world
 
   displayCallback $= displayFunc world
   reshapeCallback $= Just reshapeFunc

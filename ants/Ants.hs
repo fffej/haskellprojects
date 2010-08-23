@@ -1,13 +1,14 @@
 module Ants where
 
-import Data.Maybe
-
-import Data.Array
-
 import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TVar
+
+import Data.Maybe
+import Data.Array
+
+import System.Random
 
 -- |Dimensions of square world
 dim :: Int
@@ -69,9 +70,15 @@ clearAnt cell = cell { ant = Nothing }
 incPher :: Cell -> Cell
 incPher cell = cell { pheromone = succ (pheromone cell) }
 
+setFood :: Cell -> Int -> Cell
+setFood cell f = cell { food = f }
+
 hasAnt :: Cell -> Bool
 hasAnt (Cell _ _ (Just ant) _) = True
 hasAnt _ = False
+
+homeRange :: [Int]
+homeRange = [homeOff..(nantsSqrt + homeOff)]
 
 delta :: Direction -> (Int,Int)
 delta N  = (0,-1)
@@ -111,10 +118,30 @@ updateTVar tv f = do
   v <- readTVar tv
   writeTVar tv (f v)
 
-mkWorld :: STM World
-mkWorld = do
-  cells <- replicateM (dim*dim) (newTVar (mkCell 0 0))
-  return (World $ listArray ((0,0),(dim,dim)) cells)
+mkWorld :: IO (World)
+mkWorld = atomically $ do
+            cells <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
+            return (World $ listArray ((0,0),(dim,dim)) cells)
+
+populateWorld :: World -> IO ()
+populateWorld w = do
+  -- Set up giant block of random numbers
+  -- TODO factor this out into a monad (or use an existing one?)
+  gen <- newStdGen
+  let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
+      dirs       = randomRs (0,8) gen :: [Int]
+      foodRanges = randomRs (0,foodRange) gen :: [Int]
+      xy         = uncurry zip $ splitAt foodPlaces dims
+
+  -- set (rand int dim) (rand int dim) (rant int food-range)x
+  forM_ (zip3 [0..foodPlaces] xy foodRanges) 
+        (\(_,p,f) -> atomically $ updateTVar (place w p) (\x -> x{ food = f }))
+                                                            
+  -- make some places at (x,y) that are home
+  -- place an ant there facing in a random direction
+  forM_ [(x,y) | x <- homeRange, y <- homeRange] (\(x,y) -> print "TODO")
+                                                              
+
 
 place :: World -> (Int,Int) -> TCell
 place world (x,y) = cells world ! (x,y)
@@ -185,11 +212,6 @@ behave w loc = atomically $ do
                     then forage w loc
                     else goHome w loc
                            
-    
-      
-               
-
-
 {- notes about stm
   
   locks and condition variables do not support modular programming
