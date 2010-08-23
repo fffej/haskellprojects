@@ -71,7 +71,7 @@ drawAnt (x,y) ant = do
   let gray  = Color4 0.4 0.4 0.4 1 :: Color4 GLfloat
       red   = Color4 1 0 0 1 :: Color4 GLfloat
       (hx,hy,tx,ty) = antInfo (direction ant)
-      c = if (hasFood ant)
+      c = if hasFood ant
           then red
           else gray
       x' = fromIntegral x * gridSize
@@ -96,9 +96,9 @@ drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
   when (pheromone cell > 0)
-       (fillCell loc (Color4 0 1 0 ((realToFrac $ pheromone cell) / pherScale)))
+       (fillCell loc (Color4 0 1 0 (realToFrac $ pheromone cell / pherScale)))
   when (food cell > 0)
-       (fillCell loc (Color4 1 0 0 ((fromIntegral $ food cell) / foodScale)))
+       (fillCell loc (Color4 1 0 0 (fromIntegral $ food cell / foodScale)))
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 

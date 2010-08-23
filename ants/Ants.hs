@@ -138,7 +138,7 @@ updateTVar tv f = do
   v <- readTVar tv
   writeTVar tv (f v)
 
-mkWorld :: IO (World)
+mkWorld :: IO World
 mkWorld = atomically $ do
             cells <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
             return (World $ listArray ((0,0),(dim,dim)) cells)
@@ -225,12 +225,11 @@ forage w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-  if (food cell > 0 && (not $ home cell))
-     then (takeFood w loc >> turn w loc 4 >> return loc)
-     else if (home ahead && (not $ hasAnt ahead))
+  if food cell > 0 && not (home cell)
+     then takeFood w loc >> turn w loc 4 >> return loc
+     else if home ahead && not (hasAnt ahead)
           then move w loc
           else return (1,2)
-
 
 goHome :: World -> (Int,Int) -> STM (Int,Int)
 goHome w loc = do
@@ -240,9 +239,9 @@ goHome w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-  if (home cell) 
-     then (dropFood w loc >> turn w loc 4 >> return loc)
-     else if (home ahead && (not $ hasAnt ahead))
+  if home cell
+     then dropFood w loc >> turn w loc 4 >> return loc
+     else if home ahead && not (hasAnt ahead)
           then move w loc
           else return (1,2)
 
@@ -251,9 +250,9 @@ behave :: World -> (Int,Int) -> IO (Int,Int)
 behave w loc = atomically $ do
                  cell <- readTVar (place w loc)
                  let a = fromJust $ ant cell
-                 if (hasFood a)
-                    then (goHome w loc)
-                    else (forage w loc)
+                 if hasFood a
+                    then goHome w loc
+                    else forage w loc
                            
 {- notes about stm
   
