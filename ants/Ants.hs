@@ -129,17 +129,17 @@ populateWorld w = do
   -- TODO factor this out into a monad (or use an existing one?)
   gen <- newStdGen
   let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
-      dirs       = randomRs (0,8) gen :: [Int]
+      dirs       = randomRs (0,7) gen :: [Int]
       foodRanges = randomRs (0,foodRange) gen :: [Int]
       xy         = uncurry zip $ splitAt foodPlaces dims
 
-  -- set (rand int dim) (rand int dim) (rant int food-range)x
   forM_ (zip3 [0..foodPlaces] xy foodRanges) 
         (\(_,p,f) -> atomically $ updateTVar (place w p) (\x -> x{ food = f }))
                                                             
   -- make some places at (x,y) that are home
   -- place an ant there facing in a random direction
-  forM_ [(x,y) | x <- homeRange, y <- homeRange] (\(x,y) -> print "TODO")
+  forM_ (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
+        (\(p,dir) -> atomically $ updateTVar (place w p) (\x -> x { ant = Just (Ant (toEnum dir) False) }))
                                                               
 
 

@@ -31,11 +31,33 @@ tick = 100
 gridSize :: GLfloat
 gridSize = 5
 
+pherScale :: GLfloat
+pherScale = 20.0
+
+foodScale :: GLfloat
+foodScale = 30.0
+
+antInfo :: Direction -> (GLfloat,GLfloat,GLfloat,GLfloat)
+antInfo N  = (2,0,2,4)
+antInfo NE = (4,0,0,4)
+antInfo E  = (4,2,0,2)
+antInfo SE = (4,4,0,0)
+antInfo Ants.S = (2,4,2,0) -- what is the S from Graphics.UI.Glut?
+antInfo SW = (0,4,4,0)
+antInfo W  = (0,2,4,2)
+antInfo NW = (0,0,4,4)
+
 displayFunc :: World -> DisplayCallback
 displayFunc w = do
   clear [ColorBuffer]
   forM_ (assocs $ cells w) (uncurry drawPlace) 
-  flush
+  let h = fromIntegral homeOff * gridSize
+      g = gridSize + gridSize * fromIntegral nantsSqrt
+  renderPrimitive Quads $ do
+                  colorVertex (Color4 0 0 1 0) (Vertex2 h h)
+                  colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) h)
+                  colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) (h+g))
+                  colorVertex (Color4 0 0 1 0) (Vertex2 h (h+g))
   swapBuffers
 
 timerFunc :: World -> IO ()
@@ -45,14 +67,26 @@ timerFunc w = do
   return ()
 
 drawAnt :: (Int,Int) -> Ant -> IO ()
-drawAnt loc ant = return ()
+drawAnt (x,y) ant = do
+  let gray  = Color4 0.4 0.4 0.4 1 :: Color4 GLfloat
+      red   = Color4 1 0 0 1 :: Color4 GLfloat
+      (hx,hy,tx,ty) = antInfo (direction ant)
+      c = if (hasFood ant)
+          then red
+          else gray
+      x' = fromIntegral x * gridSize
+      y' = fromIntegral y * gridSize
+     
+  renderPrimitive Lines $ do
+                    colorVertex c (Vertex2 (hx + x') (hy + y'))
+                    colorVertex c (Vertex2 (tx + x') (ty + y'))
+  return ()
 
 fillCell :: (Int,Int) -> Color4 GLfloat -> IO ()
 fillCell (i,j) c = do
   let x = fromIntegral i *  gridSize
       y = fromIntegral j *  gridSize
   renderPrimitive Quads $ do
-
                      colorVertex c (Vertex2 x y)
                      colorVertex c (Vertex2 (x + gridSize) y)
                      colorVertex c (Vertex2 (x + gridSize) (y + gridSize))
@@ -62,9 +96,9 @@ drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
   when (pheromone cell > 0)
-       (fillCell loc (Color4 0 1 0 0))
+       (fillCell loc (Color4 0 1 0 ((realToFrac $ pheromone cell) / pherScale)))
   when (food cell > 0)
-       (fillCell loc (Color4 1 0 0 0))
+       (fillCell loc (Color4 1 0 0 ((fromIntegral $ food cell) / foodScale)))
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 
