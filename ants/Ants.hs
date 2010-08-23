@@ -7,6 +7,7 @@ import Control.Concurrent.STM.TVar
 
 import Data.Maybe
 import Data.Array
+import Data.List (sortBy)
 
 import System.Random
 
@@ -47,6 +48,13 @@ data Direction = N | NE | E | SE | S | SW | W | NW
 nextDir :: Direction -> Direction
 nextDir NW = N
 nextDir x = succ x
+
+prevDir :: Direction -> Direction
+prevDir N = NW
+prevDir x = pred x
+
+turnAround :: Direction -> Direction
+turnAround = nextDir . nextDir . nextDir . nextDir
 
 data Ant = Ant {
       direction :: Direction
@@ -103,6 +111,14 @@ bound b n | n' < 0 = n' + b
     where
       n' = rem n b    
 
+-- Proof if proof were needed that more concise isn't necessarily good
+wrand :: [Int] -> IO Int
+wrand xs = do
+  gen <- newStdGen
+  let total = sum xs
+      (s,_) = randomR (0,sum xs) gen
+  return (snd $ head $ filter (\(runningSum,_) -> s <= runningSum) $ zip (scanl (+) 0 xs) [0..])
+
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
 
@@ -142,9 +158,11 @@ populateWorld w = do
         (\(p,dir) -> atomically $ updateTVar (place w p) (\x -> x { ant = Just (Ant (toEnum dir) False) }))
                                                               
 
-
 place :: World -> (Int,Int) -> TCell
 place world (x,y) = cells world ! (x,y)
+
+rankBy :: (Cell -> Cell -> Ordering) -> [Cell] -> [Cell]
+rankBy = sortBy
 
 -- |Takes one food from current location.
 -- TODO assert that..
@@ -194,10 +212,11 @@ turn w loc amt = atomically $ updateTVar src (turnAnt amt)
     where
       src = place w loc
 
-forage :: World -> (Int,Int) -> STM (Int,Int)
+forage :: World -> Cell -> STM (Int,Int)
 forage w loc = undefined
+  
 
-goHome :: World -> (Int,Int) -> STM (Int,Int)
+goHome :: World -> Cell -> STM (Int,Int)
 goHome w loc = undefined
 -- If we are home, drop food and turn around
 -- Otherwise search based on pheromene
@@ -208,9 +227,13 @@ behave :: World -> (Int,Int) -> IO (Int,Int)
 behave w loc = atomically $ do
                  cell <- readTVar (place w loc)
                  let a = fromJust $ ant cell
+                 ahead <- readTVar $ place w (deltaLoc loc (direction a))
+                 aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
+                 aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
+                 let places = [ahead,aheadLeft,aheadRight]
                  if (hasFood a)
-                    then forage w loc
-                    else goHome w loc
+                    then goHome w cell
+                    else forage w cell
                            
 {- notes about stm
   
