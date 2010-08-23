@@ -1,6 +1,7 @@
 module Ants where
 
 import Control.Monad
+import Control.Monad.IfElse
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TVar
@@ -171,12 +172,12 @@ rankBy = sortBy
 -- TODO assert that..
 -- 1) Food exists
 -- 2) Ant exists
-takeFood :: World -> (Int,Int) -> IO ()
-takeFood w loc = atomically $ do
-                   updateTVar p (\c -> c { food = pred (food c) })
-                   updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = True }) } )
-    where
-      p = place w loc
+takeFood :: World -> (Int,Int) -> STM ()
+takeFood w loc = do
+  updateTVar p (\c -> c { food = pred (food c) })
+  updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = True }) } )
+      where
+        p = place w loc
 
 -- |Drop food at current location
 -- TODO assert that ant has food
@@ -189,18 +190,19 @@ dropFood w loc = atomically $ do
 
 -- |Move the ant in the direction it is heading
 -- TODO assert that the way is clear
-move :: World -> (Int,Int) -> IO (Int,Int)
-move w loc = atomically $ do
-               cell <- readTVar src
-               let dir    = direction $ fromJust $ ant cell
-                   newLoc = deltaLoc loc dir
-               dest <- readTVar (cells w ! newLoc)
-               -- move the ant to the new cell
-               updateTVar src clearAnt
-               updateTVar src (\x -> x { ant = ant cell })
-               -- Leave a trail
-               when (home cell) (updateTVar src incPher)
-               return newLoc
+move :: World -> (Int,Int) -> STM (Int,Int)
+move w loc = do
+  cell <- readTVar src
+  let dir    = direction $ fromJust $ ant cell
+      newLoc = deltaLoc loc dir
+
+  dest <- readTVar (cells w ! newLoc)
+  -- move the ant to the new cell
+  updateTVar src clearAnt
+  updateTVar src (\x -> x { ant = ant cell })
+  -- Leave a trail
+  when (home cell) (updateTVar src incPher)
+  return newLoc
     where
       src = place w loc
 
@@ -210,34 +212,41 @@ turnAnt amt cell = cell { ant = Just turnedAnt }
       a = fromJust $ ant cell
       turnedAnt = a { direction = nextDir (direction a) }
 
-turn :: World -> (Int,Int) -> Int -> IO ()
-turn w loc amt = atomically $ updateTVar src (turnAnt amt)
+turn :: World -> (Int,Int) -> Int -> STM ()
+turn w loc amt = updateTVar src (turnAnt amt)
     where
       src = place w loc
 
-forage :: World -> Cell -> IO (Int,Int)
+forage :: World -> (Int,Int) -> STM (Int,Int)
 forage w loc = do
-  return loc
+  cell <- readTVar (place w loc)
+  let a = fromJust $ ant cell
+  ahead <- readTVar $ place w (deltaLoc loc (direction a))
+  aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
+  aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
+  let places = [ahead,aheadLeft,aheadRight]
+  
+  -- Foraging TODO eliminate cond
+  if (food cell > 0 && (not $ home cell))
+     then (takeFood w loc >> turn w loc 4 >> return loc)
+     else if (home ahead && (not $ hasAnt ahead))
+          then move w loc
+          else return (1,2)
 
-goHome :: World -> Cell -> IO (Int,Int)
+
+goHome :: World -> (Int,Int) -> STM (Int,Int)
 goHome w loc = do
-  return loc
--- If we are home, drop food and turn around
--- Otherwise search based on pheromene
--- Return new location
+  cell <- readTVar (place w loc)
+  return (3,4)
 
 -- | The main function for the ant agent
 behave :: World -> (Int,Int) -> IO (Int,Int)
 behave w loc = atomically $ do
                  cell <- readTVar (place w loc)
                  let a = fromJust $ ant cell
-                 ahead <- readTVar $ place w (deltaLoc loc (direction a))
-                 aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
-                 aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
-                 let places = [ahead,aheadLeft,aheadRight]
                  if (hasFood a)
-                    then goHome loc cell
-                    else forage loc cell
+                    then (goHome w loc)
+                    else (forage w loc)
                            
 {- notes about stm
   
