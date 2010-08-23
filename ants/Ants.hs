@@ -117,10 +117,10 @@ wrand xs = do
   gen <- newStdGen
   let total = sum xs
       (s,_) = randomR (0,sum xs) gen
-      ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (scanl (+) 0 xs) [0..])
-  case ys of
-    [] -> return 0
-    _  -> return $ snd $ head ys
+      ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (scanl (+) 0 xs) [0..]
+  return $ case ys of
+             [] -> 0 
+             _ -> snd $ head ys
 
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
