@@ -181,12 +181,12 @@ takeFood w loc = do
 
 -- |Drop food at current location
 -- TODO assert that ant has food
-dropFood :: World -> (Int,Int) -> IO ()
-dropFood w loc = atomically $ do 
-                   updateTVar p (\c -> c { food = succ (food c) } )
-                   updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = False }) } )
-    where
-      p = place w loc
+dropFood :: World -> (Int,Int) -> STM ()
+dropFood w loc = do 
+  updateTVar p (\c -> c { food = succ (food c) } )
+  updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = False }) } )
+      where
+        p = place w loc
 
 -- |Move the ant in the direction it is heading
 -- TODO assert that the way is clear
@@ -225,8 +225,6 @@ forage w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-  
-  -- Foraging TODO eliminate cond
   if (food cell > 0 && (not $ home cell))
      then (takeFood w loc >> turn w loc 4 >> return loc)
      else if (home ahead && (not $ hasAnt ahead))
@@ -237,7 +235,16 @@ forage w loc = do
 goHome :: World -> (Int,Int) -> STM (Int,Int)
 goHome w loc = do
   cell <- readTVar (place w loc)
-  return (3,4)
+  let a = fromJust $ ant cell
+  ahead <- readTVar $ place w (deltaLoc loc (direction a))
+  aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
+  aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
+  let places = [ahead,aheadLeft,aheadRight]
+  if (home cell) 
+     then (dropFood w loc >> turn w loc 4 >> return loc)
+     else if (home ahead && (not $ hasAnt ahead))
+          then move w loc
+          else return (1,2)
 
 -- | The main function for the ant agent
 behave :: World -> (Int,Int) -> IO (Int,Int)
