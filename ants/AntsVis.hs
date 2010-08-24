@@ -96,9 +96,9 @@ drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
   when (pheromone cell > 0)
-       (fillCell loc (Color4 0 1 0 (realToFrac $ pheromone cell / pherScale)))
+       (fillCell loc (Color4 0 1 0 (realToFrac (pheromone cell) / pherScale)))
   when (food cell > 0)
-       (fillCell loc (Color4 1 0 0 (fromIntegral $ food cell / foodScale)))
+       (fillCell loc (Color4 1 0 0 (fromIntegral (food cell) / foodScale)))
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 

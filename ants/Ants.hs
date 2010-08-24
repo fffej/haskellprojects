@@ -1,14 +1,15 @@
 module Ants where
 
 import Control.Monad
-import Control.Monad.IfElse
 import Control.Concurrent
 import Control.Concurrent.STM
-import Control.Concurrent.STM.TVar
 
+import Data.Ord (comparing)
 import Data.Maybe
 import Data.Array
-import Data.List (sortBy)
+import Data.List (sort,sortBy)
+import Data.Map (Map,unionWith)
+import qualified Data.Map as M
 
 import System.Random
 
@@ -44,7 +45,7 @@ data World = World {
 }
 
 data Direction = N | NE | E | SE | S | SW | W | NW
-               deriving (Enum,Show)
+               deriving (Enum,Show,Eq)
 
 nextDir :: Direction -> Direction
 nextDir NW = N
@@ -60,14 +61,17 @@ turnAround = nextDir . nextDir . nextDir . nextDir
 data Ant = Ant {
       direction :: Direction
     , hasFood :: Bool
-}
-
+} deriving (Eq,Show)
+ 
 data Cell = Cell {
       food :: Int
     , pheromone :: Double
     , ant :: Maybe Ant
     , home :: Bool
-}
+} deriving (Eq,Show)
+
+instance Ord Cell where
+    compare = comparing food
 
 data Agent = Agent Ant
 
@@ -113,15 +117,14 @@ bound b n | n' < 0 = n' + b
       n' = rem n b    
 
 -- Proof if proof were needed that more concise isn't necessarily good
-wrand :: [Int] -> IO Int
-wrand xs = do
-  gen <- newStdGen
+wrand :: [Int] -> StdGen -> Int
+wrand xs gen = do
   let total = sum xs
       (s,_) = randomR (0,sum xs) gen
       ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (scanl (+) 0 xs) [0..]
-  return $ case ys of
-             [] -> 0 
-             _ -> snd $ head ys
+  case ys of
+    [] -> 0 
+    _ -> snd $ head ys
 
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
@@ -164,9 +167,6 @@ populateWorld w = do
 
 place :: World -> (Int,Int) -> TCell
 place world (x,y) = cells world ! (x,y)
-
-rankBy :: (Cell -> Cell -> Ordering) -> [Cell] -> [Cell]
-rankBy = sortBy
 
 -- |Takes one food from current location.
 -- TODO assert that..
@@ -217,8 +217,13 @@ turn w loc amt = updateTVar src (turnAnt amt)
     where
       src = place w loc
 
-forage :: World -> (Int,Int) -> STM (Int,Int)
-forage w loc = do
+rankBy :: (Cell -> Cell -> Ordering) -> [Cell] -> Map Cell Int
+rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..length sorted - 1]
+    where
+      sorted = sortBy f xs
+
+forage :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
+forage gen w loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
@@ -229,30 +234,52 @@ forage w loc = do
      then takeFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
           then move w loc
-          else return (1,2)
+          else do
+            let f = rankBy (comparing food) places
+                p = rankBy (comparing pheromone) places
+                ranks = unionWith (+) f p -- TODO naff
+            return undefined
 
-goHome :: World -> (Int,Int) -> STM (Int,Int)
-goHome w loc = do
+{-
+         (([move #(turn % -1) #(turn % 1)]
+            (wrand [(if (:ant @ahead) 0 (ranks ahead)) 
+                    (ranks ahead-left) (ranks ahead-right)]))
+           loc)
+-}
+
+-- TODO much duplication to eliminate grass hopper
+goHome :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
+goHome gen w loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
+      indices = [deltaLoc loc (direction a)
+                ,deltaLoc loc (prevDir (direction a))
+                ,deltaLoc loc (nextDir (direction a))]
   if home cell
      then dropFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
           then move w loc
-          else return (1,2)
+          else do
+            let p = rankBy (comparing pheromone) places 
+                h = rankBy (comparing home) places
+                ranks = unionWith (+) p h
+                choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
+                               ,(M.findWithDefault 0 aheadLeft ranks)
+                               ,(M.findWithDefault 0 aheadRight ranks)] gen
+            return (indices !! choice)
 
 -- | The main function for the ant agent
 behave :: World -> (Int,Int) -> IO (Int,Int)
-behave w loc = atomically $ do
-                 cell <- readTVar (place w loc)
-                 let a = fromJust $ ant cell
-                 if hasFood a
-                    then goHome w loc
-                    else forage w loc
+behave w loc = do
+  gen <- newStdGen
+  atomically $ do
+    cell <- readTVar (place w loc)
+    let a = fromJust $ ant cell
+    if hasFood a then goHome gen w loc else forage gen w loc  
                            
 {- notes about stm
   
