@@ -13,6 +13,9 @@ import qualified Data.Map as M
 
 import System.Random
 
+import Debug.Trace
+
+
 -- |Dimensions of square world
 dim :: Int
 dim = 80
@@ -121,7 +124,7 @@ wrand :: [Int] -> StdGen -> Int
 wrand xs gen = do
   let total = sum xs
       (s,_) = randomR (0,sum xs) gen
-      ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (scanl (+) 0 xs) [0..]
+      ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (tail $ scanl (+) 0 xs) [0..]
   case ys of
     [] -> 0 
     _ -> snd $ head ys
@@ -271,6 +274,7 @@ goHome gen w loc = do
                 choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
                                ,(M.findWithDefault 0 aheadLeft ranks)
                                ,(M.findWithDefault 0 aheadRight ranks)] gen
+
             return (indices !! choice)
 
 -- | The main function for the ant agent
@@ -280,3 +284,4 @@ behave gen w loc = do
   let a = fromJust $ ant cell
   if hasFood a then goHome gen w loc else forage gen w loc  
                            
+currentError = wrand [0,6,6] (mkStdGen 2135)
