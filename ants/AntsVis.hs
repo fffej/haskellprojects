@@ -11,6 +11,7 @@ import Data.Maybe (fromJust)
 
 import Data.Array
 
+import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 
@@ -42,8 +43,8 @@ antBehave :: State -> (Int,Int) -> IO ()
 antBehave state p = do
   newPos <- atomically $ do
                       let w = (world state)
-                      run <- readTVar (running state)
-                      check run -- only behave if appropriate
+--                      run <- readTVar (running state)
+--                      check run -- only behave if appropriate
                       behave gen w p
   _ <- threadDelay antTick
   _ <- forkIO $ (antBehave state newPos)
@@ -77,8 +78,9 @@ antInfo SW = (0,4,4,0)
 antInfo W  = (0,2,4,2)
 antInfo NW = (0,0,4,4)
 
-displayFunc :: World -> DisplayCallback
-displayFunc w = do
+displayFunc :: State -> DisplayCallback
+displayFunc s = do
+  let w = world s
   clear [ColorBuffer]
   forM_ (assocs $ cells w) (uncurry drawPlace) 
   let h = fromIntegral homeOff * gridSize
@@ -132,7 +134,8 @@ drawPlace loc tcell = do
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 
-keyboardMouseHandler :: World -> KeyboardMouseCallback
+keyboardMouseHandler :: State -> KeyboardMouseCallback
+keyboardMouseHandler state (Char ' ') Down _ _ = flickSwitch state
 keyboardMouseHandler _ _ _ _ _ = return ()
 
 reshapeFunc :: ReshapeCallback
@@ -154,11 +157,17 @@ main = do
   clearColor $= Color4 0 0 0 1
 
   world <- mkWorld
-  _ <- populateWorld world
+  ants <- populateWorld world
+  
+  run <- atomically $ (newTVar False)
+  
+  let state = State world run
 
-  displayCallback $= displayFunc world
+  forM ants (antBehave state)
+
+  displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc
-  keyboardMouseCallback $= Just (keyboardMouseHandler world)
+  keyboardMouseCallback $= Just (keyboardMouseHandler state)
   addTimerCallback tick (timerFunc world)
 
   mainLoop

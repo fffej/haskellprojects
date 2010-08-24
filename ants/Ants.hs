@@ -42,7 +42,7 @@ type TCellArray = Array (Int,Int) TCell
 
 data World = World {
       cells :: TCellArray
-}
+} 
 
 data Direction = N | NE | E | SE | S | SW | W | NW
                deriving (Enum,Show,Eq)
