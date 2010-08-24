@@ -146,7 +146,7 @@ mkWorld = atomically $ do
             cells <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
             return (World $ listArray ((0,0),(dim,dim)) cells)
 
-populateWorld :: World -> IO ()
+populateWorld :: World -> IO [(Int,Int)]
 populateWorld w = do
   -- Set up giant block of random numbers
   -- TODO factor this out into a monad (or use an existing one?)
@@ -161,8 +161,8 @@ populateWorld w = do
                                                             
   -- make some places at (x,y) that are home
   -- place an ant there facing in a random direction
-  forM_ (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
-        (\(p,dir) -> atomically $ updateTVar (place w p) (\x -> x { ant = Just (Ant (toEnum dir) False) }))
+  forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
+       (\(p,dir) -> atomically $ updateTVar (place w p) (\x -> x { ant = Just (Ant (toEnum dir) False) }) >> return p)
                                                               
 
 place :: World -> (Int,Int) -> TCell
@@ -222,6 +222,7 @@ rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..leng
     where
       sorted = sortBy f xs
 
+-- TODO much duplication to eliminate
 forage :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 forage gen w loc = do
   cell <- readTVar (place w loc)
@@ -230,6 +231,9 @@ forage gen w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
+      indices = [deltaLoc loc (direction a)
+                ,deltaLoc loc (prevDir (direction a))
+                ,deltaLoc loc (nextDir (direction a))]
   if food cell > 0 && not (home cell)
      then takeFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
@@ -238,14 +242,11 @@ forage gen w loc = do
             let f = rankBy (comparing food) places
                 p = rankBy (comparing pheromone) places
                 ranks = unionWith (+) f p -- TODO naff
-            return undefined
+                choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
+                               ,(M.findWithDefault 0 aheadLeft ranks)
+                               ,(M.findWithDefault 0 aheadRight ranks)] gen
+            return (indices !! choice)
 
-{-
-         (([move #(turn % -1) #(turn % 1)]
-            (wrand [(if (:ant @ahead) 0 (ranks ahead)) 
-                    (ranks ahead-left) (ranks ahead-right)]))
-           loc)
--}
 
 -- TODO much duplication to eliminate grass hopper
 goHome :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
