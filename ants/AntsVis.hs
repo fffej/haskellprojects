@@ -1,6 +1,7 @@
 module AntsVis where
 
 import Ants
+import System.Random
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith,ExitCode(ExitSuccess))
@@ -10,6 +11,7 @@ import Data.Maybe (fromJust)
 
 import Data.Array
 
+import Control.Concurrent
 import Control.Concurrent.STM
 
 color4f :: Color4 GLfloat -> IO ()
@@ -23,10 +25,38 @@ colorVertex c v = do
   color4f c
   vertex v
 
+data State = State {
+      world :: World
+    , running :: TVar Bool
+}
+
+gen :: StdGen 
+gen = mkStdGen 100
+
+flickSwitch :: State -> IO () 
+flickSwitch s = atomically $ do 
+                  x <- readTVar (running s)
+                  writeTVar (running s) (not x)
+
+antBehave :: State -> (Int,Int) -> IO ()
+antBehave state p = do
+  newPos <- atomically $ do
+                      let w = (world state)
+                      run <- readTVar (running state)
+                      check run -- only behave if appropriate
+                      behave gen w p
+  _ <- threadDelay antTick
+  _ <- forkIO $ (antBehave state newPos)
+  return ()
+
 -- state is the world
 -- |Timeout in ms for the callback
 tick :: Int
 tick = 100
+
+-- |Timeout for the ants 
+antTick :: Int
+antTick = 50
 
 gridSize :: GLfloat
 gridSize = 5

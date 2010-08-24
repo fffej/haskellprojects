@@ -274,24 +274,9 @@ goHome gen w loc = do
             return (indices !! choice)
 
 -- | The main function for the ant agent
-behave :: World -> (Int,Int) -> IO (Int,Int)
-behave w loc = do
-  gen <- newStdGen
-  atomically $ do
-    cell <- readTVar (place w loc)
-    let a = fromJust $ ant cell
-    if hasFood a then goHome gen w loc else forage gen w loc  
+behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
+behave gen w loc = do
+  cell <- readTVar (place w loc)
+  let a = fromJust $ ant cell
+  if hasFood a then goHome gen w loc else forage gen w loc  
                            
-{- notes about stm
-  
-  locks and condition variables do not support modular programming
-
-  atomically makes two guarantees
-  - atomicity - change becomes visible in the whole, not in parts
-  - isolation - act is unaffected by any other threads
-
- -- It is therefore good library design to export STM actions (rather than IO actions)
-whenever possible, because they are composable; their type advertises that they
-do no irrevocable effects.
-
--}
