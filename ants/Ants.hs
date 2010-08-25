@@ -5,7 +5,8 @@ import Control.Concurrent.STM
 
 import Data.Ord (comparing)
 import Data.Maybe
-import Data.Array
+import Data.Vector (Vector)
+import qualified Data.Vector as V
 import Data.List (sortBy)
 import Data.Map (Map,unionWith)
 import qualified Data.Map as M
@@ -37,7 +38,7 @@ homeOff = dim `div` 4
 
 type TCell = TVar Cell
 
-type TCellArray = Array (Int,Int) TCell
+type TCellArray = Vector TCell
 
 data World = World {
       cells :: TCellArray
@@ -126,12 +127,9 @@ wrand xs gen = do
     [] -> 0
     _ -> snd $ head ys
 
-mkCell :: Int -> Double -> Cell
-mkCell f p = Cell f p Nothing False
-
 -- |Causes all the pheromones to evaporate a bit
-evaporate :: World -> IO ()
-evaporate w = atomically $ forM_ (elems (cells w)) (`updateTVar` evaporate')
+evaporate :: World -> STM ()
+evaporate w = V.forM_ (cells w) (`updateTVar` evaporate')
     where
       evaporate' c = c {pheromone = pheromone c * evapRate}
 
@@ -139,33 +137,11 @@ updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar tv f = do
   v <- readTVar tv
   writeTVar tv (f v)
-
-mkWorld :: IO World
-mkWorld = atomically $ do
-            cs <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
-            return (World $ listArray ((0,0),(dim,dim)) cs)
-
-populateWorld :: StdGen -> World -> IO [(Int,Int)]
-populateWorld gen w = do
-  -- Set up giant block of random numbers
-  -- TODO factor this out into a monad (or use an existing one?)
-  let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
-      dirs       = randomRs (0,7) gen :: [Int]
-      foodRanges = randomRs (0,foodRange) gen :: [Int]
-      xy         = uncurry zip $ splitAt foodPlaces dims
-
-  forM_ (zip3 [0..foodPlaces] xy foodRanges) 
-        (\(_,p,f) -> atomically $ updateTVar (place w p) (\x -> x{ food = f }))
-                                                            
-  -- make some places at (x,y) that are home
-  -- place an ant there facing in a random direction
-  forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
-       (\(p,dir) -> atomically $ updateTVar (place w p) 
-                    (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)
-                                                              
-
+                                                       
 place :: World -> (Int,Int) -> TCell
-place world (x,y) = cells world ! (x,y)
+place world (x,y) = cells world V.! n
+    where
+      n = x*dim + y
 
 -- |Takes one food from current location.
 -- TODO assert that..
@@ -196,13 +172,13 @@ move w loc = do
   let dir    = direction $ fromJust $ ant cell
       newLoc = deltaLoc loc dir
 
-  dest <- readTVar (cells w ! newLoc)
+  dest <- readTVar (place w newLoc)
 
   _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src clearAnt
-  updateTVar (cells w ! newLoc) (\x -> x { ant = ant cell })
+  updateTVar (place w newLoc) (\x -> x { ant = ant cell })
 
   -- Leave a trail
   unless (home cell) (updateTVar src incPher)
@@ -214,7 +190,6 @@ turnAnt amt cell = cell { ant = Just turnedAnt }
       a = fromJust $ ant cell      
       turnedAnt = a { direction = turnInt amt (direction a) }
 
--- TODO put check in
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = do
   cell <- readTVar src
@@ -269,11 +244,6 @@ goHome gen w loc = do
      else if home ahead && not (hasAnt ahead)
           then move w loc -- head forward knowing the way is clear
           else do
-            -- rank possibilities 
-            -- by home is worth 1  #( => function literal
-            -- by places sorted by pheromone content, merged with +
-            -- vectors are functions of their indices
-            -- [move, turnLeft, turnRight] are functions gotcha
             let p = rankBy (comparing pheromone) places 
                 h = rankBy (comparing home) places
                 ranks = unionWith (+) p h
@@ -292,3 +262,28 @@ behave gen w loc = do
   let a = fromJust $ ant cell
   if hasFood a then goHome gen w loc else forage gen w loc  
                           
+mkCell :: Int -> Double -> Cell
+mkCell f p = Cell f p Nothing False
+
+mkWorld :: IO World
+mkWorld = atomically $ do
+            cs <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
+            return (World $ V.fromList cs)
+
+populateWorld :: StdGen -> World -> IO [(Int,Int)]
+populateWorld gen w = do
+  -- Set up giant block of random numbers
+  -- TODO factor this out into a monad (or use an existing one?)
+  let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
+      dirs       = randomRs (0,7) gen :: [Int]
+      foodRanges = randomRs (0,foodRange) gen :: [Int]
+      xy         = uncurry zip $ splitAt foodPlaces dims
+
+  forM_ (zip3 [0..foodPlaces] xy foodRanges) 
+        (\(_,p,f) -> atomically $ updateTVar (place w p) (\x -> x{ food = f }))
+                                                            
+  -- make some places at (x,y) that are home
+  -- place an ant there facing in a random direction
+  forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
+       (\(p,dir) -> atomically $ updateTVar (place w p) 
+                    (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)

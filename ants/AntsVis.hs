@@ -6,7 +6,8 @@ import System.Random
 import Graphics.UI.GLUT as G
 import Data.Maybe (fromJust)
 
-import Data.Array
+import Data.Vector (Vector)
+import qualified Data.Vector as V
 
 import Control.Monad
 import Control.Concurrent
@@ -23,30 +24,21 @@ colorVertex c v = do
   color4f c
   vertex v
 
-data State = State {
-      world :: World
-    , running :: TVar Bool
-}
+pos :: Vector (Int,Int)
+pos = V.fromList [(y,x) | x <- [0..dim-1], y <- [0..dim-1]]
 
-flickSwitch :: State -> IO () 
-flickSwitch s = atomically $ do 
-                  x <- readTVar (running s)
-                  writeTVar (running s) (not x)
-
-antBehave :: State -> (Int,Int) -> IO ()
-antBehave state p = do
+antBehave :: World -> (Int,Int) -> IO ()
+antBehave world p = do
   gen <- newStdGen 
-  newPos <- atomically $ do
-                      let w = (world state)
-                      behave gen w p                      
+  newPos <- atomically $ behave gen world p                      
   _ <- threadDelay (antTick  * 1000)
-  _ <- forkIO (antBehave state newPos)
+  _ <- forkIO (antBehave world newPos)
   return ()
 
 -- state is the world
 -- |Timeout in ms for the callback
 tick :: Int
-tick = 50
+tick = 500
 
 -- |Timeout for the ants 
 antTick :: Int
@@ -71,9 +63,8 @@ antInfo SW = (0,4,4,0)
 antInfo W  = (0,2,4,2)
 antInfo NW = (0,0,4,4)
 
-displayFunc :: State -> DisplayCallback
-displayFunc s = do
-  let w = world s
+displayFunc :: World -> DisplayCallback
+displayFunc world = do
   clear [ColorBuffer]
 
   -- Draw the home area
@@ -86,12 +77,13 @@ displayFunc s = do
                   colorVertex (Color4 0 0 1 0) (Vertex2 h (h+g))
 
   -- Then draw the relevant cells
-  forM_ (assocs $ cells w) (uncurry drawPlace) 
+  V.forM_ (V.zip pos (cells world)) (uncurry drawPlace) 
   swapBuffers
 
 timerFunc :: World -> IO ()
 timerFunc w = do
   postRedisplay Nothing
+  atomically $ evaporate w
   addTimerCallback tick (timerFunc w)
   return ()
 
@@ -131,10 +123,6 @@ drawPlace loc tcell = do
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 
-keyboardMouseHandler :: State -> KeyboardMouseCallback
-keyboardMouseHandler state (Char ' ') Down _ _ = flickSwitch state
-keyboardMouseHandler _ _ _ _ _ = return ()
-
 reshapeFunc :: ReshapeCallback
 reshapeFunc size@(Size _ height) =
     unless (height == 0) $ do
@@ -154,19 +142,13 @@ main = do
   clearColor $= Color4 0 0 0 1
 
   gen <- getStdGen
-
   w <- mkWorld
   ants <- populateWorld gen w
   
-  run <- atomically (newTVar False)
-  
-  let state = State w run
+  forM_ (take 10 ants) (antBehave w)
 
-  forM_ (take 10 ants) (antBehave state)
-
-  displayCallback $= displayFunc state
+  displayCallback $= displayFunc w
   reshapeCallback $= Just reshapeFunc
-  keyboardMouseCallback $= Just (keyboardMouseHandler state)
   addTimerCallback tick (timerFunc w)
 
   mainLoop
