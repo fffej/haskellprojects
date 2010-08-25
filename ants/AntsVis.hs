@@ -5,7 +5,6 @@ import System.Random
 
 import Graphics.UI.GLUT as G
 import System.Exit (exitWith,ExitCode(ExitSuccess))
-import Control.Monad
 import Data.IORef
 import Data.Maybe (fromJust)
 
@@ -43,7 +42,8 @@ antBehave state p = do
                       let w = (world state)
                       behave gen w p                      
   _ <- threadDelay antTick
-  _ <- forkIO $ (antBehave state newPos)
+  _ <- yield
+  _ <- forkIO (antBehave state newPos)
   return ()
 
 -- state is the world
@@ -53,7 +53,7 @@ tick = 100
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 50
+antTick = 2000
 
 gridSize :: GLfloat
 gridSize = 5
@@ -161,12 +161,11 @@ main = do
   world <- mkWorld
   ants <- populateWorld gen world
   
-  run <- atomically $ (newTVar False)
+  run <- atomically (newTVar False)
   
   let state = State world run
 
-  _ <- antBehave state (head ants)
-  -- forM ants (antBehave state)
+  forM_ ants (antBehave state)
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc

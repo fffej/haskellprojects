@@ -13,8 +13,6 @@ import qualified Data.Map as M
 
 import System.Random
 
-import Debug.Trace
-
 -- |Dimensions of square world
 dim :: Int
 dim = 80
@@ -195,12 +193,12 @@ move :: World -> (Int,Int) -> STM (Int,Int)
 move w loc = do
   let src = place w loc
   cell <- readTVar src
-  let dir    = trace ("MOVE " ++ show cell) (direction $ fromJust $ ant cell)
-      newLoc = trace ("NEW DEST " ++ show (deltaLoc loc dir)) deltaLoc loc dir
+  let dir    = direction $ fromJust $ ant cell
+      newLoc = deltaLoc loc dir
 
   dest <- readTVar (cells w ! newLoc)
 
-  check (not(hasAnt dest))
+  check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src clearAnt
@@ -213,7 +211,7 @@ move w loc = do
 turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
-      a = trace ("TURNING " ++ show cell) (fromJust $ ant cell)
+      a = fromJust $ ant cell
       turnedAnt = a { direction = turnRight (direction a) }
 
 turn :: World -> (Int,Int) -> Int -> STM ()
@@ -231,7 +229,7 @@ rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..leng
 forage :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 forage gen w loc = do
   cell <- readTVar (place w loc)
-  let a = traceShow "FORAGE" (fromJust $ ant cell)
+  let a = fromJust $ ant cell
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
   aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
@@ -247,12 +245,12 @@ forage gen w loc = do
             let f = rankBy (comparing food) places
                 p = rankBy (comparing pheromone) places
                 ranks = unionWith (+) f p -- TODO naff
-                choice = wrand [if (traceShow (hasAnt ahead) (hasAnt ahead)) then 0 else (ranks M.! ahead)
-                               ,(ranks M.! aheadLeft)
-                               ,(ranks M.! aheadRight)] gen
+                choice = wrand [if hasAnt ahead then 0 else ranks M.! ahead
+                               ,ranks M.! aheadLeft
+                               ,ranks M.! aheadRight] gen
                 funcs = [move w
-                        ,(\x -> turn w x (- 1) >> (return x))
-                        ,(\x -> turn w x 1 >> (return x))]          
+                        ,\x -> turn w x (- 1) >> return x
+                        ,\x -> turn w x 1 >> return x]          
             ((funcs !! choice) loc)
 
 -- 1:46minnutes http://blip.tv/file/812787
@@ -281,19 +279,19 @@ goHome gen w loc = do
             let p = rankBy (comparing pheromone) places 
                 h = rankBy (comparing home) places
                 ranks = unionWith (+) p h
-                choice = wrand [if (hasAnt ahead) then 0 else (ranks M.! ahead)
-                               ,(ranks M.! aheadLeft)
-                               ,(ranks M.! aheadRight)] gen
+                choice = wrand [if hasAnt ahead then 0 else ranks M.! ahead
+                               ,ranks M.! aheadLeft
+                               ,ranks M.! aheadRight] gen
                 funcs = [move w
-                        ,(\x -> turn w x (- 1) >> (return x))
-                        ,(\x -> turn w x 1 >> (return x))]          
+                        ,\x -> turn w x (- 1) >> return x
+                        ,\x -> turn w x 1 >> return x]          
             ((funcs !! choice) loc)
 
 -- | The main function for the ant agent
 behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 behave gen w loc = do
   cell <- readTVar (place w loc)
-  let a = trace ("BEHAVE " ++ show cell) (fromJust $ ant cell)
+  let a = fromJust $ ant cell
   if hasFood a then goHome gen w loc else forage gen w loc  
                           
 test :: Int -> IO ()
