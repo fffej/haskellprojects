@@ -45,7 +45,7 @@ antBehave state p = do
                       let w = (world state)
 --                      run <- readTVar (running state)
 --                      check run -- only behave if appropriate
-                      behave gen w p
+                      behave gen w p                      
   _ <- threadDelay antTick
   _ <- forkIO $ (antBehave state newPos)
   return ()

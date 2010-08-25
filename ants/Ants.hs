@@ -15,7 +15,6 @@ import System.Random
 
 import Debug.Trace
 
-
 -- |Dimensions of square world
 dim :: Int
 dim = 80
@@ -149,11 +148,10 @@ mkWorld = atomically $ do
             cells <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
             return (World $ listArray ((0,0),(dim,dim)) cells)
 
-populateWorld :: World -> IO [(Int,Int)]
-populateWorld w = do
+populateWorld :: StdGen -> World -> IO [(Int,Int)]
+populateWorld gen w = do
   -- Set up giant block of random numbers
   -- TODO factor this out into a monad (or use an existing one?)
-  gen <- newStdGen
   let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
       dirs       = randomRs (0,7) gen :: [Int]
       foodRanges = randomRs (0,foodRange) gen :: [Int]
@@ -195,24 +193,26 @@ dropFood w loc = do
 -- TODO assert that the way is clear
 move :: World -> (Int,Int) -> STM (Int,Int)
 move w loc = do
+  let src = place w loc
   cell <- readTVar src
-  let dir    = direction $ fromJust $ ant cell
-      newLoc = deltaLoc loc dir
+  let dir    = trace ("MOVE " ++ show cell) (direction $ fromJust $ ant cell)
+      newLoc = trace ("NEW DEST " ++ show (deltaLoc loc dir)) deltaLoc loc dir
 
-  dest <- readTVar (cells w ! newLoc)
   -- move the ant to the new cell
   updateTVar src clearAnt
-  updateTVar src (\x -> x { ant = ant cell })
+  updateTVar (cells w ! newLoc) (\x -> x { ant = ant cell })
+
   -- Leave a trail
   when (home cell) (updateTVar src incPher)
+  
+  newCell <- readTVar (place w newLoc)
+
   return newLoc
-    where
-      src = place w loc
 
 turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
-      a = fromJust $ ant cell
+      a = trace ("TURNING " ++ show cell) (fromJust $ ant cell)
       turnedAnt = a { direction = nextDir (direction a) }
 
 turn :: World -> (Int,Int) -> Int -> STM ()
@@ -229,7 +229,7 @@ rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..leng
 forage :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 forage gen w loc = do
   cell <- readTVar (place w loc)
-  let a = fromJust $ ant cell
+  let a = traceShow "FORAGE" (fromJust $ ant cell)
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
   aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
@@ -240,7 +240,7 @@ forage gen w loc = do
   if food cell > 0 && not (home cell)
      then takeFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
-          then move w loc
+          then move w loc -- check hasant
           else do
             let f = rankBy (comparing food) places
                 p = rankBy (comparing pheromone) places
@@ -248,8 +248,7 @@ forage gen w loc = do
                 choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
                                ,(M.findWithDefault 0 aheadLeft ranks)
                                ,(M.findWithDefault 0 aheadRight ranks)] gen
-            return (indices !! choice)
-
+            move w (indices !! choice)
 
 -- TODO much duplication to eliminate grass hopper
 goHome :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
@@ -273,15 +272,28 @@ goHome gen w loc = do
                 ranks = unionWith (+) p h
                 choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
                                ,(M.findWithDefault 0 aheadLeft ranks)
-                               ,(M.findWithDefault 0 aheadRight ranks)] gen
-
-            return (indices !! choice)
+                               ,(M.findWithDefault 0 aheadRight ranks)] gen            
+            move w (indices !! choice)
 
 -- | The main function for the ant agent
 behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 behave gen w loc = do
   cell <- readTVar (place w loc)
-  let a = fromJust $ ant cell
+  let a = trace ("BEHAVE " ++ show cell) (fromJust $ ant cell)
   if hasFood a then goHome gen w loc else forage gen w loc  
-                           
-currentError = wrand [0,6,6] (mkStdGen 2135)
+                          
+test :: Int -> IO ()
+test i = do
+  w <- mkWorld
+  let gen = mkStdGen i
+  (ant:ants) <- populateWorld gen w
+  print ant
+  newPos <- atomically $ behave gen w ant
+  print newPos
+  newPos' <- atomically $ behave gen w newPos
+  print newPos'
+  newPos'' <- atomically $ behave gen w newPos'
+  print newPos''
+
+  
+
