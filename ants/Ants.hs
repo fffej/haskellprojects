@@ -203,9 +203,6 @@ move w loc = do
 
   -- Leave a trail
   when (home cell) (updateTVar src incPher)
-  
-  newCell <- readTVar (place w newLoc)
-
   return newLoc
 
 turnAnt :: Int -> Cell -> Cell
