@@ -50,7 +50,7 @@ tick = 100
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 50
+antTick = 200
 
 gridSize :: GLfloat
 gridSize = 5
@@ -162,8 +162,8 @@ main = do
   
   let state = State w run
 
-  antBehave state (head ants)
---  forM_ ants (antBehave state)
+--  antBehave state (head ants)
+  forM_ (take 10 ants) (antBehave state)
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc

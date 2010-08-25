@@ -54,12 +54,10 @@ turnLeft :: Direction -> Direction
 turnLeft N = NW
 turnLeft x = pred x
 
-turnInt :: Direction -> Int -> Direction
-turnInt d 0 = d
-turnInt d x = turnInt (turnRight d) (x - 1)
-
-turnAround :: Direction -> Direction
-turnAround = turnRight . turnRight . turnRight . turnRight
+turnInt :: Int -> Direction -> Direction
+turnInt 0 d = d
+turnInt x d | x < 0     = turnInt (x + 1) (turnRight d)
+            | otherwise = turnInt (x - 1) (turnLeft d)
 
 data Ant = Ant {
       direction :: Direction
@@ -200,7 +198,7 @@ move w loc = do
 
   dest <- readTVar (cells w ! newLoc)
 
---  _ <- check (not (hasAnt dest))
+  _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src clearAnt
@@ -210,13 +208,13 @@ move w loc = do
   unless (home cell) (updateTVar src incPher)
   return newLoc
 
--- BUG
 turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
-      a = fromJust $ ant cell
-      turnedAnt = a { direction = turnInt (direction a) amt }
+      a = fromJust $ ant cell      
+      turnedAnt = a { direction = turnInt amt (direction a) }
 
+-- TODO put check in
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = updateTVar src (turnAnt amt)
     where
@@ -281,7 +279,7 @@ goHome gen w loc = do
                                ,ranks M.! aheadRight] gen
                 funcs = [move w
                         ,\x -> turn w x (- 1) >> return x
-                        ,\x -> turn w x 1 >> return x]          
+                        ,\x -> turn w x 1  >> return x]          
             ((funcs !! choice) loc)
 
 -- | The main function for the ant agent
