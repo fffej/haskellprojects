@@ -40,7 +40,6 @@ antBehave state p = do
                       let w = (world state)
                       behave gen w p                      
   _ <- threadDelay antTick
-  _ <- yield
   _ <- forkIO (antBehave state newPos)
   return ()
 
@@ -51,7 +50,7 @@ tick = 100
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 2000
+antTick = 50
 
 gridSize :: GLfloat
 gridSize = 5
@@ -163,7 +162,8 @@ main = do
   
   let state = State w run
 
-  forM_ ants (antBehave state)
+  antBehave state (head ants)
+--  forM_ ants (antBehave state)
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc

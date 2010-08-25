@@ -56,7 +56,7 @@ turnLeft x = pred x
 
 turnInt :: Direction -> Int -> Direction
 turnInt d 0 = d
-turnInt d x = turnInt (succ d) (x - 1)
+turnInt d x = turnInt (turnRight d) (x - 1)
 
 turnAround :: Direction -> Direction
 turnAround = turnRight . turnRight . turnRight . turnRight
@@ -200,7 +200,7 @@ move w loc = do
 
   dest <- readTVar (cells w ! newLoc)
 
-  _ <- check (not (hasAnt dest))
+--  _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src clearAnt
