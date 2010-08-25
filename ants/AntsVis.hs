@@ -82,7 +82,8 @@ displayFunc :: State -> DisplayCallback
 displayFunc s = do
   let w = world s
   clear [ColorBuffer]
-  forM_ (assocs $ cells w) (uncurry drawPlace) 
+
+  -- Draw the home area
   let h = fromIntegral homeOff * gridSize
       g = gridSize + gridSize * fromIntegral nantsSqrt
   renderPrimitive Quads $ do
@@ -90,6 +91,9 @@ displayFunc s = do
                   colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) h)
                   colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) (h+g))
                   colorVertex (Color4 0 0 1 0) (Vertex2 h (h+g))
+
+  -- Then draw the relevant cells
+  forM_ (assocs $ cells w) (uncurry drawPlace) 
   swapBuffers
 
 timerFunc :: World -> IO ()
@@ -156,14 +160,17 @@ main = do
   _ <- createWindow "Ants in Haskell."
   clearColor $= Color4 0 0 0 1
 
+  gen <- getStdGen
+
   world <- mkWorld
-  ants <- populateWorld world
+  ants <- populateWorld gen world
   
   run <- atomically $ (newTVar False)
   
   let state = State world run
 
-  forM ants (antBehave state)
+  _ <- antBehave state (head ants)
+  -- forM ants (antBehave state)
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc

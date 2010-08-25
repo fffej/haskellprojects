@@ -162,7 +162,8 @@ populateWorld gen w = do
   -- make some places at (x,y) that are home
   -- place an ant there facing in a random direction
   forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
-       (\(p,dir) -> atomically $ updateTVar (place w p) (\x -> x { ant = Just (Ant (toEnum dir) False) }) >> return p)
+       (\(p,dir) -> atomically $ updateTVar (place w p) 
+                    (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)
                                                               
 
 place :: World -> (Int,Int) -> TCell
@@ -202,7 +203,7 @@ move w loc = do
   updateTVar (cells w ! newLoc) (\x -> x { ant = ant cell })
 
   -- Leave a trail
-  when (home cell) (updateTVar src incPher)
+  unless (home cell) (updateTVar src incPher)
   return newLoc
 
 turnAnt :: Int -> Cell -> Cell
@@ -216,6 +217,7 @@ turn w loc amt = updateTVar src (turnAnt amt)
     where
       src = place w loc
 
+-- | Map to their 1-based rank
 rankBy :: (Cell -> Cell -> Ordering) -> [Cell] -> Map Cell Int
 rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..length sorted - 1]
     where
@@ -233,19 +235,23 @@ forage gen w loc = do
       indices = [deltaLoc loc (direction a)
                 ,deltaLoc loc (turnLeft (direction a))
                 ,deltaLoc loc (turnRight (direction a))]
-  if food cell > 0 && not (home cell)
+  if food cell > 0 && not (home cell) -- if there is food and we aren't at home
      then takeFood w loc >> turn w loc 4 >> return loc
-     else if home ahead && not (hasAnt ahead)
-          then move w loc -- check hasant
+     else if (food ahead > 0) && not (home ahead) && not (hasAnt ahead) -- food ahead and nothing in the way
+          then move w loc 
           else do
             let f = rankBy (comparing food) places
                 p = rankBy (comparing pheromone) places
                 ranks = unionWith (+) f p -- TODO naff
-                choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
-                               ,(M.findWithDefault 0 aheadLeft ranks)
-                               ,(M.findWithDefault 0 aheadRight ranks)] gen
-            move w (indices !! choice)
+                choice = wrand [if (hasAnt ahead) then 0 else (ranks M.! ahead)
+                               ,(ranks M.! aheadLeft)
+                               ,(ranks M.! aheadRight)] gen
+                funcs = [move w
+                        ,(\x -> turn w x (- 1) >> (return x))
+                        ,(\x -> turn w x 1 >> (return x))]          
+            ((funcs !! choice) loc)
 
+-- 1:46minnutes http://blip.tv/file/812787
 -- TODO much duplication to eliminate grass hopper
 goHome :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 goHome gen w loc = do
@@ -259,17 +265,25 @@ goHome gen w loc = do
                 ,deltaLoc loc (turnLeft (direction a))
                 ,deltaLoc loc (turnRight (direction a))]
   if home cell
-     then dropFood w loc >> turn w loc 4 >> return loc
+     then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
      else if home ahead && not (hasAnt ahead)
-          then move w loc
+          then move w loc -- head forward knowing the way is clear
           else do
+            -- rank possibilities 
+            -- by home is worth 1  #( => function literal
+            -- by places sorted by pheromone content, merged with +
+            -- vectors are functions of their indices
+            -- [move, turnLeft, turnRight] are functions gotcha
             let p = rankBy (comparing pheromone) places 
                 h = rankBy (comparing home) places
                 ranks = unionWith (+) p h
-                choice = wrand [if (hasAnt ahead) then 0 else (M.findWithDefault 0 ahead ranks)
-                               ,(M.findWithDefault 0 aheadLeft ranks)
-                               ,(M.findWithDefault 0 aheadRight ranks)] gen            
-            move w (indices !! choice)
+                choice = wrand [if (hasAnt ahead) then 0 else (ranks M.! ahead)
+                               ,(ranks M.! aheadLeft)
+                               ,(ranks M.! aheadRight)] gen
+                funcs = [move w
+                        ,(\x -> turn w x (- 1) >> (return x))
+                        ,(\x -> turn w x 1 >> (return x))]          
+            ((funcs !! choice) loc)
 
 -- | The main function for the ant agent
 behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
