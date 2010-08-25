@@ -39,18 +39,18 @@ antBehave state p = do
   newPos <- atomically $ do
                       let w = (world state)
                       behave gen w p                      
-  _ <- threadDelay antTick
+  _ <- threadDelay (antTick  * 1000)
   _ <- forkIO (antBehave state newPos)
   return ()
 
 -- state is the world
 -- |Timeout in ms for the callback
 tick :: Int
-tick = 100
+tick = 50
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 200
+antTick = 100
 
 gridSize :: GLfloat
 gridSize = 5
@@ -141,7 +141,7 @@ reshapeFunc size@(Size _ height) =
       viewport $= (Position 0 0, size)
       matrixMode $= Projection
       loadIdentity
-      ortho2D 0 400 0 400 -- (fromIntegral dim) 0 (fromIntegral dim)
+      ortho2D 0 400 0 400 
       clearColor $= Color4 0 0 0 1
 
 main :: IO ()
@@ -162,7 +162,6 @@ main = do
   
   let state = State w run
 
---  antBehave state (head ants)
   forM_ (take 10 ants) (antBehave state)
 
   displayCallback $= displayFunc state

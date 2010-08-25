@@ -216,7 +216,10 @@ turnAnt amt cell = cell { ant = Just turnedAnt }
 
 -- TODO put check in
 turn :: World -> (Int,Int) -> Int -> STM ()
-turn w loc amt = updateTVar src (turnAnt amt)
+turn w loc amt = do
+  cell <- readTVar src
+  _ <- check (hasAnt cell)
+  updateTVar src (turnAnt amt)
     where
       src = place w loc
 
