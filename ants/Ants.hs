@@ -49,16 +49,16 @@ data World = World {
 data Direction = N | NE | E | SE | S | SW | W | NW
                deriving (Enum,Show,Eq)
 
-nextDir :: Direction -> Direction
-nextDir NW = N
-nextDir x = succ x
+turnRight :: Direction -> Direction
+turnRight NW = N
+turnRight x = succ x
 
-prevDir :: Direction -> Direction
-prevDir N = NW
-prevDir x = pred x
+turnLeft :: Direction -> Direction
+turnLeft N = NW
+turnLeft x = pred x
 
 turnAround :: Direction -> Direction
-turnAround = nextDir . nextDir . nextDir . nextDir
+turnAround = turnRight . turnRight . turnRight . turnRight
 
 data Ant = Ant {
       direction :: Direction
@@ -213,7 +213,7 @@ turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
       a = trace ("TURNING " ++ show cell) (fromJust $ ant cell)
-      turnedAnt = a { direction = nextDir (direction a) }
+      turnedAnt = a { direction = turnRight (direction a) }
 
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = updateTVar src (turnAnt amt)
@@ -231,12 +231,12 @@ forage gen w loc = do
   cell <- readTVar (place w loc)
   let a = traceShow "FORAGE" (fromJust $ ant cell)
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
-  aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
-  aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
+  aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
+  aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
       indices = [deltaLoc loc (direction a)
-                ,deltaLoc loc (prevDir (direction a))
-                ,deltaLoc loc (nextDir (direction a))]
+                ,deltaLoc loc (turnLeft (direction a))
+                ,deltaLoc loc (turnRight (direction a))]
   if food cell > 0 && not (home cell)
      then takeFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
@@ -256,12 +256,12 @@ goHome gen w loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
   ahead <- readTVar $ place w (deltaLoc loc (direction a))
-  aheadLeft <- readTVar $ place w (deltaLoc loc (prevDir (direction a)))
-  aheadRight <- readTVar $ place w (deltaLoc loc (nextDir(direction a)))
+  aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
+  aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
       indices = [deltaLoc loc (direction a)
-                ,deltaLoc loc (prevDir (direction a))
-                ,deltaLoc loc (nextDir (direction a))]
+                ,deltaLoc loc (turnLeft (direction a))
+                ,deltaLoc loc (turnRight (direction a))]
   if home cell
      then dropFood w loc >> turn w loc 4 >> return loc
      else if home ahead && not (hasAnt ahead)
