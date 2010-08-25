@@ -131,12 +131,11 @@ wrand xs gen = do
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
 
-evaporate' :: Cell -> Cell
-evaporate' c = c { pheromone = pheromone c * evapRate }
-
 -- |Causes all the pheromones to evaporate a bit
 evaporate :: World -> IO ()
 evaporate w = atomically $ forM_ (elems (cells w)) (`updateTVar` evaporate')
+    where
+      evaporate' c = c {pheromone = pheromone c * evapRate}
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar tv f = do
