@@ -122,10 +122,10 @@ bound b n | n' < 0 = n' + b
 wrand :: [Int] -> StdGen -> Int
 wrand xs gen = do
   let total = sum xs
-      (s,_) = randomR (0,sum xs) gen
+      (s,r) = randomR (0,sum xs) gen
       ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (tail $ scanl (+) 0 xs) [0..]
   case ys of
-    [] -> 0 
+    [] -> 0
     _ -> snd $ head ys
 
 mkCell :: Int -> Double -> Cell
@@ -243,7 +243,7 @@ forage gen w loc = do
             let f = rankBy (comparing food) places
                 p = rankBy (comparing pheromone) places
                 ranks = unionWith (+) f p -- TODO naff
-                choice = wrand [if (hasAnt ahead) then 0 else (ranks M.! ahead)
+                choice = wrand [if (traceShow (hasAnt ahead) (hasAnt ahead)) then 0 else (ranks M.! ahead)
                                ,(ranks M.! aheadLeft)
                                ,(ranks M.! aheadRight)] gen
                 funcs = [move w

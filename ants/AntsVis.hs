@@ -31,9 +31,6 @@ data State = State {
     , running :: TVar Bool
 }
 
-gen :: StdGen 
-gen = mkStdGen 100
-
 flickSwitch :: State -> IO () 
 flickSwitch s = atomically $ do 
                   x <- readTVar (running s)
@@ -41,10 +38,9 @@ flickSwitch s = atomically $ do
 
 antBehave :: State -> (Int,Int) -> IO ()
 antBehave state p = do
+  gen <- newStdGen 
   newPos <- atomically $ do
                       let w = (world state)
---                      run <- readTVar (running state)
---                      check run -- only behave if appropriate
                       behave gen w p                      
   _ <- threadDelay antTick
   _ <- forkIO $ (antBehave state newPos)
