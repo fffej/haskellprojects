@@ -198,6 +198,10 @@ move w loc = do
   let dir    = trace ("MOVE " ++ show cell) (direction $ fromJust $ ant cell)
       newLoc = trace ("NEW DEST " ++ show (deltaLoc loc dir)) deltaLoc loc dir
 
+  dest <- readTVar (cells w ! newLoc)
+
+  check (not(hasAnt dest))
+
   -- move the ant to the new cell
   updateTVar src clearAnt
   updateTVar (cells w ! newLoc) (\x -> x { ant = ant cell })
