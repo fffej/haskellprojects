@@ -4,8 +4,6 @@ import Ants
 import System.Random
 
 import Graphics.UI.GLUT as G
-import System.Exit (exitWith,ExitCode(ExitSuccess))
-import Data.IORef
 import Data.Maybe (fromJust)
 
 import Data.Array
@@ -99,11 +97,11 @@ timerFunc w = do
   return ()
 
 drawAnt :: (Int,Int) -> Ant -> IO ()
-drawAnt (x,y) ant = do
+drawAnt (x,y) a = do
   let gray  = Color4 0.4 0.4 0.4 1 :: Color4 GLfloat
       red   = Color4 1 0 0 1 :: Color4 GLfloat
-      (hx,hy,tx,ty) = antInfo (direction ant)
-      c = if hasFood ant
+      (hx,hy,tx,ty) = antInfo (direction a)
+      c = if hasFood a
           then red
           else gray
       x' = fromIntegral x * gridSize
@@ -158,18 +156,18 @@ main = do
 
   gen <- getStdGen
 
-  world <- mkWorld
-  ants <- populateWorld gen world
+  w <- mkWorld
+  ants <- populateWorld gen w
   
   run <- atomically (newTVar False)
   
-  let state = State world run
+  let state = State w run
 
   forM_ ants (antBehave state)
 
   displayCallback $= displayFunc state
   reshapeCallback $= Just reshapeFunc
   keyboardMouseCallback $= Just (keyboardMouseHandler state)
-  addTimerCallback tick (timerFunc world)
+  addTimerCallback tick (timerFunc w)
 
   mainLoop

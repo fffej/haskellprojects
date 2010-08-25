@@ -1,13 +1,12 @@
 module Ants where
 
 import Control.Monad
-import Control.Concurrent
 import Control.Concurrent.STM
 
 import Data.Ord (comparing)
 import Data.Maybe
 import Data.Array
-import Data.List (sort,sortBy)
+import Data.List (sortBy)
 import Data.Map (Map,unionWith)
 import qualified Data.Map as M
 
@@ -55,6 +54,10 @@ turnLeft :: Direction -> Direction
 turnLeft N = NW
 turnLeft x = pred x
 
+turnInt :: Direction -> Int -> Direction
+turnInt d 0 = d
+turnInt d x = turnInt (succ d) (x - 1)
+
 turnAround :: Direction -> Direction
 turnAround = turnRight . turnRight . turnRight . turnRight
 
@@ -87,7 +90,7 @@ setFood :: Cell -> Int -> Cell
 setFood cell f = cell { food = f }
 
 hasAnt :: Cell -> Bool
-hasAnt (Cell _ _ (Just ant) _) = True
+hasAnt (Cell _ _ (Just _) _) = True
 hasAnt _ = False
 
 homeRange :: [Int]
@@ -119,8 +122,7 @@ bound b n | n' < 0 = n' + b
 -- Proof if proof were needed that more concise isn't necessarily good
 wrand :: [Int] -> StdGen -> Int
 wrand xs gen = do
-  let total = sum xs
-      (s,r) = randomR (0,sum xs) gen
+  let (s,_) = randomR (0,sum xs) gen
       ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (tail $ scanl (+) 0 xs) [0..]
   case ys of
     [] -> 0
@@ -142,8 +144,8 @@ updateTVar tv f = do
 
 mkWorld :: IO World
 mkWorld = atomically $ do
-            cells <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
-            return (World $ listArray ((0,0),(dim,dim)) cells)
+            cs <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
+            return (World $ listArray ((0,0),(dim,dim)) cs)
 
 populateWorld :: StdGen -> World -> IO [(Int,Int)]
 populateWorld gen w = do
@@ -198,7 +200,7 @@ move w loc = do
 
   dest <- readTVar (cells w ! newLoc)
 
-  check (not (hasAnt dest))
+  _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src clearAnt
@@ -208,11 +210,12 @@ move w loc = do
   unless (home cell) (updateTVar src incPher)
   return newLoc
 
+-- BUG
 turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
       a = fromJust $ ant cell
-      turnedAnt = a { direction = turnRight (direction a) }
+      turnedAnt = a { direction = turnInt (direction a) amt }
 
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = updateTVar src (turnAnt amt)
@@ -234,9 +237,6 @@ forage gen w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-      indices = [deltaLoc loc (direction a)
-                ,deltaLoc loc (turnLeft (direction a))
-                ,deltaLoc loc (turnRight (direction a))]
   if food cell > 0 && not (home cell) -- if there is food and we aren't at home
      then takeFood w loc >> turn w loc 4 >> return loc
      else if (food ahead > 0) && not (home ahead) && not (hasAnt ahead) -- food ahead and nothing in the way
@@ -263,9 +263,6 @@ goHome gen w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-      indices = [deltaLoc loc (direction a)
-                ,deltaLoc loc (turnLeft (direction a))
-                ,deltaLoc loc (turnRight (direction a))]
   if home cell
      then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
      else if home ahead && not (hasAnt ahead)
@@ -294,18 +291,3 @@ behave gen w loc = do
   let a = fromJust $ ant cell
   if hasFood a then goHome gen w loc else forage gen w loc  
                           
-test :: Int -> IO ()
-test i = do
-  w <- mkWorld
-  let gen = mkStdGen i
-  (ant:ants) <- populateWorld gen w
-  print ant
-  newPos <- atomically $ behave gen w ant
-  print newPos
-  newPos' <- atomically $ behave gen w newPos
-  print newPos'
-  newPos'' <- atomically $ behave gen w newPos'
-  print newPos''
-
-  
-
