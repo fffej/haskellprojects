@@ -262,3 +262,7 @@ populateWorld gen w = do
   forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
        (\(p,dir) -> atomically $ updateTVar (place w p) 
                     (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)
+
+-- |Just for debugging
+countAnts :: World -> STM Int
+countAnts w = liftM V.length (V.filterM (\x -> readTVar x >>= return . hasAnt) (cells w))
