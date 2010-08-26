@@ -205,62 +205,50 @@ rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..leng
       sorted = sortBy f xs
 
 -- TODO much duplication to eliminate
-forage :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
-forage gen w loc = do
+forage :: StdGen -> World -> Cell -> ((Int,Int) -> STM (Int,Int)) -> (Int,Int) -> STM (Int,Int)
+forage gen w ahead action loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
-  ahead <- readTVar $ place w (deltaLoc loc (direction a))
-  aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
-  aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
-  let places = [ahead,aheadLeft,aheadRight]
   if food cell > 0 && not (home cell) -- if there is food and we aren't at home
      then takeFood w loc >> turn w loc 4 >> return loc
      else if (food ahead > 0) && not (home ahead) && not (hasAnt ahead) -- food ahead and nothing in the way
           then move w loc 
-          else do
-            let f = rankBy (comparing food) places
-                p = rankBy (comparing pheromone) places
-                ranks = unionWith (+) f p -- TODO naff
-                choice = wrand [if hasAnt ahead then 0 else ranks M.! ahead
-                               ,ranks M.! aheadLeft
-                               ,ranks M.! aheadRight] gen
-                funcs = [move w
-                        ,\x -> turn w x (- 1) >> return x
-                        ,\x -> turn w x 1 >> return x]          
-            ((funcs !! choice) loc)
+          else action loc
 
 -- 1:46minnutes http://blip.tv/file/812787
 -- TODO much duplication to eliminate grass hopper
-goHome :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
-goHome gen w loc = do
+goHome :: StdGen -> World -> Cell -> ((Int,Int) -> STM (Int,Int)) -> (Int,Int) -> STM (Int,Int)
+goHome gen w ahead action loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
-  ahead <- readTVar $ place w (deltaLoc loc (direction a))
-  aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
-  aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
-  let places = [ahead,aheadLeft,aheadRight]
   if home cell
      then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
      else if home ahead && not (hasAnt ahead)
           then move w loc -- head forward knowing the way is clear
-          else do
-            let p = rankBy (comparing pheromone) places 
-                h = rankBy (comparing home) places
-                ranks = unionWith (+) p h
-                choice = wrand [if hasAnt ahead then 0 else ranks M.! ahead
-                               ,ranks M.! aheadLeft
-                               ,ranks M.! aheadRight] gen
-                funcs = [move w
-                        ,\x -> turn w x (- 1) >> return x
-                        ,\x -> turn w x 1  >> return x]          
-            ((funcs !! choice) loc)
+          else action loc
 
 -- | The main function for the ant agent
 behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 behave gen w loc = do
   cell <- readTVar (place w loc)
   let a = fromJust $ ant cell
-  if hasFood a then goHome gen w loc else forage gen w loc  
+  ahead <- readTVar $ place w (deltaLoc loc (direction a))
+  aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
+  aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
+  let places = [ahead,aheadLeft,aheadRight]
+      p = rankBy (comparing pheromone) places
+      f = rankBy (comparing food) places
+      h = rankBy (comparing home) places
+      ranks = if hasFood a then unionWith (+) p h else unionWith (+) f p
+      choice = wrand [if hasAnt ahead then 0 else ranks M.! ahead
+                     ,ranks M.! aheadLeft
+                     ,ranks M.! aheadRight] gen
+      action = [move w
+               ,\x -> turn w x (- 1) >> return x
+               ,\x -> turn w x 1 >> return x]  !! choice
+  if hasFood a 
+     then goHome gen w ahead action loc 
+     else forage gen w ahead action loc 
                           
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
