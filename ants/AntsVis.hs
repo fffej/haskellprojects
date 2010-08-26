@@ -32,16 +32,15 @@ antBehave world p = do
   gen <- newStdGen 
   newPos <- atomically $ behave gen world p                      
   _ <- threadDelay (antTick  * 1000)
-  _ <- forkIO (antBehave world newPos)
-  return ()
+  antBehave world newPos
 
 -- |Timeout in ms for the callback
 tick :: Int
-tick = 50
+tick = 100
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 50
+antTick = 150
 
 gridSize :: GLfloat
 gridSize = 5
@@ -144,7 +143,7 @@ main = do
   w <- mkWorld
   ants <- populateWorld gen w
   
-  forM_ (take 10 ants) (antBehave w)
+  forM_ (ants) (\x -> forkIO $ (antBehave w x >> return ()))
 
   displayCallback $= displayFunc w
   reshapeCallback $= Just reshapeFunc
