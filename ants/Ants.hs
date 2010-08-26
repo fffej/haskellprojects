@@ -44,22 +44,6 @@ data World = World {
       cells :: TCellArray
 } 
 
-data Direction = N | NE | E | SE | S | SW | W | NW
-               deriving (Enum,Show,Eq)
-
-turnRight :: Direction -> Direction
-turnRight NW = N
-turnRight x = succ x
-
-turnLeft :: Direction -> Direction
-turnLeft N = NW
-turnLeft x = pred x
-
-turnInt :: Int -> Direction -> Direction
-turnInt 0 d = d
-turnInt x d | x < 0     = turnInt (x + 1) (turnRight d)
-            | otherwise = turnInt (x - 1) (turnLeft d)
-
 data Ant = Ant {
       direction :: Direction
     , hasFood :: Bool
@@ -75,7 +59,21 @@ data Cell = Cell {
 instance Ord Cell where
     compare = comparing food
 
-data Agent = Agent Ant
+data Direction = N | NE | E | SE | S | SW | W | NW
+               deriving (Enum,Show,Eq)
+
+turnRight :: Direction -> Direction
+turnRight NW = N
+turnRight x = succ x
+
+turnLeft :: Direction -> Direction
+turnLeft N = NW
+turnLeft x = pred x
+
+turnInt :: Int -> Direction -> Direction
+turnInt 0 d = d
+turnInt x d | x < 0     = turnInt (x + 1) (turnRight d)
+            | otherwise = turnInt (x - 1) (turnLeft d)
 
 {- Boring helper functions -}
 
