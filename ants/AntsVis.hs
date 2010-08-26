@@ -143,7 +143,7 @@ main = do
   w <- mkWorld
   ants <- populateWorld gen w
   
-  forM_ (ants) (\x -> forkIO $ (antBehave w x >> return ()))
+  forM_ ants (\x -> forkIO $ antBehave w x >> return ())
 
   displayCallback $= displayFunc w
   reshapeCallback $= Just reshapeFunc
