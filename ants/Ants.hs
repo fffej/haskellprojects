@@ -204,29 +204,6 @@ rankBy f xs = foldl (\m i -> M.insert (sorted !! i) (succ i) m) M.empty [0..leng
     where
       sorted = sortBy f xs
 
--- TODO much duplication to eliminate
-forage :: StdGen -> World -> Cell -> ((Int,Int) -> STM (Int,Int)) -> (Int,Int) -> STM (Int,Int)
-forage gen w ahead action loc = do
-  cell <- readTVar (place w loc)
-  let a = fromJust $ ant cell
-  if food cell > 0 && not (home cell) -- if there is food and we aren't at home
-     then takeFood w loc >> turn w loc 4 >> return loc
-     else if (food ahead > 0) && not (home ahead) && not (hasAnt ahead) -- food ahead and nothing in the way
-          then move w loc 
-          else action loc
-
--- 1:46minnutes http://blip.tv/file/812787
--- TODO much duplication to eliminate grass hopper
-goHome :: StdGen -> World -> Cell -> ((Int,Int) -> STM (Int,Int)) -> (Int,Int) -> STM (Int,Int)
-goHome gen w ahead action loc = do
-  cell <- readTVar (place w loc)
-  let a = fromJust $ ant cell
-  if home cell
-     then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
-     else if home ahead && not (hasAnt ahead)
-          then move w loc -- head forward knowing the way is clear
-          else action loc
-
 -- | The main function for the ant agent
 behave :: StdGen -> World -> (Int,Int) -> STM (Int,Int)
 behave gen w loc = do
@@ -247,8 +224,17 @@ behave gen w loc = do
                ,\x -> turn w x (- 1) >> return x
                ,\x -> turn w x 1 >> return x]  !! choice
   if hasFood a 
-     then goHome gen w ahead action loc 
-     else forage gen w ahead action loc 
+     then if home cell
+             then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
+             else if home ahead && not (hasAnt ahead)
+                  then move w loc -- head forward knowing the way is clear
+                  else action loc
+     else if food cell > 0 && not (home cell) -- if there is food and we aren't at home
+             then takeFood w loc >> turn w loc 4 >> return loc
+             else if (food ahead > 0) && not (home ahead) && not (hasAnt ahead) -- food ahead and nothing in the way
+                  then move w loc 
+                  else action loc
+
                           
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
