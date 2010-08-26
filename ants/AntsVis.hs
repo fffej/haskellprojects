@@ -13,6 +13,8 @@ import Control.Monad
 import Control.Concurrent
 import Control.Concurrent.STM
 
+import Debug.Trace
+
 color4f :: Color4 GLfloat -> IO ()
 color4f = color
 
@@ -46,7 +48,7 @@ gridSize :: GLfloat
 gridSize = 5
 
 pherScale :: GLfloat
-pherScale = 20.0
+pherScale = 40.0
 
 foodScale :: GLfloat
 foodScale = 30.0
@@ -69,10 +71,10 @@ displayFunc world = do
   let h = fromIntegral homeOff * gridSize
       g = gridSize + gridSize * fromIntegral nantsSqrt
   renderPrimitive Quads $ do
-                  colorVertex (Color4 0 0 1 0) (Vertex2 h h)
-                  colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) h)
-                  colorVertex (Color4 0 0 1 0) (Vertex2 (h+g) (h+g))
-                  colorVertex (Color4 0 0 1 0) (Vertex2 h (h+g))
+                  colorVertex (Color4 0 0 1 0.1) (Vertex2 h h)
+                  colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) h)
+                  colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) (h+g))
+                  colorVertex (Color4 0 0 1 0.1) (Vertex2 h (h+g))
 
   -- Then draw the relevant cells
   V.forM_ (V.zip pos (cells world)) (uncurry drawPlace) 
@@ -104,7 +106,7 @@ drawAnt (x,y) a = do
 fillCell :: (Int,Int) -> Color4 GLfloat -> IO ()
 fillCell (i,j) c = do
   let x = fromIntegral i *  gridSize
-      y = fromIntegral j *  gridSize
+      y = fromIntegral j *  gridSize     
   renderPrimitive Quads $ do
                      colorVertex c (Vertex2 x y)
                      colorVertex c (Vertex2 (x + gridSize) y)
@@ -115,9 +117,9 @@ drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
   when (pheromone cell > 0)
-       (fillCell loc (Color4 0 1 0 (realToFrac (pheromone cell) / pherScale)))
+       (fillCell loc (Color4 0 (min 1 (realToFrac (pheromone cell) / pherScale)) 0 0))
   when (food cell > 0)
-       (fillCell loc (Color4 1 0 0 (fromIntegral (food cell) / foodScale)))
+       (fillCell loc (Color4 (min 1 (fromIntegral (food cell) / foodScale)) 0 0 0))
   when (hasAnt cell)
        (drawAnt loc (fromJust $ ant cell))
 
@@ -128,16 +130,15 @@ reshapeFunc size@(Size _ height) =
       matrixMode $= Projection
       loadIdentity
       ortho2D 0 400 0 400 
-      clearColor $= Color4 0 0 0 1
 
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
-  initialDisplayMode $= [DoubleBuffered,RGBAMode]
+  initialDisplayMode $= [DoubleBuffered,WithAlphaComponent,RGBAMode]
   initialWindowSize $= Size 512 512
   initialWindowPosition $= Position 0 0
   _ <- createWindow "Ants in Haskell."
-  clearColor $= Color4 0 0 0 1
+  clearColor $= Color4 0 0 0 0
 
   gen <- getStdGen
   w <- mkWorld

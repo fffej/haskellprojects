@@ -148,8 +148,8 @@ takeFood w loc = do
   src <- readTVar p
   _ <- check (hasAnt src && food src > 0)
 
-  updateTVar p (\c -> c { food = pred (food c) })
-  updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = True }) } )
+  updateTVar p (\c -> c { food = pred (food c) 
+                        , ant = Just ((fromJust (ant c)) { hasFood = True }) })
       where
         p = place w loc
 
@@ -158,8 +158,8 @@ dropFood w loc = do
   src <- readTVar p
   _ <- check (hasAnt src && hasFood (fromJust (ant src)))
 
-  updateTVar p (\c -> c { food = succ (food c) } )
-  updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = False }) } )
+  updateTVar p (\c -> c { food = succ (food c) 
+                        , ant = Just ((fromJust (ant c)) { hasFood = False }) })
       where
         p = place w loc
 
@@ -168,6 +168,7 @@ move :: World -> (Int,Int) -> STM (Int,Int)
 move w loc = do
   let src = place w loc
   cell <- readTVar src
+  _ <- check (hasAnt cell)
   let dir    = direction $ fromJust $ ant cell
       newLoc = deltaLoc loc dir
 
@@ -183,6 +184,7 @@ move w loc = do
   unless (home cell) (updateTVar src incPher)
   return newLoc
 
+-- |Must be called when asserted there is an ant
 turnAnt :: Int -> Cell -> Cell
 turnAnt amt cell = cell { ant = Just turnedAnt } 
     where
