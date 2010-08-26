@@ -143,28 +143,27 @@ place world (x,y) = cells world V.! n
     where
       n = x*dim + y
 
--- |Takes one food from current location.
--- TODO assert that..
--- 1) Food exists
--- 2) Ant exists
 takeFood :: World -> (Int,Int) -> STM ()
 takeFood w loc = do
+  src <- readTVar p
+  _ <- check (hasAnt src && food src > 0)
+
   updateTVar p (\c -> c { food = pred (food c) })
   updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = True }) } )
       where
         p = place w loc
 
--- |Drop food at current location
--- TODO assert that ant has food
 dropFood :: World -> (Int,Int) -> STM ()
 dropFood w loc = do 
+  src <- readTVar p
+  _ <- check (hasAnt src && hasFood (fromJust (ant src)))
+
   updateTVar p (\c -> c { food = succ (food c) } )
   updateTVar p (\c -> c { ant = Just ((fromJust (ant c)) { hasFood = False }) } )
       where
         p = place w loc
 
 -- |Move the ant in the direction it is heading
--- TODO assert that the way is clear
 move :: World -> (Int,Int) -> STM (Int,Int)
 move w loc = do
   let src = place w loc
@@ -172,8 +171,8 @@ move w loc = do
   let dir    = direction $ fromJust $ ant cell
       newLoc = deltaLoc loc dir
 
+  -- Is the coast clear?
   dest <- readTVar (place w newLoc)
-
   _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell

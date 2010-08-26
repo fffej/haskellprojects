@@ -35,14 +35,13 @@ antBehave world p = do
   _ <- forkIO (antBehave world newPos)
   return ()
 
--- state is the world
 -- |Timeout in ms for the callback
 tick :: Int
-tick = 500
+tick = 50
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 100
+antTick = 50
 
 gridSize :: GLfloat
 gridSize = 5
