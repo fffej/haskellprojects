@@ -19,7 +19,7 @@ dim = 80
 
 -- |Number of ants
 nantsSqrt :: Int
-nantsSqrt = 7
+nantsSqrt = 5
 
 -- |Number of places with food
 foodPlaces :: Int
@@ -31,7 +31,7 @@ foodRange = 100
 
 -- |Evaporation rate
 evapRate :: Double
-evapRate = 0.99
+evapRate = 0.9999999
 
 homeOff :: Int
 homeOff = dim `div` 4
@@ -76,16 +76,6 @@ turnInt x d | x < 0     = turnInt (x + 1) (turnRight d)
             | otherwise = turnInt (x - 1) (turnLeft d)
 
 {- Boring helper functions -}
-
-clearAnt :: Cell -> Cell
-clearAnt cell = cell { ant = Nothing }
-
-incPher :: Cell -> Cell
-incPher cell = cell { pheromone = succ (pheromone cell) }
-
-setFood :: Cell -> Int -> Cell
-setFood cell f = cell { food = f }
-
 hasAnt :: Cell -> Bool
 hasAnt (Cell _ _ (Just _) _) = True
 hasAnt _ = False
@@ -116,14 +106,14 @@ bound b n | n' < 0 = n' + b
     where
       n' = rem n b    
 
--- Proof if proof were needed that more concise isn't necessarily good
 wrand :: [Int] -> StdGen -> Int
-wrand xs gen = do
-  let (s,_) = randomR (0,sum xs) gen
-      ys = filter (\(runningSum,_) -> s <= runningSum) $ zip (tail $ scanl (+) 0 xs) [0..]
-  case ys of
-    [] -> 0
-    _ -> snd $ head ys
+wrand xs gen = f 0 0
+    where 
+      total = sum xs 
+      (r,_) = randomR (0,total - 1) gen
+      f = \i sum -> if r < (xs !! i) + sum 
+                    then i
+                    else f (succ i) (sum + (xs !! i))
 
 -- |Causes all the pheromones to evaporate a bit
 evaporate :: World -> STM ()
@@ -132,30 +122,24 @@ evaporate w = V.forM_ (cells w) (`updateTVar` evaporate')
       evaporate' c = c {pheromone = pheromone c * evapRate}
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
-updateTVar tv f = do
-  v <- readTVar tv
-  writeTVar tv (f v)
+updateTVar tv f = readTVar tv >>= writeTVar tv . f
                                                        
 place :: World -> (Int,Int) -> TCell
-place world (x,y) = cells world V.! n
-    where
-      n = x*dim + y
+place world (x,y) = cells world V.! (x*dim + y)
 
+-- |Must be called in a transaction where has food at loc
 takeFood :: World -> (Int,Int) -> STM ()
 takeFood w loc = do
   src <- readTVar p
-  _ <- check (hasAnt src && food src > 0)
-
   updateTVar p (\c -> c { food = pred (food c) 
                         , ant = Just ((fromJust (ant c)) { hasFood = True }) })
       where
         p = place w loc
 
+-- |Must be called in a transaction where the ant has food
 dropFood :: World -> (Int,Int) -> STM ()
 dropFood w loc = do 
   src <- readTVar p
-  _ <- check (hasAnt src && hasFood (fromJust (ant src)))
-
   updateTVar p (\c -> c { food = succ (food c) 
                         , ant = Just ((fromJust (ant c)) { hasFood = False }) })
       where
@@ -166,7 +150,6 @@ move :: World -> (Int,Int) -> STM (Int,Int)
 move w loc = do
   let src = place w loc
   cell <- readTVar src
-  _ <- check (hasAnt cell)
   let dir    = direction $ fromJust $ ant cell
       newLoc = deltaLoc loc dir
 
@@ -175,11 +158,12 @@ move w loc = do
   _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
-  updateTVar src clearAnt
+  updateTVar src (\x -> x { ant = Nothing })
   updateTVar (place w newLoc) (\x -> x { ant = ant cell })
 
   -- Leave a trail
-  unless (home cell) (updateTVar src incPher)
+  unless (home cell) 
+      (updateTVar src (\x -> x { pheromone = succ $ pheromone x } ))
   return newLoc
 
 -- |Must be called when asserted there is an ant
@@ -189,10 +173,10 @@ turnAnt amt cell = cell { ant = Just turnedAnt }
       a = fromJust $ ant cell      
       turnedAnt = a { direction = turnInt amt (direction a) }
 
+-- |Must be called when true that world (int,int) is an ant
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = do
   cell <- readTVar src
-  _ <- check (hasAnt cell)
   updateTVar src (turnAnt amt)
     where
       src = place w loc
@@ -220,8 +204,8 @@ behave gen w loc = do
                      ,ranks M.! aheadLeft
                      ,ranks M.! aheadRight] gen
       action = [move w
-               ,\x -> turn w x (- 1) >> return x
-               ,\x -> turn w x 1 >> return x]  !! choice
+               ,\x -> turn w x 1 >> return x
+               ,\x -> turn w x (- 1) >> return x]  !! choice
   if hasFood a 
      then if home cell
              then dropFood w loc >> turn w loc 4 >> return loc -- drop food, turn around
@@ -238,29 +222,33 @@ behave gen w loc = do
 mkCell :: Int -> Double -> Cell
 mkCell f p = Cell f p Nothing False
 
-mkWorld :: IO World
-mkWorld = atomically $ do
+mkWorld :: IO (World,[(Int,Int)])
+mkWorld = do 
+  gen <- getStdGen
+
+  w <- atomically $ do
             cs <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
             return (World $ V.fromList cs)
 
-populateWorld :: StdGen -> World -> IO [(Int,Int)]
-populateWorld gen w = do
-  -- Set up giant block of random numbers
-  -- TODO factor this out into a monad (or use an existing one?)
   let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
       dirs       = randomRs (0,7) gen :: [Int]
       foodRanges = randomRs (0,foodRange) gen :: [Int]
       xy         = uncurry zip $ splitAt foodPlaces dims
 
+  -- Position the food randomly
   forM_ (zip3 [0..foodPlaces] xy foodRanges) 
         (\(_,p,f) -> atomically $ updateTVar (place w p) (\x -> x{ food = f }))
-                                                            
-  -- make some places at (x,y) that are home
-  -- place an ant there facing in a random direction
-  forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
-       (\(p,dir) -> atomically $ updateTVar (place w p) 
-                    (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)
+                               
+  -- Set up the home area
+  ants <- forM (zip [(x,y) | x <- homeRange, y <- homeRange] dirs)
+          (\(p,dir) -> atomically $ updateTVar (place w p) 
+           (\x -> x { home = True, ant = Just (Ant (toEnum dir) False) }) >> return p)
+
+  return (w,ants)
 
 -- |Just for debugging
 countAnts :: World -> STM Int
-countAnts w = liftM V.length (V.filterM (\x -> readTVar x >>= return . hasAnt) (cells w))
+countAnts w = liftM V.length (V.filterM (\x -> fmap hasAnt (readTVar x)) (cells w))
+
+getAnts :: World -> STM [Ant]
+getAnts w = liftM (catMaybes . V.toList) $ V.mapM (\x -> fmap ant (readTVar x)) (cells w)

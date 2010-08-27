@@ -1,6 +1,8 @@
 module AntsVis where
 
 import Ants
+
+import System.Exit (exitWith, ExitCode(ExitSuccess))
 import System.Random
 
 import Graphics.UI.GLUT as G
@@ -38,11 +40,11 @@ antBehave world p = do
 
 -- |Timeout in ms for the callback
 tick :: Int
-tick = 100
+tick = 50
 
 -- |Timeout for the ants 
 antTick :: Int
-antTick = 150
+antTick = 100
 
 gridSize :: GLfloat
 gridSize = 5
@@ -51,7 +53,7 @@ pherScale :: GLfloat
 pherScale = 40.0
 
 foodScale :: GLfloat
-foodScale = 30.0
+foodScale = 100.0
 
 antInfo :: Direction -> (GLfloat,GLfloat,GLfloat,GLfloat)
 antInfo N  = (2,0,2,4)
@@ -67,7 +69,6 @@ displayFunc :: World -> DisplayCallback
 displayFunc world = do
   clear [ColorBuffer]
 
-  -- Draw the home area
   let h = fromIntegral homeOff * gridSize
       g = gridSize + gridSize * fromIntegral nantsSqrt
   renderPrimitive Quads $ do
@@ -131,6 +132,10 @@ reshapeFunc size@(Size _ height) =
       loadIdentity
       ortho2D 0 400 0 400 
 
+keyboardMouseHandler :: KeyboardMouseCallback
+keyboardMouseHandler (Char 'q') Down _ _ = exitWith ExitSuccess
+keyboardMouseHandler _ _ _ _ = return ()
+
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
@@ -140,14 +145,13 @@ main = do
   _ <- createWindow "Ants in Haskell."
   clearColor $= Color4 0 0 0 0
 
-  gen <- getStdGen
-  w <- mkWorld
-  ants <- populateWorld gen w
-  
+  (w,ants) <- mkWorld
+
   forM_ ants (\x -> forkIO $ antBehave w x >> return ())
 
   displayCallback $= displayFunc w
   reshapeCallback $= Just reshapeFunc
   addTimerCallback tick (timerFunc w)
+  keyboardMouseCallback $= Just keyboardMouseHandler
 
   mainLoop
