@@ -47,7 +47,7 @@ antTick :: Int
 antTick = 100
 
 gridSize :: GLfloat
-gridSize = 5
+gridSize = 7
 
 pherScale :: GLfloat
 pherScale = 40.0
