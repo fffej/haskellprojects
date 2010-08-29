@@ -78,7 +78,7 @@ displayFunc world = do
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 h (h+g))
 
   -- Then draw the relevant cells
-  V.forM_ (V.zip pos (cells world)) (uncurry drawPlace) 
+  V.forM_ (V.zip pos world) (uncurry drawPlace) 
   swapBuffers
 
 timerFunc :: World -> IO ()

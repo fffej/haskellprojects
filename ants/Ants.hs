@@ -13,6 +13,9 @@ import qualified Data.Map as M
 
 import System.Random
 
+import Criterion
+import Criterion.Main
+
 -- |Dimensions of square world
 dim :: Int
 dim = 80
@@ -40,9 +43,7 @@ type TCell = TVar Cell
 
 type TCellArray = Vector TCell
 
-data World = World {
-      cells :: TCellArray
-} 
+type World = TCellArray
 
 data Ant = Ant {
       direction :: Direction
@@ -117,7 +118,7 @@ wrand xs gen = f 0 0
 
 -- |Causes all the pheromones to evaporate a bit
 evaporate :: World -> STM ()
-evaporate w = V.forM_ (cells w) (`updateTVar` evaporate')
+evaporate w = V.forM_ w (`updateTVar` evaporate')
     where
       evaporate' c = c {pheromone = pheromone c * evapRate}
 
@@ -125,7 +126,7 @@ updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar tv f = readTVar tv >>= writeTVar tv . f
                                                        
 place :: World -> (Int,Int) -> TCell
-place world (x,y) = cells world V.! (x*dim + y)
+place world (x,y) = world V.! (x*dim + y)
 
 -- |Must be called in a transaction where has food at loc
 takeFood :: World -> (Int,Int) -> STM ()
@@ -228,7 +229,7 @@ mkWorld = do
 
   w <- atomically $ do
             cs <- replicateM ((1+dim)*(1+dim)) (newTVar (mkCell 0 0))
-            return (World $ V.fromList cs)
+            return (V.fromList cs)
 
   let dims       = take (2*foodPlaces) $ randomRs (0,dim) gen :: [Int]
       dirs       = randomRs (0,7) gen :: [Int]
@@ -248,7 +249,17 @@ mkWorld = do
 
 -- |Just for debugging
 countAnts :: World -> STM Int
-countAnts w = liftM V.length (V.filterM (\x -> fmap hasAnt (readTVar x)) (cells w))
+countAnts w = liftM V.length (V.filterM (\x -> fmap hasAnt (readTVar x)) w)
 
 getAnts :: World -> STM [Ant]
-getAnts w = liftM (catMaybes . V.toList) $ V.mapM (\x -> fmap ant (readTVar x)) (cells w)
+getAnts w = liftM (catMaybes . V.toList) $ V.mapM (\x -> fmap ant (readTVar x)) w
+
+-- Performance benchmarks
+main = do
+  (world,(ant:ants)) <- mkWorld
+  let gen = mkStdGen 101
+  defaultMain [
+        bgroup "Ants" [ bench "evaporate" $ whnfIO $ atomically $ evaporate world ] 
+       ]
+--                     , bench "behave" $ whnfIO $ atomically $ behave gen world ant]
+
