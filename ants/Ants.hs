@@ -23,7 +23,7 @@ nantsSqrt = 5
 
 -- |Number of places with food
 foodPlaces :: Int
-foodPlaces = 35
+foodPlaces = 100
 
 -- |Range of amount of food at a place
 foodRange :: Int
