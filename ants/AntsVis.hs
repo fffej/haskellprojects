@@ -34,7 +34,7 @@ pos = V.fromList [(y,x) | x <- [0..dim-1], y <- [0..dim-1]]
 antBehave :: World -> (Int,Int) -> IO ()
 antBehave world p = do
   gen <- newStdGen 
-  newPos <- atomically $ behave gen world p                      
+  newPos <- atomically $! behave gen world p                      
   _ <- threadDelay (antTick  * 1000)
   antBehave world newPos
 
@@ -117,8 +117,8 @@ fillCell (i,j) c = do
 drawPlace :: (Int,Int) -> TCell -> IO ()
 drawPlace loc tcell = do
   cell <- atomically $ readTVar tcell
-  when (pheromone cell > 0)
-       (fillCell loc (Color4 0 (min 1 (realToFrac (pheromone cell) / pherScale)) 0 0))
+  when (pher cell > 0)
+       (fillCell loc (Color4 0 (min 1 (realToFrac (pher cell) / pherScale)) 0 0))
   when (food cell > 0)
        (fillCell loc (Color4 (min 1 (fromIntegral (food cell) / foodScale)) 0 0 0))
   when (hasAnt cell)

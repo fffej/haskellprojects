@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Ants where
 
 import Control.Monad
@@ -13,8 +14,8 @@ import qualified Data.Map as M
 
 import System.Random
 
-import Criterion
-import Criterion.Main
+--import Criterion
+--import Criterion.Main
 
 -- |Dimensions of square world
 dim :: Int
@@ -22,7 +23,7 @@ dim = 80
 
 -- |Number of ants
 nantsSqrt :: Int
-nantsSqrt = 5
+nantsSqrt = 10
 
 -- |Number of places with food
 foodPlaces :: Int
@@ -52,7 +53,7 @@ data Ant = Ant {
  
 data Cell = Cell {
       food :: Int
-    , pheromone :: Double
+    , pher :: Double
     , ant :: Maybe Ant
     , home :: Bool
 } deriving (Eq,Show)
@@ -116,11 +117,10 @@ wrand xs gen = f 0 0
                     then i
                     else f (succ i) (sum + (xs !! i))
 
--- |Causes all the pheromones to evaporate a bit
+-- |Causes all the phers to evaporate a bit
 evaporate :: World -> STM ()
-evaporate w = V.forM_ w (`updateTVar` evaporate')
-    where
-      evaporate' c = c {pheromone = pheromone c * evapRate}
+evaporate w = V.forM_ w (\x -> updateTVar x 
+                               (\c -> c { pher = pher c * evapRate }) `seq` return ())
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar tv f = readTVar tv >>= writeTVar tv . f
@@ -159,12 +159,12 @@ move w loc = do
   _ <- check (not (hasAnt dest))
 
   -- move the ant to the new cell
-  updateTVar src (\x -> x { ant = Nothing })
+  updateTVar src (\x -> x { ant = Nothing } )
   updateTVar (place w newLoc) (\x -> x { ant = ant cell })
 
   -- Leave a trail
   unless (home cell) 
-      (updateTVar src (\x -> x { pheromone = succ $ pheromone x } ))
+      (updateTVar src (\x -> x { pher = succ $ pher x } ))
   return newLoc
 
 -- |Must be called when asserted there is an ant
@@ -197,7 +197,7 @@ behave gen w loc = do
   aheadLeft <- readTVar $ place w (deltaLoc loc (turnLeft (direction a)))
   aheadRight <- readTVar $ place w (deltaLoc loc (turnRight(direction a)))
   let places = [ahead,aheadLeft,aheadRight]
-      p = rankBy (comparing pheromone) places
+      p = rankBy (comparing pher) places
       f = rankBy (comparing food) places
       h = rankBy (comparing home) places
       ranks = if hasFood a then unionWith (+) p h else unionWith (+) f p
@@ -255,11 +255,11 @@ getAnts :: World -> STM [Ant]
 getAnts w = liftM (catMaybes . V.toList) $ V.mapM (\x -> fmap ant (readTVar x)) w
 
 -- Performance benchmarks
-main = do
+{-main = do
   (world,(ant:ants)) <- mkWorld
   let gen = mkStdGen 101
   defaultMain [
         bgroup "Ants" [ bench "evaporate" $ whnfIO $ atomically $ evaporate world ] 
-       ]
+       ]-}
 --                     , bench "behave" $ whnfIO $ atomically $ behave gen world ant]
 
