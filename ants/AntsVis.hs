@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module AntsVis where
 
 import Ants
@@ -28,13 +29,13 @@ colorVertex c v = do
   color4f c
   vertex v
 
-pos :: Vector (Int,Int)
-pos = V.fromList [(y,x) | x <- [0..dim-1], y <- [0..dim-1]]
+--pos :: Vector (Int,Int)
+--pos = V.fromList [(y,x) | x <- [0..dim-1], y <- [0..dim-1]]
 
 antBehave :: World -> (Int,Int) -> IO ()
 antBehave world p = do
   gen <- newStdGen 
-  newPos <- atomically $! behave gen world p                      
+  newPos <- atomically $ behave gen world p                      
   _ <- threadDelay (antTick  * 1000)
   antBehave world newPos
 
@@ -77,8 +78,7 @@ displayFunc world = do
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) (h+g))
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 h (h+g))
 
-  -- Then draw the relevant cells
-  V.forM_ (V.zip pos world) (uncurry drawPlace) 
+  forM_ [0..dim*dim] (\x -> let pos = (x `div` dim, x `mod` dim) in drawPlace pos (world V.! x))
   swapBuffers
 
 timerFunc :: World -> IO ()
