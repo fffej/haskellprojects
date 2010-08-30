@@ -47,14 +47,14 @@ type TCellArray = Vector TCell
 type World = TCellArray
 
 data Ant = Ant {
-      direction :: Direction
-    , hasFood :: Bool
+      direction :: !Direction
+    , hasFood :: !Bool
 } deriving (Eq,Show)
  
 data Cell = Cell {
       food :: !Int
     , pher :: !Double
-    , ant :: Maybe Ant
+    , ant :: !(Maybe Ant)
     , home :: !Bool
 } deriving (Eq,Show)
 
@@ -154,7 +154,7 @@ move w loc = do
   let src = place w loc
   cell <- readTVar src
   let dir    = direction $ fromJust $ ant cell
-      newLoc = deltaLoc loc dir
+      !newLoc = deltaLoc loc dir
 
   -- Is the coast clear?
   dest <- readTVar (place w newLoc)
