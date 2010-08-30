@@ -52,10 +52,10 @@ data Ant = Ant {
 } deriving (Eq,Show)
  
 data Cell = Cell {
-      food :: Int
-    , pher :: Double
+      food :: !Int
+    , pher :: !Double
     , ant :: Maybe Ant
-    , home :: Bool
+    , home :: !Bool
 } deriving (Eq,Show)
 
 instance Ord Cell where
@@ -119,11 +119,13 @@ wrand xs gen = f 0 0
 
 -- |Causes all the phers to evaporate a bit
 evaporate :: World -> STM ()
-evaporate w = V.forM_ w (\x -> updateTVar x 
-                               (\c -> c { pher = pher c * evapRate }) `seq` return ())
+evaporate w = V.forM_ w (\x -> updateTVar x (\c -> c { pher = pher c * evapRate }) `seq` return ())
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
-updateTVar tv f = readTVar tv >>= writeTVar tv . f
+updateTVar !tv f = do
+  x <- readTVar tv
+  _ <- writeTVar tv $! (f x)
+  return ()
                                                        
 place :: World -> (Int,Int) -> TCell
 place world (x,y) = world V.! (x*dim + y)

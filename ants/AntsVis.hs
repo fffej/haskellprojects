@@ -78,7 +78,7 @@ displayFunc world = do
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) (h+g))
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 h (h+g))
 
-  forM_ [0..dim*dim] (\x -> let pos = (x `div` dim, x `mod` dim) in drawPlace pos (world V.! x))
+  forM_ [0..dim*dim] (\x -> let pos = (x `div` dim, x `mod` dim) in drawPlace pos (world V.! x)) 
   swapBuffers
 
 timerFunc :: World -> IO ()
