@@ -35,7 +35,7 @@ foodRange = 100
 
 -- |Evaporation rate
 evapRate :: Double
-evapRate = 0.01
+evapRate = 0.9999
 
 homeOff :: Int
 homeOff = dim `div` 4
@@ -118,8 +118,12 @@ wrand xs gen = f 0 0
                     else f (succ i) (sum + (xs !! i))
 
 -- |Causes all the phers to evaporate a bit
-evaporate :: World -> STM ()
-evaporate w = V.forM_ w (\x -> updateTVar x (\c -> c { pher = pher c * evapRate }))
+-- The reason that this is done in the IO monad is that I want to apply lots of little updates
+-- and get them commited to the transaction. 
+-- If I don't do this and run within the IO monad, then it's only commited when nothing else
+-- causes it to retry.
+evaporate :: World -> IO ()
+evaporate w = V.forM_ w (\x -> atomically $ updateTVar x (\c -> c { pher = pher c * evapRate }))
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar !tv f = do

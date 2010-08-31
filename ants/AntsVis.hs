@@ -36,8 +36,14 @@ antBehave :: World -> (Int,Int) -> IO ()
 antBehave world p = do
   gen <- newStdGen 
   newPos <- atomically $ behave gen world p                      
-  _ <- threadDelay (antTick  * 1000)
+  _ <- threadDelay (antTick * 1000)
   antBehave world newPos
+
+evaporateWorld :: World -> IO ()
+evaporateWorld w = do
+  evaporate w
+  _ <- threadDelay (evapTick * 1000)
+  evaporateWorld w
 
 -- |Timeout in ms for the callback
 tick :: Int
@@ -46,6 +52,10 @@ tick = 50
 -- |Timeout for the ants 
 antTick :: Int
 antTick = 100
+
+-- |Evaporation time
+evapTick :: Int
+evapTick = 100
 
 gridSize :: GLfloat
 gridSize = 7
@@ -77,14 +87,12 @@ displayFunc world = do
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) h)
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 (h+g) (h+g))
                   colorVertex (Color4 0 0 1 0.1) (Vertex2 h (h+g))
-
   forM_ [0..dim*dim] (\x -> let pos = (x `div` dim, x `mod` dim) in drawPlace pos (world V.! x)) 
   swapBuffers
 
 timerFunc :: World -> IO ()
 timerFunc w = do
   postRedisplay Nothing
-  atomically $ evaporate w
   addTimerCallback tick (timerFunc w)
   return ()
 
@@ -142,12 +150,13 @@ main = do
   initialDisplayMode $= [DoubleBuffered,WithAlphaComponent,RGBAMode]
   initialWindowSize $= Size 512 512
   initialWindowPosition $= Position 0 0
-  _ <- createWindow "Ants in Haskell."
+  createWindow "Ants in Haskell."
   clearColor $= Color4 0 0 0 0
 
   (w,ants) <- mkWorld
 
   forM_ ants (\x -> forkIO $ antBehave w x >> return ())
+  forkIO $ evaporateWorld w
 
   displayCallback $= displayFunc w
   reshapeCallback $= Just reshapeFunc
