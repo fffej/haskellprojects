@@ -35,7 +35,7 @@ foodRange = 100
 
 -- |Evaporation rate
 evapRate :: Double
-evapRate = 0.9999999
+evapRate = 0.01
 
 homeOff :: Int
 homeOff = dim `div` 4
@@ -119,34 +119,30 @@ wrand xs gen = f 0 0
 
 -- |Causes all the phers to evaporate a bit
 evaporate :: World -> STM ()
-evaporate w = V.forM_ w (\x -> updateTVar x (\c -> c { pher = pher c * evapRate }) `seq` return ())
+evaporate w = V.forM_ w (\x -> updateTVar x (\c -> c { pher = pher c * evapRate }))
 
 updateTVar :: TVar a -> (a -> a) -> STM ()
 updateTVar !tv f = do
   x <- readTVar tv
-  _ <- writeTVar tv $! (f x)
-  return ()
+  writeTVar tv $! (f x)
                                                        
 place :: World -> (Int,Int) -> TCell
 place world (x,y) = world V.! (x*dim + y)
 
 -- |Must be called in a transaction where has food at loc
 takeFood :: World -> (Int,Int) -> STM ()
-takeFood w loc = do
-  src <- readTVar p
-  updateTVar p (\c -> c { food = pred (food c) 
-                        , ant = Just ((fromJust (ant c)) { hasFood = True }) })
-      where
-        p = place w loc
+takeFood w loc = adjustFood w loc True
 
 -- |Must be called in a transaction where the ant has food
 dropFood :: World -> (Int,Int) -> STM ()
-dropFood w loc = do 
-  src <- readTVar p
-  updateTVar p (\c -> c { food = succ (food c) 
-                        , ant = Just ((fromJust (ant c)) { hasFood = False }) })
-      where
-        p = place w loc
+dropFood w loc = adjustFood w loc False
+
+adjustFood :: World -> (Int,Int) -> Bool -> STM ()
+adjustFood w loc b = do
+  let p = place w loc
+      fv = if b then 1 else (- 1)
+  updateTVar p (\c -> c { food = food c + fv
+                        , ant = Just ((fromJust (ant c)) { hasFood = b }) })
 
 -- |Move the ant in the direction it is heading
 move :: World -> (Int,Int) -> STM (Int,Int)
@@ -154,11 +150,11 @@ move w loc = do
   let src = place w loc
   cell <- readTVar src
   let dir    = direction $ fromJust $ ant cell
-      !newLoc = deltaLoc loc dir
+      newLoc = deltaLoc loc dir
 
   -- Is the coast clear?
   dest <- readTVar (place w newLoc)
-  _ <- check (not (hasAnt dest))
+  check (not (hasAnt dest))
 
   -- move the ant to the new cell
   updateTVar src (\x -> x { ant = Nothing } )
@@ -179,10 +175,9 @@ turnAnt amt cell = cell { ant = Just turnedAnt }
 -- |Must be called when true that world (int,int) is an ant
 turn :: World -> (Int,Int) -> Int -> STM ()
 turn w loc amt = do
+  let src = place w loc
   cell <- readTVar src
   updateTVar src (turnAnt amt)
-    where
-      src = place w loc
 
 -- | Map to their 1-based rank
 rankBy :: (Cell -> Cell -> Ordering) -> [Cell] -> Map Cell Int
