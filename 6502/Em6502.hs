@@ -455,16 +455,16 @@ execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
 execute cpu addressMode ADC = undefined
 execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
 execute cpu addressMode ASL = undefined
-execute cpu addressMode BCC = undefined
-execute cpu addressMode BCS = undefined
-execute cpu addressMode BEQ = undefined
+execute cpu addressMode BCC = branchIf cpu Carry False
+execute cpu addressMode BCS = branchIf cpu Carry True
+execute cpu addressMode BEQ = branchIf cpu Zero True
 execute cpu addressMode BIT = undefined
-execute cpu addressMode BMI = undefined
-execute cpu addressMode BNE = undefined
-execute cpu addressMode BPL = undefined
+execute cpu addressMode BMI = branchIf cpu Negative True
+execute cpu addressMode BNE = branchIf cpu Zero False
+execute cpu addressMode BPL = branchIf cpu Negative False
 execute cpu addressMode BRK = undefined
-execute cpu addressMode BVC = undefined
-execute cpu addressMode BVS = undefined
+execute cpu addressMode BVC = branchIf cpu Overflow False
+execute cpu addressMode BVS = branchIf cpu Overflow True
 execute cpu addressMode CLC = clearFlag cpu Carry 
 execute cpu addressMode CLD = clearFlag cpu Decimal
 execute cpu addressMode CLI = clearFlag cpu Interrupt
@@ -508,6 +508,9 @@ execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu) True
 execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
+
+branchIf :: CPU -> Flag -> Bool -> IO ()
+branchIf cpu flag val = undefined
 
 copyRegister :: CPU -> IORef Byte -> IORef Byte -> Bool -> IO ()
 copyRegister cpu src dest updateFlags = do
