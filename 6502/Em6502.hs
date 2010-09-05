@@ -124,6 +124,11 @@ setFlag c f = modifyIORef (sr c) (`setBit` fromIntegral (flag f))
 clearFlag :: CPU -> Flag -> IO ()
 clearFlag c f = modifyIORef (sr c) (`clearBit` fromIntegral (flag f))
 
+isSet :: CPU -> Flag -> IO Bool
+isSet cpu f = do
+  sr' <- readIORef (sr cpu)
+  return (testBit sr' (fromIntegral $ flag f))
+
 incPC :: CPU -> Word16 -> IO ()
 incPC c i = modifyIORef (pc c) (+ i)
 
@@ -510,7 +515,11 @@ execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
 branchIf :: CPU -> Flag -> Bool -> IO ()
-branchIf cpu flag val = undefined
+branchIf cpu flag val = do
+  f <- isSet cpu flag
+  if f == val then branchRelAddr cpu else stepPC cpu
+  
+  
 
 copyRegister :: CPU -> IORef Byte -> IORef Byte -> Bool -> IO ()
 copyRegister cpu src dest updateFlags = do
