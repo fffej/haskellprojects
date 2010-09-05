@@ -138,7 +138,6 @@ stepPC c = incPC c 1
 step2PC :: CPU -> IO ()
 step2PC c = incPC c 2
 
--- TODO readByte and readWord should have an addressing mode
 toByte :: Word16 -> Byte
 toByte w = fromIntegral (255 .&. w)
 
