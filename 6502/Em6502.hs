@@ -45,19 +45,7 @@ data Flag = Negative
           | Zero
           | Carry
 
--- http://www.obelisk.demon.co.uk/6502/addressing.html
-
-data AddressingMode = IndirectXAddr
-                    | IndirectYAddr
-                    | ZeroPageAddr 
-                    | ZeroPageXAddr
-                    | ZeroPageYAddr
-                    | AbsoluteAddr
-                    | AbsoluteXAddr
-                    | AbsoluteYAddr
-                    | BranchRelAddr
-                    | Implicit -- |^ Opcode does not care about addressing model
-
+-- http://www.obelisk.demon.co.uk/6502/addressing.html explains addressing modes
 data Instruction = ADC    -- |^  ADd with Carry
                  | AND    -- |^  AND (with accumulator)
                  | ASL    -- |^  Arithmetic Shift Left
