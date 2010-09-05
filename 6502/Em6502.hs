@@ -501,8 +501,8 @@ execute cpu addressMode SEI = setFlag cpu Interrupt
 execute cpu addressMode STA = store cpu (ac cpu) addressMode
 execute cpu addressMode STX = store cpu (xr cpu) addressMode
 execute cpu addressMode STY = store cpu (yr cpu) addressMode
-execute cpu addressMode TAX = transferAccumulator cpu (xr cpu) 
-execute cpu addressMode TAY = undefined
+execute cpu addressMode TAX = transferToAccumulator cpu (xr cpu) 
+execute cpu addressMode TAY = transferToAccumulator cpu (yr cpu)
 execute cpu addressMode TSX = undefined
 execute cpu addressMode TXA = undefined
 execute cpu addressMode TXS = undefined
@@ -539,8 +539,8 @@ pullRef cpu src setFlags = do
   writeIORef src val
   when setFlags (setZeroNegativeFlags cpu val)
 
-transferAccumulator :: CPU -> IORef Byte -> IO ()
-transferAccumulator cpu dest = do
+transferToAccumulator :: CPU -> IORef Byte -> IO ()
+transferToAccumulator cpu dest = do
   val <- readIORef dest
   writeIORef (ac cpu) val
   setZeroNegativeFlags cpu val
