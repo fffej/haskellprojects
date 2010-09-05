@@ -480,9 +480,9 @@ execute cpu addressMode INX = undefined
 execute cpu addressMode INY = undefined
 execute cpu addressMode JMP = undefined
 execute cpu addressMode JSR = undefined
-execute cpu addressMode LDA = undefined
-execute cpu addressMode LDX = undefined
-execute cpu addressMode LDY = undefined
+execute cpu addressMode LDA = load cpu (ac cpu) addressMode
+execute cpu addressMode LDX = load cpu (xr cpu) addressMode
+execute cpu addressMode LDY = load cpu (yr cpu) addressMode
 execute cpu addressMode LSR = undefined
 execute cpu addressMode NOP = undefined
 execute cpu addressMode ORA = undefined
@@ -513,3 +513,17 @@ store cpu source address = do
   src <- readIORef source
   addr <- address cpu
   writeByte cpu addr src
+
+load :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
+load cpu destination address = do
+  addr <- address cpu
+  byte <- readByte cpu addr
+  writeIORef destination byte
+  setZeroNegativeFlags cpu byte
+
+setZeroNegativeFlags :: CPU -> Byte -> IO ()
+setZeroNegativeFlags cpu b = do
+  clearFlag cpu Zero
+  clearFlag cpu Negative
+  if (b == 0) then setFlag cpu Zero else (when (b > 128) (setFlag cpu Negative))
+       
