@@ -539,6 +539,12 @@ pullRef cpu src setFlags = do
   writeIORef src val
   when setFlags (setZeroNegativeFlags cpu val)
 
+transferAccumulator :: CPU -> IORef Byte -> IO ()
+transferAccumulator cpu dest = do
+  val <- readIORef dest
+  writeIORef (ac cpu) val
+  setZeroNegativeFlags cpu val
+
 setZeroNegativeFlags :: CPU -> Byte -> IO ()
 setZeroNegativeFlags cpu b = do
   clearFlag cpu Zero
