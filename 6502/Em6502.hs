@@ -133,7 +133,6 @@ step2PC :: CPU -> IO ()
 step2PC c = incPC c 2
 
 -- TODO readByte and readWord should have an addressing mode
-
 toByte :: Word16 -> Byte
 toByte w = fromIntegral (255 .&. w)
 
@@ -500,11 +499,17 @@ execute cpu addressMode SEC = setFlag cpu Carry
 execute cpu addressMode SED = setFlag cpu Decimal
 execute cpu addressMode SEI = setFlag cpu Interrupt
 execute cpu addressMode STA = undefined
-execute cpu addressMode STX = undefined
-execute cpu addressMode STY = undefined
+execute cpu addressMode STX = store cpu (xr cpu) addressMode
+execute cpu addressMode STY = store cpu (yr cpu) addressMode
 execute cpu addressMode TAX = undefined
 execute cpu addressMode TAY = undefined
 execute cpu addressMode TSX = undefined
 execute cpu addressMode TXA = undefined
 execute cpu addressMode TXS = undefined
 execute cpu addressMode TYA = undefined
+
+store :: CPU -> IORef -> (IO -> Word16) -> IO ()
+store cpu source address = do
+  src <- readIORef source
+  addr <- address
+  writeByte cpu addr src
