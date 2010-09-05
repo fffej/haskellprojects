@@ -452,7 +452,7 @@ instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
 
 execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
 execute cpu addressMode ADC = undefined
-execute cpu addressMode AND = undefined 
+execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
 execute cpu addressMode ASL = undefined
 execute cpu addressMode BCC = undefined
 execute cpu addressMode BCS = undefined
@@ -474,7 +474,7 @@ execute cpu addressMode CPY = undefined
 execute cpu addressMode DEC = undefined
 execute cpu addressMode DEX = undefined
 execute cpu addressMode DEY = undefined
-execute cpu addressMode EOR = undefined
+execute cpu addressMode EOR = bitWiseOp cpu addressMode xor
 execute cpu addressMode INC = undefined
 execute cpu addressMode INX = undefined
 execute cpu addressMode INY = undefined
@@ -485,7 +485,7 @@ execute cpu addressMode LDX = load cpu (xr cpu) addressMode
 execute cpu addressMode LDY = load cpu (yr cpu) addressMode
 execute cpu addressMode LSR = undefined
 execute cpu addressMode NOP = undefined
-execute cpu addressMode ORA = undefined
+execute cpu addressMode ORA = bitWiseOp cpu addressMode (.|.)
 execute cpu addressMode PHA = undefined
 execute cpu addressMode PHP = undefined
 execute cpu addressMode PLA = undefined
@@ -525,5 +525,11 @@ setZeroNegativeFlags :: CPU -> Byte -> IO ()
 setZeroNegativeFlags cpu b = do
   clearFlag cpu Zero
   clearFlag cpu Negative
-  if (b == 0) then setFlag cpu Zero else (when (testBit b 7) (setFlag cpu Negative))
+  if b == 0 then setFlag cpu Zero else when (testBit b 7) (setFlag cpu Negative)
        
+bitWiseOp :: CPU -> (CPU -> IO Word16) -> (Byte -> Byte -> Byte) -> IO ()
+bitWiseOp cpu byte op = do
+  b <- byte cpu
+  modifyIORef (ac cpu) (\x -> fromIntegral $ op (fromIntegral b) x)
+  result <- readIORef (ac cpu)
+  setZeroNegativeFlags cpu result
