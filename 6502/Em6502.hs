@@ -525,5 +525,5 @@ setZeroNegativeFlags :: CPU -> Byte -> IO ()
 setZeroNegativeFlags cpu b = do
   clearFlag cpu Zero
   clearFlag cpu Negative
-  if (b == 0) then setFlag cpu Zero else (when (b > 128) (setFlag cpu Negative))
+  if (b == 0) then setFlag cpu Zero else (when (testBit b 7) (setFlag cpu Negative))
        
