@@ -146,6 +146,9 @@ step2PC c = incPC c 2
 
 -- TODO readByte and readWord should have an addressing mode
 
+toByte :: Word16 -> Byte
+toByte w = fromIntegral (255 .&. w)
+
 readByte :: CPU -> Word16 -> IO Byte
 readByte cpu addr = GM.read (ram cpu) (fromIntegral addr)
 
@@ -187,24 +190,24 @@ stackPopWord cpu = do
   byte2 <- stackPopByte cpu
   return $ (fromIntegral byte1 :: Word16) + (256 * fromIntegral byte2 :: Word16)
 
-zeroPageAddr :: CPU -> IO Byte
+zeroPageAddr :: CPU -> IO Word16
 zeroPageAddr cpu = do
   pc' <- readIORef (pc cpu)
-  readByte cpu pc'
+  liftM fromIntegral $ readByte cpu pc'
 
-zeroPageXAddr :: CPU -> IO Byte
+zeroPageXAddr :: CPU -> IO Word16
 zeroPageXAddr cpu = do
   pc' <- readIORef (pc cpu)
   b <- readByte cpu pc'
   xr' <- readIORef (xr cpu)
-  return (255 .&. (xr' + b))
+  return $ fromIntegral (255 .&. (xr' + b))
 
-zeroPageYAddr :: CPU -> IO Byte
+zeroPageYAddr :: CPU -> IO Word16
 zeroPageYAddr cpu = do
   pc' <- readIORef (pc cpu)
   b <- readByte cpu pc'
   yr' <- readIORef (yr cpu)
-  return (255 .&. (yr' + b))
+  return $ fromIntegral (255 .&. (yr' + b))
 
 indirectXAddr :: CPU -> IO Word16
 indirectXAddr cpu = do
