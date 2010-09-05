@@ -488,8 +488,8 @@ execute cpu addressMode NOP = undefined
 execute cpu addressMode ORA = bitWiseOp cpu addressMode (.|.)
 execute cpu addressMode PHA = pushRef cpu (ac cpu)
 execute cpu addressMode PHP = pushRef cpu (sr cpu)
-execute cpu addressMode PLA = undefined
-execute cpu addressMode PLP = undefined
+execute cpu addressMode PLA = pullRef cpu (ac cpu) True
+execute cpu addressMode PLP = pullRef cpu (sr cpu) False
 execute cpu addressMode ROL = undefined
 execute cpu addressMode ROR = undefined
 execute cpu addressMode RTI = undefined
@@ -532,6 +532,12 @@ pushRef :: CPU -> IORef Byte -> IO ()
 pushRef cpu src = do
   val <- readIORef src
   stackPushByte cpu val
+
+pullRef :: CPU -> IORef Byte -> Bool -> IO ()
+pullRef cpu src setFlags = do
+  val <- stackPopByte cpu
+  writeIORef src val
+  when setFlags (setZeroNegativeFlags cpu val)
 
 setZeroNegativeFlags :: CPU -> Byte -> IO ()
 setZeroNegativeFlags cpu b = do
