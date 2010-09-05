@@ -508,8 +508,8 @@ execute cpu addressMode TXA = undefined
 execute cpu addressMode TXS = undefined
 execute cpu addressMode TYA = undefined
 
-store :: CPU -> IORef -> (IO -> Word16) -> IO ()
+store :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
 store cpu source address = do
   src <- readIORef source
-  addr <- address
+  addr <- address cpu
   writeByte cpu addr src
