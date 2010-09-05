@@ -27,13 +27,13 @@ type ByteVector = M.IOVector Byte
 
 data CPU = CPU {
       ram :: ByteVector
-    , pc :: IORef Word16  -- |^Program counter
-    , yr :: IORef Byte    -- |^ Y Register
-    , xr :: IORef Byte    -- |^ X Register
-    , sr :: IORef Byte    -- |^ Status Register
-    , sp :: IORef Word16  -- |^ Stack Pointer
-    , ac :: IORef Byte    -- |^ Accumulator
-    , cycles :: IORef Int -- |^ Processor cycles
+    , pc :: IORef Word16  -- ^ Program counter
+    , yr :: IORef Byte    -- ^ Y Register
+    , xr :: IORef Byte    -- ^ X Register
+    , sr :: IORef Byte    -- ^ Status Register
+    , sp :: IORef Word16  -- ^ Stack Pointer
+    , ac :: IORef Byte    -- ^ Accumulator
+    , cycles :: IORef Int -- ^ Processor cycles
 }
 
 data Flag = Negative
@@ -45,16 +45,18 @@ data Flag = Negative
           | Zero
           | Carry
 
+-- http://www.obelisk.demon.co.uk/6502/addressing.html
+
 data AddressingMode = IndirectXAddr
                     | IndirectYAddr
-                    | ZeroPageAddr
+                    | ZeroPageAddr 
                     | ZeroPageXAddr
                     | ZeroPageYAddr
                     | AbsoluteAddr
                     | AbsoluteXAddr
                     | AbsoluteYAddr
                     | BranchRelAddr
-                    | Undefined -- |^ Opcode does not care about addressing model
+                    | Implicit -- |^ Opcode does not care about addressing model
 
 data Instruction = ADC    -- |^  ADd with Carry
                  | AND    -- |^  AND (with accumulator)
@@ -128,7 +130,10 @@ flag Zero      = 2
 flag Carry     = 1
 
 setFlag :: CPU -> Flag -> IO ()
-setFlag c f = modifyIORef (sr c) (\x -> x `setBit` fromIntegral (flag f))
+setFlag c f = modifyIORef (sr c) (`setBit` fromIntegral (flag f))
+
+clearFlag :: CPU -> Flag -> IO ()
+clearFlag c f = modifyIORef (sr c) (`clearBit` fromIntegral (flag f))
 
 incPC :: CPU -> Word16 -> IO ()
 incPC c i = modifyIORef (pc c) (+ i)
@@ -457,7 +462,7 @@ instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
 
 execute :: CPU -> AddressingMode -> Instruction -> IO ()
 execute cpu addressMode ADC = undefined
-execute cpu addressMode AND = undefined
+execute cpu addressMode AND = undefined 
 execute cpu addressMode ASL = undefined
 execute cpu addressMode BCC = undefined
 execute cpu addressMode BCS = undefined
@@ -469,10 +474,10 @@ execute cpu addressMode BPL = undefined
 execute cpu addressMode BRK = undefined
 execute cpu addressMode BVC = undefined
 execute cpu addressMode BVS = undefined
-execute cpu addressMode CLC = undefined
-execute cpu addressMode CLD = undefined
-execute cpu addressMode CLI = undefined
-execute cpu addressMode CLV = undefined
+execute cpu addressMode CLC = clearFlag cpu Carry 
+execute cpu addressMode CLD = clearFlag cpu Decimal
+execute cpu addressMode CLI = clearFlag cpu Interrupt
+execute cpu addressMode CLV = clearFlag cpu Overflow
 execute cpu addressMode CMP = undefined
 execute cpu addressMode CPX = undefined
 execute cpu addressMode CPY = undefined
