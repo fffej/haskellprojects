@@ -25,13 +25,14 @@ import Prelude hiding (break)
 type Byte = Word8
 type ByteVector = M.IOVector Byte
 
+-- http://www.obelisk.demon.co.uk/6502/registers.html
 data CPU = CPU {
       ram :: ByteVector
     , pc :: IORef Word16  -- ^ Program counter
     , yr :: IORef Byte    -- ^ Y Register
     , xr :: IORef Byte    -- ^ X Register
     , sr :: IORef Byte    -- ^ Status Register
-    , sp :: IORef Word16  -- ^ Stack Pointer
+    , sp :: IORef Byte    -- ^ Stack Pointer
     , ac :: IORef Byte    -- ^ Accumulator
     , cycles :: IORef Int -- ^ Processor cycles
 }
@@ -156,13 +157,13 @@ currentByte cpu = do
 stackPushByte :: CPU -> Byte -> IO ()
 stackPushByte cpu val = do 
   sp' <- readIORef (sp cpu)
-  writeByte cpu (sp' + 256) (val .&. 255)
+  writeByte cpu (fromIntegral sp' + 256) (val .&. 255)
   modifyIORef (sp cpu) (\x -> (x - 1) .&. 255)
 
 stackPopByte :: CPU -> IO Byte
 stackPopByte cpu = do
   s <- readIORef (sp cpu)
-  val <- readByte cpu (s+256)
+  val <- readByte cpu (fromIntegral s+256)
   modifyIORef (sp cpu) (\x -> (x + 1) .&. 255)
   return val
 
@@ -503,10 +504,16 @@ execute cpu addressMode STX = store cpu (xr cpu) addressMode
 execute cpu addressMode STY = store cpu (yr cpu) addressMode
 execute cpu addressMode TAX = transferToAccumulator cpu (xr cpu) 
 execute cpu addressMode TAY = transferToAccumulator cpu (yr cpu)
-execute cpu addressMode TSX = undefined
-execute cpu addressMode TXA = undefined
-execute cpu addressMode TXS = undefined
-execute cpu addressMode TYA = undefined
+execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu)
+execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu)
+execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu)
+execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu)
+
+copyRegister :: CPU -> IORef Byte -> IORef Byte -> IO ()
+copyRegister cpu src dest = do
+  byte <- readIORef src
+  writeIORef dest byte
+  setZeroNegativeFlags cpu byte
 
 store :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
 store cpu source address = do
