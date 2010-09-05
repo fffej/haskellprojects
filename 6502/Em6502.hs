@@ -504,16 +504,16 @@ execute cpu addressMode STX = store cpu (xr cpu) addressMode
 execute cpu addressMode STY = store cpu (yr cpu) addressMode
 execute cpu addressMode TAX = transferToAccumulator cpu (xr cpu) 
 execute cpu addressMode TAY = transferToAccumulator cpu (yr cpu)
-execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu)
-execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu)
-execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu)
-execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu)
+execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu) True
+execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
+execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
+execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
-copyRegister :: CPU -> IORef Byte -> IORef Byte -> IO ()
-copyRegister cpu src dest = do
+copyRegister :: CPU -> IORef Byte -> IORef Byte -> Bool -> IO ()
+copyRegister cpu src dest updateFlags = do
   byte <- readIORef src
   writeIORef dest byte
-  setZeroNegativeFlags cpu byte
+  when updateFlags $ setZeroNegativeFlags cpu byte
 
 store :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
 store cpu source address = do
