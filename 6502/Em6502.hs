@@ -486,8 +486,8 @@ execute cpu addressMode LDY = load cpu (yr cpu) addressMode
 execute cpu addressMode LSR = undefined
 execute cpu addressMode NOP = undefined
 execute cpu addressMode ORA = bitWiseOp cpu addressMode (.|.)
-execute cpu addressMode PHA = undefined
-execute cpu addressMode PHP = undefined
+execute cpu addressMode PHA = pushRef cpu (ac cpu)
+execute cpu addressMode PHP = pushRef cpu (sr cpu)
 execute cpu addressMode PLA = undefined
 execute cpu addressMode PLP = undefined
 execute cpu addressMode ROL = undefined
@@ -521,15 +521,21 @@ load cpu destination address = do
   writeIORef destination byte
   setZeroNegativeFlags cpu byte
 
-setZeroNegativeFlags :: CPU -> Byte -> IO ()
-setZeroNegativeFlags cpu b = do
-  clearFlag cpu Zero
-  clearFlag cpu Negative
-  if b == 0 then setFlag cpu Zero else when (testBit b 7) (setFlag cpu Negative)
-       
 bitWiseOp :: CPU -> (CPU -> IO Word16) -> (Byte -> Byte -> Byte) -> IO ()
 bitWiseOp cpu byte op = do
   b <- byte cpu
   modifyIORef (ac cpu) (\x -> fromIntegral $ op (fromIntegral b) x)
   result <- readIORef (ac cpu)
   setZeroNegativeFlags cpu result
+
+pushRef :: CPU -> IORef Byte -> IO ()
+pushRef cpu src = do
+  val <- readIORef src
+  stackPushByte cpu val
+
+setZeroNegativeFlags :: CPU -> Byte -> IO ()
+setZeroNegativeFlags cpu b = do
+  clearFlag cpu Zero
+  clearFlag cpu Negative
+  if b == 0 then setFlag cpu Zero else when (testBit b 7) (setFlag cpu Negative)
+       
