@@ -121,8 +121,14 @@ flag Carry     = 1
 setFlag :: CPU -> Flag -> IO ()
 setFlag c f = modifyIORef (sr c) (`setBit` fromIntegral (flag f))
 
+setFlags :: CPU -> [Flag] -> IO ()
+setFlags c = mapM_ (setFlag c)
+
 clearFlag :: CPU -> Flag -> IO ()
 clearFlag c f = modifyIORef (sr c) (`clearBit` fromIntegral (flag f))
+
+clearFlags :: CPU -> [Flag] -> IO ()
+clearFlags c = mapM_ (clearFlag c) 
 
 isSet :: CPU -> Flag -> IO Bool
 isSet cpu f = do
@@ -473,9 +479,9 @@ execute cpu addressMode CLC = clearFlag cpu Carry
 execute cpu addressMode CLD = clearFlag cpu Decimal
 execute cpu addressMode CLI = clearFlag cpu Interrupt
 execute cpu addressMode CLV = clearFlag cpu Overflow
-execute cpu addressMode CMP = undefined
-execute cpu addressMode CPX = undefined
-execute cpu addressMode CPY = undefined
+execute cpu addressMode CMP = comp cpu addressMode (ac cpu)
+execute cpu addressMode CPX = comp cpu addressMode (xr cpu)
+execute cpu addressMode CPY = comp cpu addressMode (yr cpu)
 execute cpu addressMode DEC = undefined
 execute cpu addressMode DEX = undefined
 execute cpu addressMode DEY = undefined
@@ -513,12 +519,20 @@ execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
+comp :: CPU -> (CPU -> IO Word16) -> IORef Byte -> IO ()
+comp cpu address src = do
+  that <- address cpu
+  this <- readIORef src
+  clearFlags cpu [Carry,Zero,Negative]
+  case (compare this (fromIntegral $ that .&. 255)) of
+    EQ -> setFlags cpu [Carry,Zero]
+    GT -> setFlag cpu Carry
+    LT -> setFlag cpu Negative
+
 branchIf :: CPU -> Flag -> Bool -> IO ()
 branchIf cpu flag val = do
   f <- isSet cpu flag
   if f == val then branchRelAddr cpu else stepPC cpu
-  
-  
 
 copyRegister :: CPU -> IORef Byte -> IORef Byte -> Bool -> IO ()
 copyRegister cpu src dest updateFlags = do
@@ -565,7 +579,6 @@ transferToAccumulator cpu dest = do
 
 setZeroNegativeFlags :: CPU -> Byte -> IO ()
 setZeroNegativeFlags cpu b = do
-  clearFlag cpu Zero
-  clearFlag cpu Negative
+  clearFlags cpu [Zero,Negative]
   if b == 0 then setFlag cpu Zero else when (testBit b 7) (setFlag cpu Negative)
        
