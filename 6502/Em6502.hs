@@ -48,6 +48,20 @@ data Flag = Negative
           | Carry
 
 -- http://www.obelisk.demon.co.uk/6502/addressing.html explains addressing modes
+data AddressMode = Accumulator      -- ^Operates directly on the accumulator
+                 | Immediate Byte   -- ^specifies constant
+                 | ZeroPage Byte    -- ^load from memory
+                 | ZeroPageX Byte   -- ^load from memory + x register
+                 | ZeroPageY Byte   -- ^load from memory + y register
+                 | Relative Int     -- ^signed bit relative offset added to program counter
+                 | Absolute Word16  -- ^full addressing
+                 | AbsoluteX Word16 -- ^16 bit + x register
+                 | AbsoluteY Word16 -- ^16 bit + y register
+                 | Indirect Word16  -- ^LSB of another 16 bit memory address?
+                 | IndexedIndirect Byte
+                 | IndirectIndexed Byte
+                 | Implicit         -- ^Irrelevant
+
 data Instruction = ADC    -- ^  ADd with Carry
                  | AND    -- ^  AND (with accumulator)
                  | ASL    -- ^  Arithmetic Shift Left
@@ -469,7 +483,7 @@ instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
 execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
 execute cpu addressMode ADC = adcOp cpu addressMode 
 execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
-execute cpu addressMode ASL = undefined
+execute cpu addressMode ASL = shiftLeft cpu addressMode
 execute cpu addressMode BCC = branchIf cpu Carry False
 execute cpu addressMode BCS = branchIf cpu Carry True
 execute cpu addressMode BEQ = branchIf cpu Zero True
@@ -524,6 +538,17 @@ execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
+shiftLeft :: CPU -> (CPU -> IO Word16) -> IO ()
+shiftLeft cpu address = do
+  byte <- address cpu
+  clearFlags cpu [Carry,Negative,Zero]
+  when (testBit (byte .&. 255) 7) (setFlag cpu Carry)
+  let shf = shiftL (fromIntegral byte) 1
+  if shf == 0 
+     then setFlag cpu Zero
+     else setFlagValue cpu Overflow (testBit (byte .&. 255) 7)
+  writeByte cpu byte shf
+
 adcOp :: CPU -> (CPU -> IO Word16) -> IO ()
 adcOp cpu address = do
   status <- readIORef (sr cpu)
@@ -571,59 +596,6 @@ sbcOp cpu address = do
       when (d <0) (setFlag cpu Overflow)
       setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
       writeIORef (ac cpu) (fromIntegral d .&. 255)
-
-{-
-
-	data = a + data + ((flags&fCAR)?1:0);
-
-	data = a - data - ((flags&fCAR)?0:1);
-
-
-function opADC(x) {
-	var data=ByteAt(x());
-	if (flags&fDEC) {
-		data = bcd2dec[data]+bcd2dec[a]+((flags&fCAR)?1:0);
-		if (data>99) {
-			flags|=fCAR+fOVF;
-			data -=100
-		};
-		if (data==0) flags|=fZER
-		else flags |=data&128;
-		a=dec2bcd[data]
-	}
-	else {
-		data += a+((flags&fCAR)?1:0);
-		if (data>255) {
-			flags|=fOVF+fCAR;
-			data &=255
-		};
-		if (data==0) flags|=fZER
-		else flags |=data&128;
-		a=data
-	}
-}
-function opSBC(x) {
-	var data=ByteAt(x());
-	if (flags&fDEC) {
-		data = bcd2dec[a]-bcd2dec[data]-((flags&fCAR)?0:1);
-		if (data==0) flags |=fZER+fCAR
-		else if (data>0) flags |=fCAR
-		else {
-			flags|=fNEG;
-			data +=100
-		};
-		a=dec2bcd[data]
-	}
-	else {
-		data = a-data-((flags&fCAR)?0:1);
-		if (data==0) flags |=fZER+fCAR
-		else if (data>0) flags |=fCAR
-		else flags|=fOVF;
-		flags |=data&128;
-		a=data&255
-	}
-}
--}
 
 bitTest :: CPU -> (CPU -> IO Word16) -> IO ()
 bitTest cpu address = do
