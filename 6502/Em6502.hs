@@ -531,8 +531,15 @@ adcOp cpu address = do
   acc <- readIORef (ac cpu)
   isDecimalMode <- isSet cpu Decimal
   isCarry <- isSet cpu Carry
+  let carry = if isCarry then 0 else 1
   case isDecimalMode of
-    True -> return undefined
+    True -> do
+      let d = (bcd2dec ! (fromIntegral acc)) + (bcd2dec ! (fromIntegral byte)) + carry
+      clearFlags cpu [Carry,Zero,Negative,Overflow]
+      when (d>99) (setFlags cpu [Overflow,Carry])
+      when (d==0) (setFlag cpu Zero)
+      when (d <0) (setFlagValue cpu Zero $ testBit (d .&. 255) (fromIntegral $ flag Zero))
+      writeIORef (ac cpu) ((fromIntegral d .&. 255) - if d > 99 then 100 else 0)
     False -> do
       let d = (fromIntegral acc) + byte + (if isCarry then 1 else 0)
       when (d > 255) (setFlags cpu [Carry,Overflow])
@@ -551,9 +558,14 @@ sbcOp cpu address = do
   case isDecimalMode of
     True -> do
       let d = (bcd2dec ! (fromIntegral acc)) - (bcd2dec ! (fromIntegral byte)) - carry
-      undefined
+      clearFlags cpu [Carry,Zero,Negative,Overflow]
+      when (d==0) (setFlags cpu [Zero,Carry])
+      when (d >0) (setFlag cpu Carry)
+      when (d <0) (setFlag cpu Negative)
+      writeIORef (ac cpu) ((fromIntegral d .&. 255) + if (d < 0) then 100 else 0)
     False -> do
       let d = (fromIntegral acc) - byte - carry
+      clearFlags cpu [Carry,Zero,Negative,Overflow]
       when (d==0) (setFlags cpu [Zero,Carry])
       when (d >0) (setFlag cpu Carry)
       when (d <0) (setFlag cpu Overflow)
