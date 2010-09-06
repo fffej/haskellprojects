@@ -466,7 +466,7 @@ instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
                    ,if8, if9, ini, ini, ini, ifd, ife, ini]
 
 execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
-execute cpu addressMode ADC = undefined
+execute cpu addressMode ADC = numericOp cpu addressMode (+)
 execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
 execute cpu addressMode ASL = undefined
 execute cpu addressMode BCC = branchIf cpu Carry False
@@ -509,7 +509,7 @@ execute cpu addressMode ROL = undefined
 execute cpu addressMode ROR = undefined
 execute cpu addressMode RTI = undefined
 execute cpu addressMode RTS = undefined
-execute cpu addressMode SBC = undefined
+execute cpu addressMode SBC = numericOp cpu addressMode (-)
 execute cpu addressMode SEC = setFlag cpu Carry
 execute cpu addressMode SED = setFlag cpu Decimal
 execute cpu addressMode SEI = setFlag cpu Interrupt
@@ -522,6 +522,75 @@ execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu) True
 execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
+
+numericOp :: CPU -> (CPU -> IO Word16) -> (Byte -> Byte -> Byte) -> IO ()
+numericOp cpu address op = do
+  status <- readIORef (sr cpu)
+  byte <- address cpu
+  acc <- readIORef (ac cpu)
+  decimalMode <- isSet cpu Decimal
+  clearFlags cpu [Carry,Zero,Negative,Overflow]
+  if decimalMode 
+      then decOp cpu acc (fromIntegral byte) op 
+      else binOp cpu acc (fromIntegral byte) op
+
+decOp :: CPU -> Byte -> Byte -> (Byte -> Byte -> Byte) -> IO ()
+decOp cpu acc byte op = do
+  undefined
+
+binOp :: CPU -> Byte -> Byte -> (Byte -> Byte -> Byte) -> IO ()
+binOp cpu acc byte op = do
+  undefined
+  
+
+{-
+
+
+function opADC(x) {
+	var data=ByteAt(x());
+	if (flags&fDEC) {
+		data = bcd2dec[data]+bcd2dec[a]+((flags&fCAR)?1:0);
+		if (data>99) {
+			flags|=fCAR+fOVF;
+			data -=100
+		};
+		if (data==0) flags|=fZER
+		else flags |=data&128;
+		a=dec2bcd[data]
+	}
+	else {
+		data += a+((flags&fCAR)?1:0);
+		if (data>255) {
+			flags|=fOVF+fCAR;
+			data &=255
+		};
+		if (data==0) flags|=fZER
+		else flags |=data&128;
+		a=data
+	}
+}
+function opSBC(x) {
+	var data=ByteAt(x());
+	if (flags&fDEC) {
+		data = bcd2dec[a]-bcd2dec[data]-((flags&fCAR)?0:1);
+		if (data==0) flags |=fZER+fCAR
+		else if (data>0) flags |=fCAR
+		else {
+			flags|=fNEG;
+			data +=100
+		};
+		a=dec2bcd[data]
+	}
+	else {
+		data = a-data-((flags&fCAR)?0:1);
+		if (data==0) flags |=fZER+fCAR
+		else if (data>0) flags |=fCAR
+		else flags|=fOVF;
+		flags |=data&128;
+		a=data&255
+	}
+}
+-}
 
 bitTest :: CPU -> (CPU -> IO Word16) -> IO ()
 bitTest cpu address = do
