@@ -466,7 +466,7 @@ instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
                    ,if8, if9, ini, ini, ini, ifd, ife, ini]
 
 execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
-execute cpu addressMode ADC = numericOp cpu addressMode (+)
+execute cpu addressMode ADC = adcOp cpu addressMode 
 execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
 execute cpu addressMode ASL = undefined
 execute cpu addressMode BCC = branchIf cpu Carry False
@@ -509,7 +509,7 @@ execute cpu addressMode ROL = undefined
 execute cpu addressMode ROR = undefined
 execute cpu addressMode RTI = undefined
 execute cpu addressMode RTS = undefined
-execute cpu addressMode SBC = numericOp cpu addressMode (-)
+execute cpu addressMode SBC = sbcOp cpu addressMode
 execute cpu addressMode SEC = setFlag cpu Carry
 execute cpu addressMode SED = setFlag cpu Decimal
 execute cpu addressMode SEI = setFlag cpu Interrupt
@@ -523,27 +523,44 @@ execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
-numericOp :: CPU -> (CPU -> IO Word16) -> (Byte -> Byte -> Byte) -> IO ()
-numericOp cpu address op = do
+adcOp :: CPU -> (CPU -> IO Word16) -> IO ()
+adcOp cpu address = do
   status <- readIORef (sr cpu)
   byte <- address cpu
   acc <- readIORef (ac cpu)
-  decimalMode <- isSet cpu Decimal
-  clearFlags cpu [Carry,Zero,Negative,Overflow]
-  if decimalMode 
-      then decOp cpu acc (fromIntegral byte) op 
-      else binOp cpu acc (fromIntegral byte) op
+  isDecimalMode <- isSet cpu Decimal
+  isCarry <- isSet cpu Carry
+  case isDecimalMode of
+    True -> return undefined
+    False -> do
+      let d = (fromIntegral acc) + byte + (if isCarry then 1 else 0)
+      when (d > 255) (setFlags cpu [Carry,Overflow])
+      when (d == 0 ) (setFlag cpu Zero)
+      setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
+      writeIORef (ac cpu) (fromIntegral d .&. 255)
 
-decOp :: CPU -> Byte -> Byte -> (Byte -> Byte -> Byte) -> IO ()
-decOp cpu acc byte op = do
-  undefined
-
-binOp :: CPU -> Byte -> Byte -> (Byte -> Byte -> Byte) -> IO ()
-binOp cpu acc byte op = do
-  undefined
-  
+sbcOp :: CPU -> (CPU -> IO Word16) -> IO ()
+sbcOp cpu address = do
+  status <- readIORef (sr cpu)
+  byte <- address cpu
+  acc <- readIORef (ac cpu)
+  isDecimalMode <- isSet cpu Decimal
+  isCarry <- isSet cpu Carry
+  case isDecimalMode of
+    True -> return undefined
+    False -> do
+      let d = (fromIntegral acc) - byte - (if isCarry then 0 else 1)
+      when (d==0) (setFlags cpu [Zero,Carry])
+      when (d >0) (setFlag cpu Carry)
+      when (d <0) (setFlag cpu Overflow)
+      setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
+      writeIORef (ac cpu) (fromIntegral d .&. 255)
 
 {-
+
+	data = a + data + ((flags&fCAR)?1:0);
+
+	data = a - data - ((flags&fCAR)?0:1);
 
 
 function opADC(x) {
