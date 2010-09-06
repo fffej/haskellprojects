@@ -47,62 +47,62 @@ data Flag = Negative
           | Carry
 
 -- http://www.obelisk.demon.co.uk/6502/addressing.html explains addressing modes
-data Instruction = ADC    -- |^  ADd with Carry
-                 | AND    -- |^  AND (with accumulator)
-                 | ASL    -- |^  Arithmetic Shift Left
-                 | BCC    -- |^  Branch on Carry Clear
-                 | BCS    -- |^  Branch on Carry Set
-                 | BEQ    -- |^  Branch on EQual (zero set)
-                 | BIT    -- |^  BIT test
-                 | BMI    -- |^  Branch on MInus (negative set)
-                 | BNE    -- |^  Branch on Not Equal (zero clear)
-                 | BPL    -- |^  Branch on PLus (negative clear)
-                 | BRK    -- |^  BReaK (interrupt)
-                 | BVC    -- |^  Branch on oVerflow Clear
-                 | BVS    -- |^  Branch on oVerflow  Set
-                 | CLC    -- |^  CLear Carry
-                 | CLD    -- |^  CLear Decimal
-                 | CLI    -- |^  CLear Interrupt disable
-                 | CLV    -- |^  CLear oVerflow
-                 | CMP    -- |^  CoMPare (with accumulator)
-                 | CPX    -- |^  ComPare with X
-                 | CPY    -- |^  ComPare with Y
-                 | DEC    -- |^  DECrement (accumulator)
-                 | DEX    -- |^  DEcrement X
-                 | DEY    -- |^  DEcrement Y
-                 | EOR    -- |^  Exclusive OR (with accumulator)
-                 | INC    -- |^  INCrement (accumulator)
-                 | INX    -- |^  INcrement X
-                 | INY    -- |^  INcrement Y
-                 | JMP    -- |^  JuMP
-                 | JSR    -- |^  Jump SubRoutine
-                 | LDA    -- |^  LoaD Accumulator
-                 | LDX    -- |^  LoaD X
-                 | LDY    -- |^  LoaD Y
-                 | LSR    -- |^  Logical Shift Right
-                 | NOP    -- |^  No OPeration
-                 | ORA    -- |^  OR with Accumulator
-                 | PHA    -- |^  PusH Accumulator
-                 | PHP    -- |^  PusH Processor status (SR)
-                 | PLA    -- |^  PulL Accumulator
-                 | PLP    -- |^  PulL Processor status (SR)
-                 | ROL    -- |^  ROtate Left
-                 | ROR    -- |^  ROtate Right
-                 | RTI    -- |^  ReTurn from Interrupt
-                 | RTS    -- |^  ReTurn from Subroutine
-                 | SBC    -- |^  SuBtract with Carry
-                 | SEC    -- |^  SEt Carry
-                 | SED    -- |^  SEt Decimal
-                 | SEI    -- |^  SEt Interrupt disable
-                 | STA    -- |^  STore Accumulator
-                 | STX    -- |^  STore X
-                 | STY    -- |^  STore Y
-                 | TAX    -- |^  Transfer Accumulator to X
-                 | TAY    -- |^  Transfer Accumulator to Y
-                 | TSX    -- |^  Transfer Stack pointer to X
-                 | TXA    -- |^  Transfer X to Accumulator
-                 | TXS    -- |^  Transfer X to Stack pointer
-                 | TYA    -- |^  Transfer Y to Accumulator
+data Instruction = ADC    -- ^  ADd with Carry
+                 | AND    -- ^  AND (with accumulator)
+                 | ASL    -- ^  Arithmetic Shift Left
+                 | BCC    -- ^  Branch on Carry Clear
+                 | BCS    -- ^  Branch on Carry Set
+                 | BEQ    -- ^  Branch on EQual (zero set)
+                 | BIT    -- ^  BIT test
+                 | BMI    -- ^  Branch on MInus (negative set)
+                 | BNE    -- ^  Branch on Not Equal (zero clear)
+                 | BPL    -- ^  Branch on PLus (negative clear)
+                 | BRK    -- ^  BReaK (interrupt)
+                 | BVC    -- ^  Branch on oVerflow Clear
+                 | BVS    -- ^  Branch on oVerflow  Set
+                 | CLC    -- ^  CLear Carry
+                 | CLD    -- ^  CLear Decimal
+                 | CLI    -- ^  CLear Interrupt disable
+                 | CLV    -- ^  CLear oVerflow
+                 | CMP    -- ^  CoMPare (with accumulator)
+                 | CPX    -- ^  ComPare with X
+                 | CPY    -- ^  ComPare with Y
+                 | DEC    -- ^  DECrement (accumulator)
+                 | DEX    -- ^  DEcrement X
+                 | DEY    -- ^  DEcrement Y
+                 | EOR    -- ^  Exclusive OR (with accumulator)
+                 | INC    -- ^  INCrement (accumulator)
+                 | INX    -- ^  INcrement X
+                 | INY    -- ^  INcrement Y
+                 | JMP    -- ^  JuMP
+                 | JSR    -- ^  Jump SubRoutine
+                 | LDA    -- ^  LoaD Accumulator
+                 | LDX    -- ^  LoaD X
+                 | LDY    -- ^  LoaD Y
+                 | LSR    -- ^  Logical Shift Right
+                 | NOP    -- ^  No OPeration
+                 | ORA    -- ^  OR with Accumulator
+                 | PHA    -- ^  PusH Accumulator
+                 | PHP    -- ^  PusH Processor status (SR)
+                 | PLA    -- ^  PulL Accumulator
+                 | PLP    -- ^  PulL Processor status (SR)
+                 | ROL    -- ^  ROtate Left
+                 | ROR    -- ^  ROtate Right
+                 | RTI    -- ^  ReTurn from Interrupt
+                 | RTS    -- ^  ReTurn from Subroutine
+                 | SBC    -- ^  SuBtract with Carry
+                 | SEC    -- ^  SEt Carry
+                 | SED    -- ^  SEt Decimal
+                 | SEI    -- ^  SEt Interrupt disable
+                 | STA    -- ^  STore Accumulator
+                 | STX    -- ^  STore X
+                 | STY    -- ^  STore Y
+                 | TAX    -- ^  Transfer Accumulator to X
+                 | TAY    -- ^  Transfer Accumulator to Y
+                 | TSX    -- ^  Transfer Stack pointer to X
+                 | TXA    -- ^  Transfer X to Accumulator
+                 | TXS    -- ^  Transfer X to Stack pointer
+                 | TYA    -- ^  Transfer Y to Accumulator
 
 -- |The maximum amount of RAM addressable by a 6502
 maxAddress :: Word16
@@ -117,6 +117,10 @@ flag Decimal   = 4
 flag Interrupt = 3
 flag Zero      = 2
 flag Carry     = 1
+
+setFlagValue :: CPU -> Flag -> Bool -> IO ()
+setFlagValue c f True = setFlag c f 
+setFlagValue c f False = clearFlag c f
 
 setFlag :: CPU -> Flag -> IO ()
 setFlag c f = modifyIORef (sr c) (`setBit` fromIntegral (flag f))
@@ -468,7 +472,7 @@ execute cpu addressMode ASL = undefined
 execute cpu addressMode BCC = branchIf cpu Carry False
 execute cpu addressMode BCS = branchIf cpu Carry True
 execute cpu addressMode BEQ = branchIf cpu Zero True
-execute cpu addressMode BIT = undefined
+execute cpu addressMode BIT = bitTest cpu addressMode
 execute cpu addressMode BMI = branchIf cpu Negative True
 execute cpu addressMode BNE = branchIf cpu Zero False
 execute cpu addressMode BPL = branchIf cpu Negative False
@@ -518,6 +522,16 @@ execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu) True
 execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
+
+bitTest :: CPU -> (CPU -> IO Word16) -> IO ()
+bitTest cpu address = do
+  this <- address cpu
+  clearFlags cpu [Carry,Zero,Negative]
+  ac' <- readIORef (ac cpu)
+  let res = ac' .&. (fromIntegral this .&. 255)
+  when (res == 0) $ setFlag cpu Zero
+  setFlagValue cpu Overflow $ testBit res (fromIntegral $ flag Overflow)
+  setFlagValue cpu Negative $ testBit res (fromIntegral $ flag Negative)
 
 comp :: CPU -> (CPU -> IO Word16) -> IORef Byte -> IO ()
 comp cpu address src = do
