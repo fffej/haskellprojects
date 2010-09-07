@@ -267,6 +267,9 @@ branchRelAddr cpu = do
       addr = pc' + fromIntegral pcOff
   writeIORef (pc cpu) (addr .&. 0xFFFF)
 
+dereference :: CPU -> AddressMode -> IO Word16
+dereference = undefined
+
 -- |Create a brand new CPU initialized appropriately
 init :: IO CPU
 init = do
@@ -290,197 +293,7 @@ init = do
           , cycles = cycles'
           }
 
--- |An unimplemented function.  Should never be called if things are going
--- well!
-ini :: CPU -> IO ()
-ini _ = return ()
-i00   = undefined
-i01 c = execute c indirectXAddr ORA >> stepPC c
-i05 c = execute c zeroPageAddr ORA >> stepPC c
-i06 c = execute c zeroPageAddr ASL >> stepPC c
-i08 c = undefined
-i09   = undefined
-i0a   = undefined
-i0d c = execute c absoluteAddr ORA >> step2PC c
-i0e c = execute c absoluteAddr ASL >> step2PC c
-i10 c = execute c undefined BPL -- branch if negative flag clear
-i11 c = execute c indirectYAddr ORA >> stepPC c
-i15 c = execute c zeroPageXAddr ORA >> stepPC c
-i16 c = execute c zeroPageXAddr ASL >> stepPC c
-i18 c = undefined
-i19 c = execute c absoluteYAddr ORA >> step2PC c
-i1d c = execute c absoluteXAddr ORA >> step2PC c
-i1e c = execute c absoluteXAddr ASL >> step2PC c
-i20 c = undefined
-i21 c = execute c indirectXAddr AND >> stepPC c
-i24 c = execute c zeroPageAddr BIT >> stepPC c
-i25 c = execute c zeroPageAddr AND >> stepPC c
-i26 c = execute c zeroPageAddr ROL >> stepPC c
-i28 c = undefined
-i29 c = undefined
-i2a c = undefined
-i2c c = execute c absoluteAddr BIT >> step2PC c
-i2d c = execute c absoluteAddr AND >> step2PC c
-i2e c = execute c absoluteAddr ROL >> step2PC c
-i30 c = execute c undefined BMI -- branch if negative flag set
-i31 c = execute c indirectYAddr AND >> stepPC c
-i35 c = execute c zeroPageXAddr AND >> stepPC c
-i36 c = execute c zeroPageXAddr ROL >> stepPC c
-i38 c = undefined
-i39 c = execute c absoluteYAddr AND >> step2PC c
-i3d c = execute c absoluteXAddr AND >> step2PC c
-i3e c = execute c absoluteXAddr ROL >> step2PC c
-i40 c = undefined
-i41 c = execute c indirectXAddr EOR >> stepPC c
-i45 c = execute c zeroPageAddr EOR >> stepPC c
-i46 c = execute c zeroPageAddr LSR >> stepPC c
-i48 c = undefined
-i49 c = undefined
-i4a c = undefined
-i4c c = undefined
-i4d c = execute c absoluteAddr EOR >> step2PC c
-i4e c = execute c absoluteAddr LSR >> step2PC c
-i50 c = execute c undefined BVC -- branch if overflow clear
-i51 c = execute c indirectYAddr EOR >> stepPC c
-i55 c = execute c zeroPageXAddr EOR >> stepPC c
-i56 c = execute c zeroPageXAddr LSR >> stepPC c
-i58 c = undefined
-i59 c = execute c absoluteYAddr EOR >> step2PC c
-i5d c = execute c absoluteXAddr EOR >> step2PC c
-i5e c = execute c absoluteXAddr LSR >> step2PC c
-i60 c = undefined
-i61 c = execute c indirectXAddr ADC >> stepPC c
-i65 c = execute c zeroPageAddr ADC >> stepPC c
-i66 c = execute c zeroPageAddr ROR >> stepPC c
-i68 c = undefined
-i69 c = undefined
-i6a c = undefined
-i6c c = undefined
-i6d c = execute c absoluteAddr ADC >> step2PC c
-i6e c = execute c absoluteAddr ROR >> step2PC c
-i70 c = execute c undefined BVS -- branch if overflow clear
-i71 c = execute c indirectYAddr ADC >> stepPC c
-i75 c = execute c zeroPageXAddr ADC >> stepPC c
-i76 c = execute c zeroPageXAddr ROR >> stepPC c
-i78 c = undefined
-i79 c = execute c absoluteYAddr ADC >> step2PC c
-i7d c = execute c absoluteXAddr ADC >> step2PC c
-i7e c = execute c absoluteXAddr ROR >> step2PC c
-i81 c = execute c indirectXAddr STA >> stepPC c
-i84 c = execute c zeroPageAddr STY >> stepPC c
-i85 c = execute c zeroPageAddr STA >> stepPC c
-i86 c = execute c zeroPageAddr STX >> stepPC c
-i88 c = undefined
-i8a c = execute c undefined TXA
-i8c c = execute c absoluteAddr STY >> step2PC c
-i8d c = execute c absoluteAddr STA >> step2PC c
-i8e c = execute c absoluteAddr STX >> step2PC c
-i90 c = execute c undefined BCC -- branch if carry clear
-i91 c = execute c indirectYAddr STA >> stepPC c
-i94 c = execute c zeroPageXAddr STY >> stepPC c
-i95 c = execute c zeroPageXAddr STA >> stepPC c
-i96 c = execute c zeroPageYAddr STX >> stepPC c
-i98 c = execute c undefined TYA
-i99 c = execute c absoluteYAddr STA >> step2PC c
-i9a c = execute c undefined TXS
-i9d c = execute c absoluteXAddr STA >> step2PC c
-ia0 c = undefined
-ia1 c = execute c indirectXAddr LDA >> stepPC c
-ia2 c = undefined
-ia4 c = execute c zeroPageAddr LDY >> stepPC c
-ia5 c = execute c zeroPageAddr LDA >> stepPC c
-ia6 c = execute c zeroPageAddr LDX >> stepPC c
-ia8 c = execute c undefined TAY
-ia9 c = undefined
-iaa c = execute c undefined TAX
-iac c = execute c absoluteAddr LDY >> step2PC c
-iad c = execute c absoluteAddr LDA >> step2PC c
-iae c = execute c absoluteAddr LDX >> step2PC c
-ib0 c = execute c undefined BCS -- branch if carry set
-ib1 c = execute c indirectYAddr LDA >> stepPC c
-ib4 c = execute c zeroPageXAddr LDY >> stepPC c
-ib5 c = execute c zeroPageXAddr LDA >> stepPC c
-ib6 c = execute c zeroPageYAddr LDX >> stepPC c
-ib8 c = undefined
-ib9 c = execute c absoluteYAddr LDA >> step2PC c
-iba c = execute c undefined TSX
-ibc c = execute c absoluteXAddr LDY >> step2PC c
-ibd c = execute c absoluteXAddr LDA >> step2PC c
-ibe c = execute c absoluteYAddr LDX >> step2PC c
-ic0 c = undefined
-ic1 c = execute c indirectXAddr CMP >> stepPC c
-ic4 c = execute c zeroPageAddr CPY >> stepPC c
-ic5 c = execute c zeroPageAddr CMP >> stepPC c
-ic6 c = execute c zeroPageAddr DEC >> stepPC c
-ic8 c = undefined
-ic9 c = undefined
-ica c = undefined
-icc c = execute c absoluteAddr CPY >> step2PC c
-icd c = execute c absoluteAddr CMP >> step2PC c
-ice c = execute c absoluteAddr DEC >> step2PC c
-id0 c = execute c undefined BNE -- if the zero flag is clear
-id1 c = execute c indirectYAddr CMP >> stepPC c
-id5 c = execute c zeroPageXAddr CMP >> stepPC c
-id6 c = execute c zeroPageXAddr DEC >> stepPC c
-id8 c = undefined
-id9 c = execute c absoluteYAddr CMP >> step2PC c
-idd c = execute c absoluteXAddr CMP >> step2PC c
-ide c = execute c absoluteXAddr DEC >> step2PC c
-ie0   = undefined
-ie1 c = execute c indirectXAddr SBC >> stepPC c
-ie4 c = execute c zeroPageAddr CPX >> stepPC c
-ie5 c = execute c zeroPageAddr SBC >> stepPC c
-ie6 c = execute c zeroPageAddr INC >> stepPC c 
-ie8   = undefined 
-ie9   = undefined
-iea c = return ()
-iec c = execute c absoluteAddr CPX >> step2PC c
-ied c = execute c absoluteAddr SBC >> step2PC c
-iee c = execute c absoluteAddr INC >> step2PC c 
-if0 c = execute c undefined BEQ 
-if1 c = execute c indirectYAddr SBC >> stepPC c 
-if5 c = execute c zeroPageXAddr SBC >> stepPC c
-if6 c = execute c zeroPageXAddr INC >> stepPC c
-if8 c = undefined -- execute c Undefined SET -- TODO take a flag
-if9 c = execute c absoluteYAddr SBC >> step2PC c 
-ifd c = execute c absoluteXAddr SBC >> step2PC c 
-ife c = execute c absoluteXAddr INC >> step2PC c
-
-instructionTable :: [CPU -> IO ()]
-instructionTable = [i00, i01, ini, ini, ini, i05, i06, ini
-                   ,i08, i09, i0a, ini, ini, i0d, i0e, ini
-                   ,i10, i11, ini, ini, ini, i15, i16, ini
-                   ,i18, i19, ini, ini, ini, i1d, i1e, ini
-                   ,i20, i21, ini, ini, i24, i25, i26, ini
-                   ,i28, i29, i2a, ini, i2c, i2d, i2e, ini
-                   ,i30, i31, ini, ini, ini, i35, i36, ini
-                   ,i38, i39, ini, ini, ini, i3d, i3e, ini
-                   ,i40, i41, ini, ini, ini, i45, i46, ini
-                   ,i48, i49, i4a, ini, i4c, i4d, i4e, ini
-                   ,i50, i51, ini, ini, ini, i55, i56, ini
-                   ,i58, i59, ini, ini, ini, i5d, i5e, ini
-                   ,i60, i61, ini, ini, ini, i65, i66, ini
-                   ,i68, i69, i6a, ini, i6c, i6d, i6e, ini
-                   ,i70, i71, ini, ini, ini, i75, i76, ini
-                   ,i78, i79, ini, ini, ini, i7d, i7e, ini
-                   ,ini, i81, ini, ini, i84, i85, i86, ini
-                   ,i88, ini, i8a, ini, i8c, i8d, i8e, ini
-                   ,i90, i91, ini, ini, i94, i95, i96, ini
-                   ,i98, i99, i9a, ini, ini, i9d, ini, ini
-                   ,ia0, ia1, ia2, ini, ia4, ia5, ia6, ini
-                   ,ia8, ia9, iaa, ini, iac, iad, iae, ini
-                   ,ib0, ib1, ini, ini, ib4, ib5, ib6, ini
-                   ,ib8, ib9, iba, ini, ibc, ibd, ibe, ini
-                   ,ic0, ic1, ini, ini, ic4, ic5, ic6, ini
-                   ,ic8, ic9, ica, ini, icc, icd, ice, ini
-                   ,id0, id1, ini, ini, ini, id5, id6, ini
-                   ,id8, id9, ini, ini, ini, idd, ide, ini
-                   ,ie0, ie1, ini, ini, ie4, ie5, ie6, ini
-                   ,ie8, ie9, iea, ini, iec, ied, iee, ini
-                   ,if0, if1, ini, ini, ini, if5, if6, ini
-                   ,if8, if9, ini, ini, ini, ifd, ife, ini]
-
-execute :: CPU -> (CPU -> IO Word16) -> Instruction -> IO ()
+execute :: CPU -> AddressMode -> Instruction -> IO ()
 execute cpu addressMode ADC = adcOp cpu addressMode 
 execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
 execute cpu addressMode ASL = shiftLeft cpu addressMode
@@ -538,9 +351,9 @@ execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
 execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
 execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
-shiftLeft :: CPU -> (CPU -> IO Word16) -> IO ()
+shiftLeft :: CPU -> AddressMode -> IO ()
 shiftLeft cpu address = do
-  byte <- address cpu
+  byte <- dereference cpu address
   clearFlags cpu [Carry,Negative,Zero]
   when (testBit (byte .&. 255) 7) (setFlag cpu Carry)
   let shf = shiftL (fromIntegral byte) 1
@@ -549,10 +362,10 @@ shiftLeft cpu address = do
      else setFlagValue cpu Overflow (testBit (byte .&. 255) 7)
   writeByte cpu byte shf
 
-adcOp :: CPU -> (CPU -> IO Word16) -> IO ()
+adcOp :: CPU -> AddressMode -> IO ()
 adcOp cpu address = do
   status <- readIORef (sr cpu)
-  byte <- address cpu
+  byte <- dereference cpu address
   acc <- readIORef (ac cpu)
   isDecimalMode <- isSet cpu Decimal
   isCarry <- isSet cpu Carry
@@ -572,10 +385,10 @@ adcOp cpu address = do
       setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
       writeIORef (ac cpu) (fromIntegral d .&. 255)
 
-sbcOp :: CPU -> (CPU -> IO Word16) -> IO ()
+sbcOp :: CPU -> AddressMode -> IO ()
 sbcOp cpu address = do
   status <- readIORef (sr cpu)
-  byte <- address cpu
+  byte <- dereference cpu address
   acc <- readIORef (ac cpu)
   isDecimalMode <- isSet cpu Decimal
   isCarry <- isSet cpu Carry
@@ -597,9 +410,9 @@ sbcOp cpu address = do
       setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
       writeIORef (ac cpu) (fromIntegral d .&. 255)
 
-bitTest :: CPU -> (CPU -> IO Word16) -> IO ()
+bitTest :: CPU -> AddressMode -> IO ()
 bitTest cpu address = do
-  this <- address cpu
+  this <- dereference cpu address
   clearFlags cpu [Carry,Zero,Negative]
   ac' <- readIORef (ac cpu)
   let res = ac' .&. (fromIntegral this .&. 255)
@@ -607,9 +420,9 @@ bitTest cpu address = do
   setFlagValue cpu Overflow $ testBit res (fromIntegral $ flag Overflow)
   setFlagValue cpu Negative $ testBit res (fromIntegral $ flag Negative)
 
-comp :: CPU -> (CPU -> IO Word16) -> IORef Byte -> IO ()
+comp :: CPU -> AddressMode -> IORef Byte -> IO ()
 comp cpu address src = do
-  that <- address cpu
+  that <- dereference cpu address
   this <- readIORef src
   clearFlags cpu [Carry,Zero,Negative]
   case (compare this (fromIntegral $ that .&. 255)) of
@@ -628,22 +441,22 @@ copyRegister cpu src dest updateFlags = do
   writeIORef dest byte
   when updateFlags $ setZeroNegativeFlags cpu byte
 
-store :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
+store :: CPU -> IORef Byte -> AddressMode -> IO ()
 store cpu source address = do
   src <- readIORef source
-  addr <- address cpu
+  addr <- dereference cpu address
   writeByte cpu addr src
 
-load :: CPU -> IORef Byte -> (CPU -> IO Word16) -> IO ()
+load :: CPU -> IORef Byte -> AddressMode -> IO ()
 load cpu destination address = do
-  addr <- address cpu
+  addr <- dereference cpu address
   byte <- readByte cpu addr
   writeIORef destination byte
   setZeroNegativeFlags cpu byte
 
-bitWiseOp :: CPU -> (CPU -> IO Word16) -> (Byte -> Byte -> Byte) -> IO ()
+bitWiseOp :: CPU -> AddressMode -> (Byte -> Byte -> Byte) -> IO ()
 bitWiseOp cpu byte op = do
-  b <- byte cpu
+  b <- dereference cpu byte 
   modifyIORef (ac cpu) (\x -> fromIntegral $ op (fromIntegral b) x)
   result <- readIORef (ac cpu)
   setZeroNegativeFlags cpu result
