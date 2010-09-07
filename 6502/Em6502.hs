@@ -60,64 +60,137 @@ data AddressMode = Accumulator      -- ^Operates directly on the accumulator
                  | Indirect Word16  -- ^LSB of another 16 bit memory address?
                  | IndexedIndirect Byte
                  | IndirectIndexed Byte
-                 | Implicit         -- ^Irrelevant
+                 deriving (Show)
 
-data Instruction = ADC    -- ^  ADd with Carry
-                 | AND    -- ^  AND (with accumulator)
-                 | ASL    -- ^  Arithmetic Shift Left
-                 | BCC    -- ^  Branch on Carry Clear
-                 | BCS    -- ^  Branch on Carry Set
-                 | BEQ    -- ^  Branch on EQual (zero set)
-                 | BIT    -- ^  BIT test
-                 | BMI    -- ^  Branch on MInus (negative set)
-                 | BNE    -- ^  Branch on Not Equal (zero clear)
-                 | BPL    -- ^  Branch on PLus (negative clear)
+class AddressModeF a where
+    dereference :: CPU -> a -> IO Word16
+    writeWord16 :: CPU -> a -> Word16 -> IO ()
+    writeWord8  :: CPU -> a -> Word16 -> IO ()
+
+
+-- ADC, AND, CMP, EOR, LDA, ORA, SBC, STA, 
+data LogicalOpAddressMode  = Immediate
+                           | ZeroPage Byte
+                           | ZeroPageX Byte
+                           | Absolute Word16
+                           | AbsoluteX Word16
+                           | AbsoluteY Word16
+                           | IndirectX Word16
+                           | IndirectY Word16
+
+-- ASL, LSR, ROL, ROR
+data ShiftAddressingMode = Accumulator
+                         | ZeroPage Byte
+                         | ZeroPageX Byte
+                         | Absolute Word16
+                         | AbsoluteX Word16
+
+-- BCC, BCS, BEQ, BMI, BNE, BPL, BVC,BVS,
+data JumpAddressMode = Relative
+
+-- BIT
+data BitAddressMode = ZeroPage Byte
+                    | Absolute Word16
+
+-- CPX, CPY
+data CompareAddressMode = Immediate
+                        | ZeroPage Byte
+                        | Absolute Word16
+
+-- DEC, INC
+data IncDecAddressMode = ZeroPage Byte
+                       | ZeroPageX Byte
+                       | Absolute Word16
+                       | AbsoluteX Word16
+
+-- JMP
+data JMPAddressMode = Absolute Word16 
+                    | Indirect
+
+-- JSR
+data JSRAddressMode = Absolute Word16
+
+-- LDX
+data LDXAddressMode = Immediate Word16
+                    | ZeroPage Byte
+                    | ZeroPageY Byte
+                    | Absolute Word16
+                    | AbsoluteY Word16
+
+-- LDY
+data LDYAddressMode = Immediate Word16
+                    | ZeroPage Byte
+                    | ZeroPageX Byte
+                    | Absolute Word16
+                    | AbsoluteX Word16
+
+-- STX
+data STXAddressMode = ZeroPage Byte
+                    | ZeroPageY Byte 
+                    | Absolute Word16
+
+-- STY
+data STYAddressMode = ZeroPage Byte
+                    | ZeroPageX Byte
+                    | Absolute Word16
+
+data Instruction = ADC LogicalOpAddressMode -- ^  ADd with Carry
+                 | AND LogicalOpAddressMode -- ^  AND (with accumulator)
+                 | ASL ShiftAddressingMode -- ^  Arithmetic Shift Left
+                 | BCC JumpAddressMode -- ^  Branch on Carry Clear
+                 | BCS JumpAddressMode -- ^  Branch on Carry Set
+                 | BEQ AddressMode -- ^  Branch on EQual (zero set)
+                 | BIT BitAddressMode -- ^  BIT test
+                 | BMI JumpAddressMode -- ^  Branch on MInus (negative set)
+                 | BNE JumpAddressMode -- ^  Branch on Not Equal (zero clear)
+                 | BPL JumpAddressMode  -- ^  Branch on PLus (negative clear)
                  | BRK    -- ^  BReaK (interrupt)
-                 | BVC    -- ^  Branch on oVerflow Clear
-                 | BVS    -- ^  Branch on oVerflow  Set
+                 | BVC JumpAddressMode  -- ^  Branch on oVerflow Clear
+                 | BVS JumpAddressMode  -- ^  Branch on oVerflow  Set
                  | CLC    -- ^  CLear Carry
                  | CLD    -- ^  CLear Decimal
                  | CLI    -- ^  CLear Interrupt disable
                  | CLV    -- ^  CLear oVerflow
-                 | CMP    -- ^  CoMPare (with accumulator)
-                 | CPX    -- ^  ComPare with X
-                 | CPY    -- ^  ComPare with Y
-                 | DEC    -- ^  DECrement (accumulator)
+                 | CMP LogicalOpAddressMode  -- ^  CoMPare (with accumulator)
+                 | CPX CompareAddressMode  -- ^  ComPare with X
+                 | CPY CompareAddressMode  -- ^  ComPare with Y
+                 | DEC IncDecAddressMode  -- ^  DECrement
                  | DEX    -- ^  DEcrement X
                  | DEY    -- ^  DEcrement Y
-                 | EOR    -- ^  Exclusive OR (with accumulator)
-                 | INC    -- ^  INCrement (accumulator)
+                 | EOR LogicalOpAddressMode  -- ^  Exclusive OR (with accumulator)
+                 | INC IncDecAddressMode  -- ^  INCrement
                  | INX    -- ^  INcrement X
                  | INY    -- ^  INcrement Y
-                 | JMP    -- ^  JuMP
-                 | JSR    -- ^  Jump SubRoutine
-                 | LDA    -- ^  LoaD Accumulator
-                 | LDX    -- ^  LoaD X
-                 | LDY    -- ^  LoaD Y
-                 | LSR    -- ^  Logical Shift Right
+                 | JMP JMPAddressMode  -- ^  JuMP
+                 | JSR JSRAddressMode  -- ^  Jump SubRoutine
+                 | LDA LogicalOpAddressMode  -- ^  LoaD Accumulator
+                 | LDX LDXAddressMode  -- ^  LoaD X
+                 | LDY LDYAddressMode  -- ^  LoaD Y
+                 | LSR ShiftAddressingMode  -- ^  Logical Shift Right
                  | NOP    -- ^  No OPeration
-                 | ORA    -- ^  OR with Accumulator
+                 | ORA LogicalOpAddressMode  -- ^  OR with Accumulator
                  | PHA    -- ^  PusH Accumulator
                  | PHP    -- ^  PusH Processor status (SR)
                  | PLA    -- ^  PulL Accumulator
                  | PLP    -- ^  PulL Processor status (SR)
-                 | ROL    -- ^  ROtate Left
-                 | ROR    -- ^  ROtate Right
+                 | ROL ShiftAddressingMode  -- ^  ROtate Left
+                 | ROR ShiftAddressingMode  -- ^  ROtate Right
                  | RTI    -- ^  ReTurn from Interrupt
                  | RTS    -- ^  ReTurn from Subroutine
-                 | SBC    -- ^  SuBtract with Carry
+                 | SBC LogicalOpAddressMode  -- ^  SuBtract with Carry
                  | SEC    -- ^  SEt Carry
                  | SED    -- ^  SEt Decimal
                  | SEI    -- ^  SEt Interrupt disable
-                 | STA    -- ^  STore Accumulator
-                 | STX    -- ^  STore X
-                 | STY    -- ^  STore Y
+                 | STA LogicalOpAddressMode  -- ^  STore Accumulator
+                 | STX STXAddressMode  -- ^  STore X
+                 | STY STYAddressMode  -- ^  STore Y
                  | TAX    -- ^  Transfer Accumulator to X
                  | TAY    -- ^  Transfer Accumulator to Y
                  | TSX    -- ^  Transfer Stack pointer to X
                  | TXA    -- ^  Transfer X to Accumulator
                  | TXS    -- ^  Transfer X to Stack pointer
                  | TYA    -- ^  Transfer Y to Accumulator
+                 deriving (Show)
 
 -- |The maximum amount of RAM addressable by a 6502
 maxAddress :: Word16
@@ -176,7 +249,8 @@ readWord cpu addr = do
   return $ fromIntegral byte1 + (fromIntegral byte2 * 256)
 
 writeByte :: CPU -> Word16 -> Byte -> IO ()
-writeByte cpu addr = GM.write (ram cpu) (fromIntegral addr)
+writeByte cpu addr byte = do
+  GM.write (ram cpu) (fromIntegral addr) byte
 
 currentByte :: CPU -> IO Byte
 currentByte cpu = do
@@ -268,11 +342,50 @@ branchRelAddr cpu = do
   writeIORef (pc cpu) (addr .&. 0xFFFF)
 
 dereference :: CPU -> AddressMode -> IO Word16
-dereference = undefined
+dereference cpu Accumulator = liftM fromIntegral $ readIORef (ac cpu)
+dereference cpu (Immediate byte) = return $ fromIntegral byte
+dereference cpu (ZeroPage byte)  = undefined
+dereference cpu (ZeroPageX byte)  = undefined
+dereference cpu (ZeroPageY byte) = undefined
+dereference cpu (Relative int)   = undefined
+dereference cpu (Absolute word16) = liftM fromIntegral (readByte cpu word16)
+dereference cpu (AbsoluteX word16) = undefined
+dereference cpu (AbsoluteY word16) = undefined
+dereference cpu (Indirect word16) = undefined
+dereference cpu (IndexedIndirect byte) = undefined
+dereference cpu (IndirectIndexed byte) = undefined
+
+writeWord16 :: CPU -> AddressMode -> Word16 -> IO ()
+writeWord16 cpu Accumulator val = writeIORef (ac cpu) (fromIntegral (val .&. 255))
+writeWord16 cpu (Immediate byte) val = error "Immediate only supports an 8 bit constant"
+writeWord16 cpu (ZeroPage byte) val = undefined
+writeWord16 cpu (ZeroPageX byte) val = undefined
+writeWord16 cpu (ZeroPageY byte) val = undefined
+writeWord16 cpu (Relative int) val = undefined
+writeWord16 cpu (Absolute word16) val = undefined
+writeWord16 cpu (AbsoluteX word16) val = undefined
+writeWord16 cpu (AbsoluteY word16) val = undefined
+writeWord16 cpu (Indirect word16) val = undefined
+writeWord16 cpu (IndexedIndirect byte) val = undefined
+writeWord16 cpu (IndirectIndexed byte) val = undefined
+
+writeWord8 :: CPU -> AddressMode -> Word8 -> IO ()
+writeWord8 cpu Accumulator val = writeIORef (ac cpu) val
+writeWord8 cpu (Immediate byte) val = undefined
+writeWord8 cpu (ZeroPage byte) val = undefined
+writeWord8 cpu (ZeroPageX byte) val = undefined
+writeWord8 cpu (ZeroPageY byte) val = undefined
+writeWord8 cpu (Relative int) val = undefined
+writeWord8 cpu (Absolute word8) val = writeByte cpu word8 val
+writeWord8 cpu (AbsoluteX word8) val = undefined
+writeWord8 cpu (AbsoluteY word8) val = undefined
+writeWord8 cpu (Indirect word8) val = undefined
+writeWord8 cpu (IndexedIndirect byte) val = undefined
+writeWord8 cpu (IndirectIndexed byte) val = undefined
 
 -- |Create a brand new CPU initialized appropriately
-init :: IO CPU
-init = do
+mkCPU :: IO CPU
+mkCPU = do
   mem <- GM.newWith (fromIntegral (maxBound :: Word16)) 0
   pc' <- newIORef 0
   yr' <- newIORef 0
@@ -293,63 +406,63 @@ init = do
           , cycles = cycles'
           }
 
-execute :: CPU -> AddressMode -> Instruction -> IO ()
-execute cpu addressMode ADC = adcOp cpu addressMode 
-execute cpu addressMode AND = bitWiseOp cpu addressMode (.&.)
-execute cpu addressMode ASL = shiftLeft cpu addressMode
-execute cpu addressMode BCC = branchIf cpu Carry False
-execute cpu addressMode BCS = branchIf cpu Carry True
-execute cpu addressMode BEQ = branchIf cpu Zero True
-execute cpu addressMode BIT = bitTest cpu addressMode
-execute cpu addressMode BMI = branchIf cpu Negative True
-execute cpu addressMode BNE = branchIf cpu Zero False
-execute cpu addressMode BPL = branchIf cpu Negative False
-execute cpu addressMode BRK = undefined
-execute cpu addressMode BVC = branchIf cpu Overflow False
-execute cpu addressMode BVS = branchIf cpu Overflow True
-execute cpu addressMode CLC = clearFlag cpu Carry 
-execute cpu addressMode CLD = clearFlag cpu Decimal
-execute cpu addressMode CLI = clearFlag cpu Interrupt
-execute cpu addressMode CLV = clearFlag cpu Overflow
-execute cpu addressMode CMP = comp cpu addressMode (ac cpu)
-execute cpu addressMode CPX = comp cpu addressMode (xr cpu)
-execute cpu addressMode CPY = comp cpu addressMode (yr cpu)
-execute cpu addressMode DEC = undefined
-execute cpu addressMode DEX = undefined
-execute cpu addressMode DEY = undefined
-execute cpu addressMode EOR = bitWiseOp cpu addressMode xor
-execute cpu addressMode INC = undefined
-execute cpu addressMode INX = undefined
-execute cpu addressMode INY = undefined
-execute cpu addressMode JMP = undefined
-execute cpu addressMode JSR = undefined
-execute cpu addressMode LDA = load cpu (ac cpu) addressMode
-execute cpu addressMode LDX = load cpu (xr cpu) addressMode
-execute cpu addressMode LDY = load cpu (yr cpu) addressMode
-execute cpu addressMode LSR = undefined
-execute cpu addressMode NOP = undefined
-execute cpu addressMode ORA = bitWiseOp cpu addressMode (.|.)
-execute cpu addressMode PHA = pushRef cpu (ac cpu)
-execute cpu addressMode PHP = pushRef cpu (sr cpu)
-execute cpu addressMode PLA = pullRef cpu (ac cpu) True
-execute cpu addressMode PLP = pullRef cpu (sr cpu) False
-execute cpu addressMode ROL = undefined
-execute cpu addressMode ROR = undefined
-execute cpu addressMode RTI = undefined
-execute cpu addressMode RTS = undefined
-execute cpu addressMode SBC = sbcOp cpu addressMode
-execute cpu addressMode SEC = setFlag cpu Carry
-execute cpu addressMode SED = setFlag cpu Decimal
-execute cpu addressMode SEI = setFlag cpu Interrupt
-execute cpu addressMode STA = store cpu (ac cpu) addressMode
-execute cpu addressMode STX = store cpu (xr cpu) addressMode
-execute cpu addressMode STY = store cpu (yr cpu) addressMode
-execute cpu addressMode TAX = transferToAccumulator cpu (xr cpu) 
-execute cpu addressMode TAY = transferToAccumulator cpu (yr cpu)
-execute cpu addressMode TSX = copyRegister cpu (sp cpu) (xr cpu) True
-execute cpu addressMode TXA = copyRegister cpu (xr cpu) (ac cpu) True
-execute cpu addressMode TXS = copyRegister cpu (xr cpu) (sp cpu) False
-execute cpu addressMode TYA = copyRegister cpu (yr cpu) (ac cpu) True
+execute :: CPU -> Instruction -> IO ()
+execute cpu (ADC addressMode) = adcOp cpu addressMode 
+execute cpu (AND addressMode) = bitWiseOp cpu addressMode (.&.)
+execute cpu (ASL addressMode) = shiftLeft cpu addressMode
+execute cpu (BCC addressMode) = branchIf cpu Carry False
+execute cpu (BCS addressMode) = branchIf cpu Carry True
+execute cpu (BEQ addressMode) = branchIf cpu Zero True
+execute cpu (BIT addressMode) = bitTest cpu addressMode
+execute cpu (BMI addressMode) = branchIf cpu Negative True
+execute cpu (BNE addressMode) = branchIf cpu Zero False
+execute cpu (BPL addressMode) = branchIf cpu Negative False
+execute cpu BRK = undefined
+execute cpu (BVC addressMode) = branchIf cpu Overflow False
+execute cpu (BVS addressMode) = branchIf cpu Overflow True
+execute cpu CLC = clearFlag cpu Carry 
+execute cpu CLD = clearFlag cpu Decimal
+execute cpu CLI = clearFlag cpu Interrupt
+execute cpu CLV = clearFlag cpu Overflow
+execute cpu (CMP addressMode) = comp cpu addressMode (ac cpu)
+execute cpu (CPX addressMode) = comp cpu addressMode (xr cpu)
+execute cpu (CPY addressMode) = comp cpu addressMode (yr cpu)
+execute cpu (DEC addressMode) = undefined
+execute cpu DEX = undefined
+execute cpu DEY = undefined
+execute cpu (EOR addressMode) = bitWiseOp cpu addressMode xor
+execute cpu (INC addressMode) = undefined
+execute cpu INX = undefined
+execute cpu INY = undefined
+execute cpu (JMP addressMode) = undefined
+execute cpu (JSR addressMode) = undefined
+execute cpu (LDA addressMode) = load cpu (ac cpu) addressMode
+execute cpu (LDX addressMode) = load cpu (xr cpu) addressMode
+execute cpu (LDY addressMode) = load cpu (yr cpu) addressMode
+execute cpu (LSR addressMode) = undefined
+execute cpu NOP = undefined
+execute cpu (ORA addressMode) = bitWiseOp cpu addressMode (.|.)
+execute cpu PHA = pushRef cpu (ac cpu)
+execute cpu PHP = pushRef cpu (sr cpu)
+execute cpu PLA = pullRef cpu (ac cpu) True
+execute cpu PLP = pullRef cpu (sr cpu) False
+execute cpu (ROL addressMode) = undefined
+execute cpu (ROR addressMode) = undefined
+execute cpu RTI = undefined
+execute cpu RTS = undefined
+execute cpu (SBC addressMode) = sbcOp cpu addressMode
+execute cpu SEC = setFlag cpu Carry
+execute cpu SED = setFlag cpu Decimal
+execute cpu SEI = setFlag cpu Interrupt
+execute cpu (STA addressMode) = store cpu (ac cpu) addressMode
+execute cpu (STX addressMode) = store cpu (xr cpu) addressMode
+execute cpu (STY addressMode) = store cpu (yr cpu) addressMode
+execute cpu TAX = transferToAccumulator cpu (xr cpu) 
+execute cpu TAY = transferToAccumulator cpu (yr cpu)
+execute cpu TSX = copyRegister cpu (sp cpu) (xr cpu) True
+execute cpu TXA = copyRegister cpu (xr cpu) (ac cpu) True
+execute cpu TXS = copyRegister cpu (xr cpu) (sp cpu) False
+execute cpu TYA = copyRegister cpu (yr cpu) (ac cpu) True
 
 shiftLeft :: CPU -> AddressMode -> IO ()
 shiftLeft cpu address = do
@@ -360,7 +473,7 @@ shiftLeft cpu address = do
   if shf == 0 
      then setFlag cpu Zero
      else setFlagValue cpu Overflow (testBit (byte .&. 255) 7)
-  writeByte cpu byte shf
+  writeWord16 cpu address shf
 
 adcOp :: CPU -> AddressMode -> IO ()
 adcOp cpu address = do
@@ -445,7 +558,7 @@ store :: CPU -> IORef Byte -> AddressMode -> IO ()
 store cpu source address = do
   src <- readIORef source
   addr <- dereference cpu address
-  writeByte cpu addr src
+  writeWord8 cpu address src
 
 load :: CPU -> IORef Byte -> AddressMode -> IO ()
 load cpu destination address = do
@@ -513,3 +626,5 @@ dec2bcd = listArray (0,255) [0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09
 	                    ,0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89
 	                    ,0x90,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99]
 
+runInstructions :: CPU -> [Instruction] -> IO ()
+runInstructions cpu instructions = forM_ instructions (execute cpu)
