@@ -48,16 +48,16 @@ data Flag = Negative
           | Carry
 
 -- http://www.obelisk.demon.co.uk/6502/addressing.html explains addressing modes
-data AddressMode = Accumulator      -- ^Operates directly on the accumulator
-                 | Immediate Byte   -- ^specifies constant
-                 | ZeroPage Byte    -- ^load from memory
-                 | ZeroPageX Byte   -- ^load from memory + x register
-                 | ZeroPageY Byte   -- ^load from memory + y register
-                 | Relative Int     -- ^signed bit relative offset added to program counter
-                 | Absolute Word16  -- ^full addressing
-                 | AbsoluteX Word16 -- ^16 bit + x register
-                 | AbsoluteY Word16 -- ^16 bit + y register
-                 | Indirect Word16  -- ^LSB of another 16 bit memory address?
+data AddressMode = Accumulator      
+                 | Immediate Byte   
+                 | ZeroPage Byte    
+                 | ZeroPageX Byte   
+                 | ZeroPageY Byte   
+                 | Relative Int     
+                 | Absolute Word16  
+                 | AbsoluteX Word16 
+                 | AbsoluteY Word16 
+                 | Indirect Word16  
                  | IndexedIndirect Byte
                  | IndirectIndexed Byte
                  deriving (Show)
@@ -177,8 +177,7 @@ readWord cpu addr = do
   return $ fromIntegral byte1 + (fromIntegral byte2 * 256)
 
 writeByte :: CPU -> Word16 -> Byte -> IO ()
-writeByte cpu addr byte = do
-  GM.write (ram cpu) (fromIntegral addr) byte
+writeByte cpu addr = GM.write (ram cpu) (fromIntegral addr) 
 
 currentByte :: CPU -> IO Byte
 currentByte cpu = do
@@ -189,13 +188,13 @@ stackPushByte :: CPU -> Byte -> IO ()
 stackPushByte cpu val = do 
   sp' <- readIORef (sp cpu)
   writeByte cpu (fromIntegral sp' + 256) val
-  modifyIORef (sp cpu) (\x -> (x - 1))
+  modifyIORef (sp cpu) (flip (-) 1)
 
 stackPopByte :: CPU -> IO Byte
 stackPopByte cpu = do
   s <- readIORef (sp cpu)
   val <- readByte cpu (fromIntegral s+256)
-  modifyIORef (sp cpu) (\x -> (x + 1))
+  modifyIORef (sp cpu) (+ 1)
   return val
 
 stackPushWord :: CPU -> Word16 -> IO ()
@@ -411,20 +410,20 @@ adcOp cpu address = do
   isDecimalMode <- isSet cpu Decimal
   isCarry <- isSet cpu Carry
   let carry = if isCarry then 0 else 1
-  case isDecimalMode of
-    True -> do
-      let d = (bcd2dec ! (fromIntegral acc)) + (bcd2dec ! (fromIntegral byte)) + carry
-      clearFlags cpu [Carry,Zero,Negative,Overflow]
-      when (d>99) (setFlags cpu [Overflow,Carry])
-      when (d==0) (setFlag cpu Zero)
-      when (d <0) (setFlagValue cpu Zero $ testBit (d .&. 255) (fromIntegral $ flag Zero))
-      writeIORef (ac cpu) ((fromIntegral d .&. 255) - if d > 99 then 100 else 0)
-    False -> do
-      let d = (fromIntegral acc) + byte + (if isCarry then 1 else 0)
-      when (d > 255) (setFlags cpu [Carry,Overflow])
-      when (d == 0 ) (setFlag cpu Zero)
-      setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
-      writeIORef (ac cpu) (fromIntegral d .&. 255)
+  if isDecimalMode 
+      then do
+        let d = bcd2dec ! fromIntegral acc + bcd2dec ! fromIntegral byte + carry
+        clearFlags cpu [Carry,Zero,Negative,Overflow]
+        when (d>99) (setFlags cpu [Overflow,Carry])
+        when (d==0) (setFlag cpu Zero)
+        when (d <0) (setFlagValue cpu Zero $ testBit (d .&. 255) (fromIntegral $ flag Zero))
+        writeIORef (ac cpu) ((fromIntegral d .&. 255) - if d > 99 then 100 else 0)
+     else do
+       let d = fromIntegral acc + byte + if isCarry then 1 else 0
+       when (d > 255) (setFlags cpu [Carry,Overflow])
+       when (d == 0 ) (setFlag cpu Zero)
+       setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
+       writeIORef (ac cpu) (fromIntegral d .&. 255)
 
 sbcOp :: CPU -> AddressMode -> IO ()
 sbcOp cpu address = do
@@ -434,22 +433,22 @@ sbcOp cpu address = do
   isDecimalMode <- isSet cpu Decimal
   isCarry <- isSet cpu Carry
   let carry = if isCarry then 0 else 1
-  case isDecimalMode of
-    True -> do
-      let d = (bcd2dec ! (fromIntegral acc)) - (bcd2dec ! (fromIntegral byte)) - carry
-      clearFlags cpu [Carry,Zero,Negative,Overflow]
-      when (d==0) (setFlags cpu [Zero,Carry])
-      when (d >0) (setFlag cpu Carry)
-      when (d <0) (setFlag cpu Negative)
-      writeIORef (ac cpu) ((fromIntegral d .&. 255) + if (d < 0) then 100 else 0)
-    False -> do
-      let d = (fromIntegral acc) - byte - carry
-      clearFlags cpu [Carry,Zero,Negative,Overflow]
-      when (d==0) (setFlags cpu [Zero,Carry])
-      when (d >0) (setFlag cpu Carry)
-      when (d <0) (setFlag cpu Overflow)
-      setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
-      writeIORef (ac cpu) (fromIntegral d .&. 255)
+  if isDecimalMode 
+      then do
+        let d = bcd2dec ! fromIntegral acc - bcd2dec ! fromIntegral byte - carry
+        clearFlags cpu [Carry,Zero,Negative,Overflow]
+        when (d==0) (setFlags cpu [Zero,Carry])
+        when (d >0) (setFlag cpu Carry)
+        when (d <0) (setFlag cpu Negative)
+        writeIORef (ac cpu) ((fromIntegral d .&. 255) + if d < 0 then 100 else 0)
+      else do
+        let d = fromIntegral acc - byte - carry
+        clearFlags cpu [Carry,Zero,Negative,Overflow]
+        when (d==0) (setFlags cpu [Zero,Carry])
+        when (d >0) (setFlag cpu Carry)
+        when (d <0) (setFlag cpu Overflow)
+        setFlagValue cpu Overflow $ testBit (d .&. 255) (fromIntegral $ flag Overflow)
+        writeIORef (ac cpu) (fromIntegral d .&. 255)
 
 bitTest :: CPU -> AddressMode -> IO ()
 bitTest cpu address = do
@@ -472,8 +471,8 @@ comp cpu address src = do
     LT -> setFlag cpu Negative
 
 branchIf :: CPU -> Flag -> Bool -> IO ()
-branchIf cpu flag val = do
-  f <- isSet cpu flag
+branchIf cpu fl val = do
+  f <- isSet cpu fl
   if f == val then branchRelAddr cpu else stepPC cpu
 
 copyRegister :: CPU -> IORef Byte -> IORef Byte -> Bool -> IO ()
@@ -508,10 +507,10 @@ pushRef cpu src = do
   stackPushByte cpu val
 
 pullRef :: CPU -> IORef Byte -> Bool -> IO ()
-pullRef cpu src setFlags = do
+pullRef cpu src flagsToSet = do
   val <- stackPopByte cpu
   writeIORef src val
-  when setFlags (setZeroNegativeFlags cpu val)
+  when flagsToSet (setZeroNegativeFlags cpu val)
 
 transferToAccumulator :: CPU -> IORef Byte -> IO ()
 transferToAccumulator cpu dest = do
