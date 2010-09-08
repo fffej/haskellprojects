@@ -188,14 +188,14 @@ currentByte cpu = do
 stackPushByte :: CPU -> Byte -> IO ()
 stackPushByte cpu val = do 
   sp' <- readIORef (sp cpu)
-  writeByte cpu (fromIntegral sp' + 256) val -- (val .&. 255)
-  modifyIORef (sp cpu) (\x -> (x - 1)) -- .&. 255)
+  writeByte cpu (fromIntegral sp' + 256) val
+  modifyIORef (sp cpu) (\x -> (x - 1))
 
 stackPopByte :: CPU -> IO Byte
 stackPopByte cpu = do
   s <- readIORef (sp cpu)
   val <- readByte cpu (fromIntegral s+256)
-  modifyIORef (sp cpu) (\x -> (x + 1)) -- .&. 255)
+  modifyIORef (sp cpu) (\x -> (x + 1))
   return val
 
 stackPushWord :: CPU -> Word16 -> IO ()
