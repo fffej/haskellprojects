@@ -10,6 +10,7 @@ module Em6502 where
 
 import Data.Array
 import Data.IORef
+import Data.Int (Int8)
 import Data.Word (Word8,Word16)
 import Data.Bits
 import qualified Data.Vector.Unboxed.Mutable as M
@@ -24,6 +25,7 @@ import Control.Monad
 import Prelude hiding (break)
 
 type Byte = Word8
+type SByte = Int8
 type ByteVector = M.IOVector Byte
 
 -- http://www.obelisk.demon.co.uk/6502/registers.html
@@ -58,23 +60,23 @@ data AddressMode = Accumulator
                  | AbsoluteX Word16 
                  | AbsoluteY Word16 
                  | Indirect Word16  
-                 | IndexedIndirect Byte
-                 | IndirectIndexed Byte
+                 | IndirectX Byte
+                 | IndirectY Byte
                  deriving (Show)
 
 data Instruction = ADC AddressMode -- ^  ADd with Carry
                  | AND AddressMode -- ^  AND (with accumulator)
                  | ASL AddressMode -- ^  Arithmetic Shift Left
-                 | BCC AddressMode -- ^  Branch on Carry Clear
-                 | BCS AddressMode -- ^  Branch on Carry Set
-                 | BEQ AddressMode -- ^  Branch on EQual (zero set)
+                 | BCC SByte       -- ^  Branch on Carry Clear
+                 | BCS SByte       -- ^  Branch on Carry Set
+                 | BEQ SByte       -- ^  Branch on EQual (zero set)
                  | BIT AddressMode -- ^  BIT test
-                 | BMI AddressMode -- ^  Branch on MInus (negative set)
-                 | BNE AddressMode -- ^  Branch on Not Equal (zero clear)
-                 | BPL AddressMode  -- ^  Branch on PLus (negative clear)
-                 | BRK    -- ^  BReaK (interrupt)
-                 | BVC AddressMode  -- ^  Branch on oVerflow Clear
-                 | BVS AddressMode  -- ^  Branch on oVerflow  Set
+                 | BMI SByte       -- ^  Branch on MInus (negative set)
+                 | BNE SByte       -- ^  Branch on Not Equal (zero clear)
+                 | BPL SByte       -- ^  Branch on PLus (negative clear)
+                 | BRK             -- ^  BReaK (interrupt)
+                 | BVC SByte       -- ^  Branch on oVerflow Clear
+                 | BVS SByte       -- ^  Branch on oVerflow  Set
                  | CLC    -- ^  CLear Carry
                  | CLD    -- ^  CLear Decimal
                  | CLI    -- ^  CLear Interrupt disable
@@ -268,19 +270,23 @@ branchRelAddr cpu = do
       addr = pc' + fromIntegral pcOff
   writeIORef (pc cpu) (addr .&. 0xFFFF)
 
-readWord8 :: CPU -> AddressMode -> IO Word16
-readWord8 cpu Accumulator = liftM fromIntegral $ readIORef (ac cpu)
+readWord8 :: CPU -> AddressMode -> IO Word8
+readWord8 cpu Accumulator = readIORef (ac cpu)
 readWord8 cpu (Immediate byte) = return $ fromIntegral byte
-readWord8 cpu (ZeroPage byte)  = undefined
-readWord8 cpu (ZeroPageX byte)  = undefined
-readWord8 cpu (ZeroPageY byte) = undefined
-readWord8 cpu (Relative int)   = undefined
+readWord8 cpu (ZeroPage byte)  = (readByte cpu (fromIntegral byte))
+readWord8 cpu (ZeroPageX byte)  = do
+  x <- readIORef (xr cpu)
+  readByte cpu (fromIntegral byte + fromIntegral x)
+readWord8 cpu (ZeroPageY byte) = do
+  y <- readIORef (yr cpu)
+  readByte cpu (fromIntegral $ byte + y)
+readWord8 cpu (Relative int)   = error "Relative is to adjust the PC"
 readWord8 cpu (Absolute word16) = liftM fromIntegral (readByte cpu word16)
 readWord8 cpu (AbsoluteX word16) = undefined
 readWord8 cpu (AbsoluteY word16) = undefined
 readWord8 cpu (Indirect word16) = undefined
-readWord8 cpu (IndexedIndirect byte) = undefined
-readWord8 cpu (IndirectIndexed byte) = undefined
+readWord8 cpu (IndirectX byte) = undefined
+readWord8 cpu (IndirectY byte) = undefined
 
 writeWord16 :: CPU -> AddressMode -> Word16 -> IO ()
 writeWord16 cpu Accumulator val = writeIORef (ac cpu) (fromIntegral (val .&. 255))
@@ -288,13 +294,13 @@ writeWord16 cpu (Immediate byte) val = error "Immediate only supports an 8 bit c
 writeWord16 cpu (ZeroPage byte) val = undefined
 writeWord16 cpu (ZeroPageX byte) val = undefined
 writeWord16 cpu (ZeroPageY byte) val = undefined
-writeWord16 cpu (Relative int) val = undefined
+writeWord16 cpu (Relative int) val = error "Relative is to adjust the PC"
 writeWord16 cpu (Absolute word16) val = undefined
 writeWord16 cpu (AbsoluteX word16) val = undefined
 writeWord16 cpu (AbsoluteY word16) val = undefined
 writeWord16 cpu (Indirect word16) val = undefined
-writeWord16 cpu (IndexedIndirect byte) val = undefined
-writeWord16 cpu (IndirectIndexed byte) val = undefined
+writeWord16 cpu (IndirectX byte) val = undefined
+writeWord16 cpu (IndirectY byte) val = undefined
 
 writeWord8 :: CPU -> AddressMode -> Word8 -> IO ()
 writeWord8 cpu Accumulator val = writeIORef (ac cpu) val
@@ -307,8 +313,8 @@ writeWord8 cpu (Absolute word8) val = writeByte cpu word8 val
 writeWord8 cpu (AbsoluteX word8) val = undefined
 writeWord8 cpu (AbsoluteY word8) val = undefined
 writeWord8 cpu (Indirect word8) val = undefined
-writeWord8 cpu (IndexedIndirect byte) val = undefined
-writeWord8 cpu (IndirectIndexed byte) val = undefined
+writeWord8 cpu (IndirectX byte) val = undefined
+writeWord8 cpu (IndirectY byte) val = undefined
 
 -- |Create a brand new CPU initialized appropriately
 mkCPU :: IO CPU
@@ -442,7 +448,7 @@ sbcOp cpu address = do
         when (d <0) (setFlag cpu Negative)
         writeIORef (ac cpu) ((fromIntegral d .&. 255) + if d < 0 then 100 else 0)
       else do
-        let d = fromIntegral acc - byte - carry
+        let d = fromIntegral acc - byte - fromIntegral carry
         clearFlags cpu [Carry,Zero,Negative,Overflow]
         when (d==0) (setFlags cpu [Zero,Carry])
         when (d >0) (setFlag cpu Carry)
@@ -490,7 +496,7 @@ store cpu source address = do
 load :: CPU -> IORef Byte -> AddressMode -> IO ()
 load cpu destination address = do
   addr <- readWord8 cpu address
-  byte <- readByte cpu addr
+  byte <- readByte cpu (fromIntegral addr)
   writeIORef destination byte
   setZeroNegativeFlags cpu byte
 
