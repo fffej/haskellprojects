@@ -36,4 +36,6 @@ render :: Array (Int,Int) Int -> FilePath -> IO ()
 render arr file = arrayToFile file (amap (normalize 0 255) arr)
 
 normalize :: Int -> Int -> Int -> Word16
-normalize minx maxx x = undefined
+normalize minx maxx x = fromIntegral $ (maxx - x) `div` r
+  where
+    r = maxx - minx
