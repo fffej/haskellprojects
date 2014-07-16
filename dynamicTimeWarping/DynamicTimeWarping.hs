@@ -23,7 +23,7 @@ dtw x y cost = runSTArray $ do
   let n = V.length x
       m = V.length y
   d <- newArray ((0,0),(n,m)) 0
-  forM_ [1..n] $ \i -> do
+  forM_ [1..n] $ \i -> 
     forM_ [1..m] $ \j -> do
       let c = cost (x ! (i -1)) (y ! (j -1))
       insertion <- readArray d (i-1,j)
