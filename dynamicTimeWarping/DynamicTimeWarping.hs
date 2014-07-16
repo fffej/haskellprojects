@@ -4,22 +4,22 @@ import Data.Array hiding ((!))
 import Data.Array.IArray (amap)
 import Data.Array.ST (runSTArray, newArray, readArray, writeArray)
 
-import Data.Vector.Unboxed ((!))
-import qualified Data.Vector.Unboxed as V
+import Data.Vector ((!))
+import qualified Data.Vector as V
 
 import Control.Monad (forM_)
 
 import Data.Word (Word16)
 import Graphics.Pgm (arrayToFile)
 
-cost :: Int -> Int -> Int
-cost x y = abs (x - y)
+intCost :: Int -> Int -> Int
+intCost x y = abs (x - y)
 
 maxcost :: Int
 maxcost = 100001
 
-dtw :: V.Vector Int -> V.Vector Int -> Array (Int,Int) Int
-dtw x y = runSTArray $ do
+dtw :: V.Vector a -> V.Vector a -> (a -> a -> Int) -> Array (Int,Int) Int
+dtw x y cost = runSTArray $ do
   let n = V.length x
       m = V.length y
   d <- newArray ((0,0),(n,m)) 0
