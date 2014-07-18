@@ -13,15 +13,13 @@ import Codec.BMP
 import qualified Data.ByteString as BS
 
 intCost :: Int -> Int -> Int
-intCost x y = abs (x - y)
-
-maxcost :: Int
-maxcost = maxBound
+intCost x y = abs (x - y) * abs (x - y)
 
 dtw :: V.Vector a -> V.Vector a -> (a -> a -> Int) -> Array (Int,Int) Int
 dtw x y cost = runSTArray $ do
   let n = V.length x
       m = V.length y
+      maxcost = maxBound
   d <- newArray ((0,0),(m,n)) 0
   forM_ [1..n] (\i -> writeArray d (0,i) maxcost)
   forM_ [1..m] (\i -> writeArray d (i,0) maxcost)
@@ -34,13 +32,31 @@ dtw x y cost = runSTArray $ do
       writeArray d (j,i) (c + minimum [insertion,deletion,match])
   return d
 
+dtwWin :: V.Vector a -> V.Vector a -> (a -> a -> Int) -> Int -> Array (Int,Int) Int
+dtwWin x y cost window = runSTArray $ do
+  let n = V.length x
+      m = V.length y
+      maxCost = maxBound
+      w = max window (abs (n - m)) -- constrain window size
+  d <- newArray ((0,0),(m,n)) maxCost
+  writeArray d (0,0) 0
+  forM_ [1..n] $ \i ->
+    forM_ [max 1 (i-w) .. min m (i+w)] $ \j -> do
+      let c = cost (x ! (i - 1)) (y ! (j - 1))
+      insertion <- readArray d (j,i-1)
+      deletion <- readArray d (j-1,i)
+      match <- readArray d (j-1,i-1)
+      writeArray d (j,i) (c + minimum [insertion,deletion,match])
+  return d
+
 render :: Array (Int,Int) Int -> FilePath -> IO ()
 render arr file = writeBMP file bmp
   where
     ((_,_),(w,h)) = bounds arr
-    bs = BS.pack (concatMap (normalize 0 (maximum vs)) vs)
+    bs = BS.pack (concatMap (normalize 0 maxvs) vs)
     bmp = packRGBA32ToBMP w h bs
     vs = map snd $ filter (\((x,y),_) -> x /= 0 && y /= 0) (assocs arr)
+    maxvs = maximum (filter (\v -> v /= (maxBound :: Int)) vs)
 
 -- TODO http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
 normalize :: Int -> Int -> Int -> [Word8]
@@ -68,8 +84,20 @@ save seq1 seq2 filename = do
   let cost = dtw (V.fromList seq1) (V.fromList seq2) intCost
   render cost filename
 
+saveWin :: [Int] -> [Int] -> Int -> FilePath -> IO ()
+saveWin seq1 seq2 w filename = do
+  let cost = dtwWin (V.fromList seq1) (V.fromList seq2) intCost w
+  render cost filename
+
+cosInt :: [Int]
+cosInt = map (floor . (*100) .cos) [0,0.1..50]
+
+sinInt :: [Int]
+sinInt = map (floor . (*100) .sin) [0,0.1..50]
+
 main :: IO ()
 main = do
-  save [0..500] [0..500] "perfect.bmp"
-  save [0..500] [500,499..0] "opposite.bmp"
-  save [0..500] [2,4..1000] "double.bmp"
+  saveWin [0..500] [0..500] 5 "perfect.bmp" 
+  saveWin [0..500] [500,499..0] 5 "opposite.bmp" 
+  saveWin [0..500] [2,4..1000] 5 "double.bmp"
+  saveWin cosInt sinInt 50 "cossin.bmp"
