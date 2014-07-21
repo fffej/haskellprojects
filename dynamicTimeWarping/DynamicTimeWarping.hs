@@ -61,7 +61,7 @@ render arr file = writeBMP file bmp
     vs = elems arr
     maxvs = maximum (filter (/= (maxBound :: Int)) vs)
 
--- TODO http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
+-- http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
 normalize :: Int -> Int -> Int -> [Word8]
 normalize minx maxx x = [scale r, scale g, scale b, 0]
   where
