@@ -13,7 +13,10 @@ import Codec.BMP
 import qualified Data.ByteString as BS
 
 intCost :: Int -> Int -> Int
-intCost x y = abs (x - y) * abs (x - y)
+intCost x y = abs (x - y)
+
+doubleCost :: Double -> Double -> Int
+doubleCost x y = floor $ abs (x - y) * 10.0
 
 dtw :: V.Vector a -> V.Vector a -> (a -> a -> Int) -> Array (Int,Int) Int
 dtw x y cost = runSTArray $ do
@@ -54,9 +57,9 @@ render arr file = writeBMP file bmp
   where
     ((_,_),(w,h)) = bounds arr
     bs = BS.pack (concatMap (normalize 0 maxvs) vs)
-    bmp = packRGBA32ToBMP w h bs
-    vs = map snd $ filter (\((x,y),_) -> x /= 0 && y /= 0) (assocs arr)
-    maxvs = maximum (filter (\v -> v /= (maxBound :: Int)) vs)
+    bmp = packRGBA32ToBMP (w+1) (h+1) bs
+    vs = elems arr
+    maxvs = maximum (filter (/= (maxBound :: Int)) vs)
 
 -- TODO http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
 normalize :: Int -> Int -> Int -> [Word8]
@@ -84,20 +87,30 @@ save seq1 seq2 filename = do
   let cost = dtw (V.fromList seq1) (V.fromList seq2) intCost
   render cost filename
 
+saveDouble :: [Double] -> [Double] -> FilePath -> IO ()
+saveDouble seq1 seq2 filename = do
+  let cost = dtw (V.fromList seq1) (V.fromList seq2) doubleCost
+  render cost filename
+
+
 saveWin :: [Int] -> [Int] -> Int -> FilePath -> IO ()
 saveWin seq1 seq2 w filename = do
   let cost = dtwWin (V.fromList seq1) (V.fromList seq2) intCost w
   render cost filename
 
 cosInt :: [Int]
-cosInt = map (floor . (*100) .cos) [0,0.1..50]
+cosInt = map (floor . (*10) . cos) [-300 .. 300]
 
 sinInt :: [Int]
-sinInt = map (floor . (*100) .sin) [0,0.1..50]
+sinInt = map (floor . (*10). sin) [-300 .. 300]
 
 main :: IO ()
 main = do
-  saveWin [0..500] [0..500] 5 "perfect.bmp" 
-  saveWin [0..500] [500,499..0] 5 "opposite.bmp" 
-  saveWin [0..500] [2,4..1000] 5 "double.bmp"
-  saveWin cosInt sinInt 50 "cossin.bmp"
+  saveWin [0..500] [0..500] 5 "perfect-win5.bmp"
+  save    [0..500] [0..500]   "perfect.bmp"
+  saveWin [0..500] [500,499..0] 5 "opposite-win5.bmp"
+  save    [0..500] [500,499..0] "opposite.bmp" 
+  saveWin [0..500] [2,4..1000] 5 "double-win5.bmp"
+  save    [0..500] [2,4..1000] "double.bmp"
+  save    cosInt   sinInt "cos-sin.bmp"
+  save    cosInt  [0..500] "cosInt-Linear.bmp"
