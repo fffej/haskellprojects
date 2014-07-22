@@ -1,9 +1,11 @@
 module DynamicTimeWarping where
 
-import Data.Array hiding ((!))
+import Data.Array 
 import Data.Array.ST (runSTArray, newArray, readArray, writeArray)
 
-import Data.Vector ((!))
+import Data.List (minimumBy)
+import Data.Ord (comparing)
+
 import qualified Data.Vector as V
 
 import Control.Monad (forM_)
@@ -28,7 +30,7 @@ dtw x y cost = runSTArray $ do
   forM_ [1..m] (\i -> writeArray d (i,0) maxcost)
   forM_ [1..n] $ \i -> 
     forM_ [1..m] $ \j -> do
-      let c = cost (x ! (i -1)) (y ! (j -1))
+      let c = cost (x V.! (i -1)) (y V.! (j -1))
       insertion <- readArray d (j,i-1)
       deletion <- readArray d (j-1,i)
       match <- readArray d (j-1,i-1)
@@ -45,7 +47,7 @@ dtwWin x y cost window = runSTArray $ do
   writeArray d (0,0) 0
   forM_ [1..n] $ \i ->
     forM_ [max 1 (i-w) .. min m (i+w)] $ \j -> do
-      let c = cost (x ! (i - 1)) (y ! (j - 1))
+      let c = cost (x V.! (i - 1)) (y V.! (j - 1))
       insertion <- readArray d (j,i-1)
       deletion <- readArray d (j-1,i)
       match <- readArray d (j-1,i-1)
@@ -55,11 +57,26 @@ dtwWin x y cost window = runSTArray $ do
 render :: Array (Int,Int) Int -> FilePath -> IO ()
 render arr file = writeBMP file bmp
   where
-    ((_,_),(w,h)) = bounds arr
+    warpPath = warpingPath arr
+    (_,(w,h)) = bounds arr
     bs = BS.pack (concatMap (normalize 0 maxvs) vs)
     bmp = packRGBA32ToBMP (w+1) (h+1) bs
     vs = elems arr
     maxvs = maximum (filter (/= (maxBound :: Int)) vs)
+
+-- file:///home/jefff/Downloads/9783540740476-c1%20(1).pdf
+warpingPath :: Array (Int,Int) Int -> [(Int,Int)]
+warpingPath arr = go (w,h) []
+  where
+    (_,(w,h)) = bounds arr
+    go p@(x,y) xs
+      | x == 0 || y == 0 = p : xs
+      | otherwise = go minVal (minVal : xs)
+      where
+        minVal = minimumBy (comparing (arr !)) [down,downLeft,left]
+        down = (max 0 (y-1),max 0 x)
+        left = (max 0 y,max 0 (x-1))
+        downLeft = (max 0 (y-1),max 0 (x-1))
 
 -- http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
 normalize :: Int -> Int -> Int -> [Word8]
@@ -99,10 +116,10 @@ saveWin seq1 seq2 w filename = do
   render cost filename
 
 cosInt :: [Int]
-cosInt = map (floor . (*10) . cos) [-300 .. 300]
+cosInt = map (floor . (*10) . cos) [-300.0 .. 300.0]
 
 sinInt :: [Int]
-sinInt = map (floor . (*10). sin) [-300 .. 300]
+sinInt = map (floor . (*10). sin) [-300.0 .. 300.0]
 
 main :: IO ()
 main = do
