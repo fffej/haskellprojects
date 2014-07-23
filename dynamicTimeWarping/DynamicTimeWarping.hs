@@ -61,7 +61,7 @@ render arr file = writeBMP file bmp
     (_,(w,h)) = bounds arr
     bs = BS.pack (concatMap (normalize 0 maxvs) vs)
     bmp = packRGBA32ToBMP (w+1) (h+1) bs
-    vs = elems arr
+    vs = elems (arr // (zip warpPath (repeat 0)))
     maxvs = maximum (filter (/= (maxBound :: Int)) vs)
 
 -- file:///home/jefff/Downloads/9783540740476-c1%20(1).pdf
@@ -70,13 +70,13 @@ warpingPath arr = go (w,h) []
   where
     (_,(w,h)) = bounds arr
     go p@(x,y) xs
-      | x == 0 || y == 0 = p : xs
+      | x == 0 && y == 0 = p : xs
       | otherwise = go minVal (minVal : xs)
       where
         minVal = minimumBy (comparing (arr !)) [down,downLeft,left]
-        down = (max 0 (y-1),max 0 x)
-        left = (max 0 y,max 0 (x-1))
-        downLeft = (max 0 (y-1),max 0 (x-1))
+        down = (max 0 (x-1),max 0 y)
+        left = (x,max 0 (y-1))
+        downLeft = (max 0 (x-1),max 0 (y-1))
 
 -- http://stackoverflow.com/questions/7706339/grayscale-to-red-green-blue-matlab-jet-color-scale
 normalize :: Int -> Int -> Int -> [Word8]
