@@ -14,6 +14,8 @@ import Data.Word (Word8)
 import Codec.BMP
 import qualified Data.ByteString as BS
 
+import System.Random
+
 intCost :: Int -> Int -> Int
 intCost x y = abs (x - y)
 
@@ -60,12 +62,12 @@ render arr file = writeBMP file bmp
     warpPath = warpingPath arr
     (_,(w,h)) = bounds arr
     bs = BS.pack (concatMap (normalize minvs maxvs) vs)
-    bmp = packRGBA32ToBMP (w+1) (h+1) bs
-    vs = elems (arr // (zip warpPath (repeat (- 1))))
+    bmp = packRGBA32ToBMP w h bs
+    highlightedPath = (arr // (zip warpPath (repeat (- 1))))
+    vs = map snd $ filter (\((x,y),_) -> x /= 0 && y /= 0) (assocs highlightedPath)
     maxvs = maximum (filter (/= (maxBound :: Int)) vs)
     minvs = minimum (filter (/= (- 1)) vs)
 
--- file:///home/jefff/Downloads/9783540740476-c1%20(1).pdf
 warpingPath :: Array (Int,Int) Int -> [(Int,Int)]
 warpingPath arr = go (w,h) []
   where
@@ -117,7 +119,7 @@ saveWin seq1 seq2 w filename = do
   render cost filename
 
 ts :: Num a => a
-ts = 256
+ts = 512
 
 cosInt :: [Int]
 cosInt = map (floor . (*10) . cos) [(0.0 :: Double) .. ts]
@@ -130,6 +132,12 @@ sinIntFast = map (floor . (*10). sin . (* 0.25)) [(0.0 :: Double) .. ts]
 
 main :: IO ()
 main = do
+  gen <- getStdGen
+  let rs = randoms gen
+      randomX = map (`mod` 256) $ take (2*ts) rs
+      randomY = map (`mod` 256) $ take (2*ts) (drop (3*ts) rs)
+  save randomX randomY "random.bmp"
+  save    (replicate 0 ts) (replicate 0 ts) "perfect2.bmp"
   saveWin [0..ts] [0..ts] 5 "perfect-win5.bmp"
   save    [0..ts] [0..ts]   "perfect.bmp"
   saveWin [0..ts] [ts,ts - 1..0] 5 "opposite-win5.bmp"
@@ -138,3 +146,4 @@ main = do
   save    [0..ts] [2,4..ts * 2] "double.bmp"
   save    cosInt   sinInt "cos-sin.bmp"
   save    cosInt  [0..ts] "cosInt-Linear.bmp"
+
