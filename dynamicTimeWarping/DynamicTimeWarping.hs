@@ -111,25 +111,30 @@ saveDouble seq1 seq2 filename = do
   let cost = dtw (V.fromList seq1) (V.fromList seq2) doubleCost
   render cost filename
 
-
 saveWin :: [Int] -> [Int] -> Int -> FilePath -> IO ()
 saveWin seq1 seq2 w filename = do
   let cost = dtwWin (V.fromList seq1) (V.fromList seq2) intCost w
   render cost filename
 
+ts :: Num a => a
+ts = 256
+
 cosInt :: [Int]
-cosInt = map (floor . (*10) . cos) [-300.0 .. 300.0]
+cosInt = map (floor . (*10) . cos) [(0.0 :: Double) .. ts]
 
 sinInt :: [Int]
-sinInt = map (floor . (*10). sin) [-300.0 .. 300.0]
+sinInt = map (floor . (*10). sin) [(0.0 :: Double) .. ts]
+
+sinIntFast :: [Int]
+sinIntFast = map (floor . (*10). sin . (* 0.25)) [(0.0 :: Double) .. ts]
 
 main :: IO ()
 main = do
-  saveWin [0..500] [0..500] 5 "perfect-win5.bmp"
-  save    [0..500] [0..500]   "perfect.bmp"
-  saveWin [0..500] [500,499..0] 5 "opposite-win5.bmp"
-  save    [0..500] [500,499..0] "opposite.bmp" 
-  saveWin [0..500] [2,4..1000] 5 "double-win5.bmp"
-  save    [0..500] [2,4..1000] "double.bmp"
+  saveWin [0..ts] [0..ts] 5 "perfect-win5.bmp"
+  save    [0..ts] [0..ts]   "perfect.bmp"
+  saveWin [0..ts] [ts,ts - 1..0] 5 "opposite-win5.bmp"
+  save    [0..ts] [ts,ts - 1..0] "opposite.bmp" 
+  saveWin [0..ts] [2,4..ts * 2] 5 "double-win5.bmp"
+  save    [0..ts] [2,4..ts * 2] "double.bmp"
   save    cosInt   sinInt "cos-sin.bmp"
-  save    cosInt  [0..500] "cosInt-Linear.bmp"
+  save    cosInt  [0..ts] "cosInt-Linear.bmp"
