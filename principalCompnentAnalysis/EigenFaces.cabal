@@ -4,22 +4,21 @@
 name:                EigenFaces
 version:             0.1.0.0
 synopsis:            The "EigenFace" algorithm or something near enough
--- description:         
 homepage:            http://www.fatvat.co.uk/
 license:             BSD2
 license-file:        LICENSE
 author:              Jeff Foster
 maintainer:          jeff.foster@acm.org
--- copyright:           
+copyright:           Jeff Foster
 category:            Biometrics
 build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
 
 library
-  -- exposed-modules:     
+  exposed-modules:     Biometrics.Face.EigenFaces
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.6 && <4.7
-  -- hs-source-dirs:      
   default-language:    Haskell2010
+  GHC-options: -Wall
