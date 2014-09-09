@@ -7,13 +7,15 @@ import Codec.BMP
 import qualified Data.Vector.Storable as V
 import Data.Array
 
-import Data.ByteString (unpack)
+import Data.ByteString (pack,unpack)
 import Control.Monad (liftM)
 import Data.Either (rights)
 import Data.Word (Word8)
 
 import Data.List (nub)
 import Data.List.Split (chunksOf)
+
+import Data.Packed.Matrix
 
 -- TODO export these to an appropriate place
 readDatabase :: IO (Array Int (V.Vector Double))
@@ -33,8 +35,22 @@ toDouble :: [Word8] -> V.Vector Double
 toDouble = V.fromList . map (scale . average) . chunksOf 4
 
 average :: [Word8] -> Word8
-average p@(_:_:_:_:[]) = (sum $ map fromIntegral p) `div` 4
+average (r:_:_:_:[]) = r -- assume gray scale
 average _            = error "unexpected image format"
 
 scale :: Word8 -> Double
 scale x = (fromIntegral x) / 255.0
+
+toImage :: V.Vector Double -> BMP
+toImage = packRGBA32ToBMP 92 112 . pack . V.toList . V.concatMap toGrayScale
+  where
+    toGrayScale :: Double -> V.Vector Word8
+    toGrayScale x = V.snoc (V.replicate 3 (floor ((abs x) * 255))) 1
+
+main :: IO ()
+main = do
+  faceDB <- readDatabase
+  let pcaProject = pcaTransform faceDB pcaMatrix
+                 (pcaProject ! 1)
+  
+  

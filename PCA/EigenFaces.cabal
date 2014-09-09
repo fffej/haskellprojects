@@ -21,6 +21,7 @@ library
   -- other-extensions:    
   build-depends:       base >=4.6 && <4.7,
                        hstatistics >= 0.2,
+                       hmatrix >= 0.16,		       
                        bmp >= 1.2,
                        vector >= 0.8,
                        directory >= 1.2.0,
