@@ -22,3 +22,5 @@ standardDeviation p = (b - a) / 6
   where
     a = bestCaseEstimate p
     b = worstCaseEstimate p
+
+data Dependency = Dependency [Project] Project deriving (Show)

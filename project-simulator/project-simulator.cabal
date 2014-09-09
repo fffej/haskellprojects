@@ -61,7 +61,9 @@ executable project-simulator
   
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.7 && <4.8,
-                       time >= 1.4
+                       time >= 1.4,
+                       containers >= 0.5.5,
+                       random-fu >= 0.2.6
   
   -- Directories containing source files.
   hs-source-dirs:      src
