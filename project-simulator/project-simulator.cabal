@@ -51,7 +51,7 @@ cabal-version:       >=1.10
 
 executable project-simulator
   -- .hs or .lhs file containing the Main module.
-  -- main-is:             
+  main-is:             Main.hs
   
   -- Modules included in this executable, other than Main.
   -- other-modules:       
@@ -60,10 +60,11 @@ executable project-simulator
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.7 && <4.8
+  build-depends:       base >=4.7 && <4.8,
+                       time >= 1.4
   
   -- Directories containing source files.
-  -- hs-source-dirs:      
+  hs-source-dirs:      src
   
   -- Base language which the package is written in.
   default-language:    Haskell2010
