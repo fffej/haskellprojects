@@ -1,10 +1,11 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Simulate where
 
 import Projects
 
 import Data.Map (Map)
-import qualified Data.Map as M
-import Data.Time (UTCTime,NominalDiffTime)
+import Data.Time (UTCTime)
 
 import Data.Random
 import Data.Random.Distribution.Triangular
@@ -23,8 +24,8 @@ simulate = undefined
 estimate :: Project -> [ProjectCompletion]
 estimate p = undefined
 
-pdf :: Project -> Triangular NominalDiffTime
-pdf p = Triangular
+pdf :: Project -> RVar Double
+pdf p = floatingTriangular
           (bestCaseEstimate p)
           (mostLikelyEstimate p)
           (worstCaseEstimate p)

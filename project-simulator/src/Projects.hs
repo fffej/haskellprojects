@@ -1,23 +1,24 @@
 module Projects where
 
-import Data.Time.Clock (NominalDiffTime)
+-- TODO smart constructor to hide the use of double internally
+-- and only allow construction with a nominal diff time
 
 data Project = Project
                {
                  name :: String
-               , bestCaseEstimate :: NominalDiffTime
-               , mostLikelyEstimate :: NominalDiffTime
-               , worstCaseEstimate :: NominalDiffTime
+               , bestCaseEstimate :: Double
+               , mostLikelyEstimate :: Double
+               , worstCaseEstimate :: Double
                }  deriving (Show)
 
-weightedAverage :: Project -> NominalDiffTime
+weightedAverage :: Project -> Double
 weightedAverage p = (a + 4 * m + b) / 6
   where
     a = bestCaseEstimate p
     m = mostLikelyEstimate p
     b = worstCaseEstimate p
 
-standardDeviation :: Project -> NominalDiffTime
+standardDeviation :: Project -> Double
 standardDeviation p = (b - a) / 6
   where
     a = bestCaseEstimate p
