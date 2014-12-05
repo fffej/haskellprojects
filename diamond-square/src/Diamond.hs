@@ -2,6 +2,7 @@ module Diamond where
 
 import Data.Array
 
+-- This is the wrong data structure
 data Grid = Grid
             {
               size :: Int
@@ -23,5 +24,8 @@ setBlock g f v = g {
                    }
 
 render :: Grid -> Int -> Grid
-render g r = undefined
+render g r = render' g r (size g)
 
+render' :: Grid -> Int -> Int -> Grid
+render' g r 1 = g
+render' g r n = undefined
