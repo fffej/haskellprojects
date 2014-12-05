@@ -1,31 +1,28 @@
 module Diamond where
 
-import Data.Array
+data QuadTree = QuadTree QuadTree QuadTree QuadTree QuadTree
+              | Leaf Int
+              deriving (Show)
 
--- This is the wrong data structure
-data Grid = Grid
-            {
-              size :: Int
-            , elements :: Array (Int,Int) Int
-            } deriving (Show)
+render :: QuadTree -> [Int]
+render (Leaf n) = [n]
+render (QuadTree a b c d) = render a ++ render b ++ render c ++ render d
 
--- TODO add random height
-createGrid :: Int -> Grid
-createGrid n = Grid n a
-  where
-    d = 2^n - 1
-    b = ((0,0),(d,d)) 
-    a = array b [((x,y), 0) | x <- [0..d], y <- [0..d]]
+{-
+  12
+  34
+-}
+twoByTwo :: QuadTree
+twoByTwo = QuadTree (Leaf 1) (Leaf 2) (Leaf 3) (Leaf 4)
 
--- Set a particular block to a value
-setBlock :: Grid -> ((Int,Int) -> Bool) -> Int -> Grid
-setBlock g f v = g {
-                     elements = elements g // [(z, v) | z <- indices (elements g), f z]
-                   }
 
-render :: Grid -> Int -> Grid
-render g r = render' g r (size g)
+{-
+  1212
+  3434
+  1212
+  3434
+   QuadTree 
+-}
 
-render' :: Grid -> Int -> Int -> Grid
-render' g r 1 = g
-render' g r n = undefined
+fourByFour :: QuadTree
+fourByFour = QuadTree twoByTwo twoByTwo twoByTwo twoByTwo
