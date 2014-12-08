@@ -21,6 +21,9 @@ executable diamond-square
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8,
-                       array >= 0.5
+                       array >= 0.5,
+                       diagrams >= 1.2,
+                       diagrams-lib >= 1.2,
+                       diagrams-svg >= 1.1
   hs-source-dirs:      src/
   default-language:    Haskell2010
