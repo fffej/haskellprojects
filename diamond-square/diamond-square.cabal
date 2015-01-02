@@ -22,6 +22,7 @@ executable diamond-square
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8,
                        array >= 0.5,
+                       lens >= 4.6,
                        diagrams >= 1.2,
                        diagrams-lib >= 1.2,
                        diagrams-svg >= 1.1
