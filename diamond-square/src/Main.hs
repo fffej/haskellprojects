@@ -54,16 +54,24 @@ averageBottomHeight :: Square -> Double
 averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
 
 topLeft :: Square -> Square
-topLeft parent = size `over` (`div` 2) $ parent
+topLeft parent = sq
+  where
+    sq = size `over` (`div` 2) $ parent
 
 topRight :: Square -> Int -> Square
-topRight parent offset = move (Point 0 offset) (size `over` (`div` 2) $ parent)
+topRight parent offset = sq
+  where
+    sq = move (Point 0 offset) (size `over` (`div` 2) $ parent)
 
 bottomLeft :: Square -> Int -> Square
-bottomLeft parent offset = move (Point offset 0) (size `over` (`div` 2) $ parent)
+bottomLeft parent offset = sq
+  where
+    sq = move (Point offset 0) (size `over` (`div` 2) $ parent)
 
 bottomRight :: Square -> Int -> Square
-bottomRight parent offset = move (Point offset offset) (size `over` (`div` 2) $ parent)
+bottomRight parent offset = sq
+  where
+    sq = move (Point offset offset) (size `over` (`div` 2) $ parent)
 
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
