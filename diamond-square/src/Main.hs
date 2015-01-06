@@ -12,7 +12,7 @@ data Point = Point Int Int deriving (Show,Eq)
 
 data Square = Square
               {
-                _topLeft :: Point                
+                _position :: Point                
               , _size    :: Int 
               , _tl      :: Double -- Height of top left
               , _tr      :: Double -- top right
@@ -32,15 +32,15 @@ addPoint :: Point -> Point -> Point
 addPoint (Point x y) (Point a b) = Point (a+x) (b+y)
 
 move :: Point -> Square -> Square
-move p = topLeft `over` (addPoint p)
+move p = position `over` addPoint p
 
 divide :: Square -> [Square]
 divide sq = [topLeft,topRight,bottomLeft,bottomRight]
   where
+    topLeft = size `over` (`div` 2) $ sq
     topRight = move (Point 0 offset) topLeft
     bottomLeft = move (Point offset 0) topLeft
     bottomRight = move (Point offset offset) topLeft
-    topLeft = size `over` (`div` 2) $ sq
     offset = sq^.size `div` 2
 
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
