@@ -35,12 +35,12 @@ move :: Point -> Square -> Square
 move p = topLeft `over` (addPoint p)
 
 divide :: Square -> [Square]
-divide sq = [newSq,topRight,bottomLeft,bottomRight]
+divide sq = [topLeft,topRight,bottomLeft,bottomRight]
   where
-    topRight = move (Point 0 offset) newSq
-    bottomLeft = move (Point offset 0) newSq
-    bottomRight = move (Point offset offset) newSq
-    newSq = size `over` (`div` 2) $ sq
+    topRight = move (Point 0 offset) topLeft
+    bottomLeft = move (Point offset 0) topLeft
+    bottomRight = move (Point offset offset) topLeft
+    topLeft = size `over` (`div` 2) $ sq
     offset = sq^.size `div` 2
 
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
