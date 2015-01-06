@@ -44,21 +44,17 @@ averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0
 
 divide :: Square -> [Square]
 divide parent = [
-              set tr avgTopHeight $ set br (averageHeight 0 parent) sq
-            , set tl (averageTopHeight parent) $
-              set bl (averageHeight 0 parent)
-              (move (0,offset) (size `over` (`div` 2) $ parent))
-            ,  set tr (averageHeight 0 parent) $
-               set br (averageBottomHeight parent)
-               (move (offset,0) (size `over` (`div` 2) $ parent))
-            , set tl (averageHeight 0 parent) $
-              set bl (averageBottomHeight parent)
-              (move (offset,offset) (size `over` (`div` 2) $ parent))
+              set tr avgTopHeight $ set br avgHeight sq
+            , set tl avgTopHeight $ set bl avgHeight (move (0,offset) sq)
+            , set tr avgHeight $ set br avgBotHeight (move (offset,0) sq)
+            , set tl avgHeight $ set bl avgBotHeight (move (offset,offset) sq)
             ]
   where    
     offset = parent^.size `div` 2
     sq = size `over` (`div` 2) $ parent
     avgTopHeight = averageTopHeight parent
+    avgHeight = averageHeight 0 parent
+    avgBotHeight = averageBottomHeight parent
     
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
