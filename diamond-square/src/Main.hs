@@ -43,14 +43,15 @@ averageBottomHeight :: Square -> Double
 averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
 
 divide :: Square -> [Square]
-divide sq = [
-              topLeft sq 
-            , topRight sq offset
-            , bottomLeft sq offset
-            , bottomRight sq offset
+divide parent = [
+              topLeft parent 
+            , topRight parent offset
+            , bottomLeft parent offset
+            , bottomRight parent offset
             ]
   where    
     offset = sq^.size `div` 2
+    sq = size `over` (`div` 2) $ parent 
 
 
 topLeft :: Square -> Square
