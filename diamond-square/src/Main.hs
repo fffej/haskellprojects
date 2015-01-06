@@ -33,6 +33,15 @@ addPoint (x,y) (a,b) = (a+x,b+y)
 move :: Point -> Square -> Square
 move p = position `over` addPoint p
 
+averageHeight :: Square -> Double
+averageHeight sq = (sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0
+
+averageTopHeight :: Square -> Double
+averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
+
+averageBottomHeight :: Square -> Double
+averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
+
 divide :: Square -> [Square]
 divide sq = [
               topLeft sq 
@@ -43,14 +52,6 @@ divide sq = [
   where    
     offset = sq^.size `div` 2
 
-averageHeight :: Square -> Double
-averageHeight sq = (sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0
-
-averageTopHeight :: Square -> Double
-averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
-
-averageBottomHeight :: Square -> Double
-averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
 
 topLeft :: Square -> Square
 topLeft parent = set tr (averageTopHeight parent) $
