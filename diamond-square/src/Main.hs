@@ -45,40 +45,25 @@ averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0
 divide :: Square -> [Square]
 divide parent = [
               set tr avgTopHeight $ set br (averageHeight 0 parent) sq
-            , topRight parent offset
-            , bottomLeft parent offset
-            , bottomRight parent offset
+            , set tl (averageTopHeight parent) $
+              set bl (averageHeight 0 parent)
+              (move (0,offset) (size `over` (`div` 2) $ parent))
+            ,  set tr (averageHeight 0 parent) $
+               set br (averageBottomHeight parent)
+               (move (offset,0) (size `over` (`div` 2) $ parent))
+            , set tl (averageHeight 0 parent) $
+              set bl (averageBottomHeight parent)
+              (move (offset,offset) (size `over` (`div` 2) $ parent))
             ]
   where    
     offset = parent^.size `div` 2
     sq = size `over` (`div` 2) $ parent
     avgTopHeight = averageTopHeight parent
     
-
-
-topRight :: Square -> Int -> Square
-topRight parent offset = set tl (averageTopHeight parent) $
-                         set bl (averageHeight 0 parent) sq
-  where
-    sq = move (0,offset) (size `over` (`div` 2) $ parent)
-
-bottomLeft :: Square -> Int -> Square
-bottomLeft parent offset = set tr (averageHeight 0 parent) $
-                           set br (averageBottomHeight parent) sq
-  where
-    sq = move (offset,0) (size `over` (`div` 2) $ parent)
-
-bottomRight :: Square -> Int -> Square
-bottomRight parent offset = set tl (averageHeight 0 parent) $
-                            set bl (averageBottomHeight parent) sq
-  where
-    sq = move (offset,offset) (size `over` (`div` 2) $ parent)
-
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
   | isUnit sq = [sq]
   | otherwise = concatMap (allSubSquares f) (f sq)
-
 
 imageSize :: Int
 imageSize = 256
