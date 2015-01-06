@@ -33,8 +33,8 @@ addPoint (x,y) (a,b) = (a+x,b+y)
 move :: Point -> Square -> Square
 move p = position `over` addPoint p
 
-averageHeight :: Square -> Double
-averageHeight sq = (sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0
+averageHeight :: Double -> Square -> Double
+averageHeight eps sq = eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0)
 
 averageTopHeight :: Square -> Double
 averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
@@ -55,24 +55,24 @@ divide sq = [
 
 topLeft :: Square -> Square
 topLeft parent = set tr (averageTopHeight parent) $
-                 set br (averageHeight parent) sq
+                 set br (averageHeight 0 parent) sq
   where
     sq = size `over` (`div` 2) $ parent
 
 topRight :: Square -> Int -> Square
 topRight parent offset = set tl (averageTopHeight parent) $
-                         set bl (averageHeight parent) sq
+                         set bl (averageHeight 0 parent) sq
   where
     sq = move (0,offset) (size `over` (`div` 2) $ parent)
 
 bottomLeft :: Square -> Int -> Square
-bottomLeft parent offset = set tr (averageHeight parent) $
+bottomLeft parent offset = set tr (averageHeight 0 parent) $
                            set br (averageBottomHeight parent) sq
   where
     sq = move (offset,0) (size `over` (`div` 2) $ parent)
 
 bottomRight :: Square -> Int -> Square
-bottomRight parent offset = set tl (averageHeight parent) $
+bottomRight parent offset = set tl (averageHeight 0 parent) $
                             set bl (averageBottomHeight parent) sq
   where
     sq = move (offset,offset) (size `over` (`div` 2) $ parent)
@@ -90,7 +90,7 @@ generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
   where
     f x y = truncate (65536 * M.findWithDefault 0 (x,y) pixels)
-    pixels = M.fromList $ map (\x -> (x^.position, averageHeight x)) $ allSubSquares divide sq
+    pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) $ allSubSquares divide sq
 
 main :: IO ()
 main = do
