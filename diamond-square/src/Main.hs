@@ -54,12 +54,14 @@ averageBottomHeight :: Square -> Double
 averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
 
 topLeft :: Square -> Square
-topLeft parent = sq
+topLeft parent = set tr (averageTopHeight parent) $
+                 set br (averageHeight parent) sq
   where
     sq = size `over` (`div` 2) $ parent
 
 topRight :: Square -> Int -> Square
-topRight parent offset = sq
+topRight parent offset = set tl (averageTopHeight parent) $
+                         set bl (averageHeight parent) sq
   where
     sq = move (Point 0 offset) (size `over` (`div` 2) $ parent)
 
