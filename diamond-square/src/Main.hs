@@ -4,8 +4,12 @@
 module Main where
 
 import Control.Lens
+import Codec.Picture
+import Data.Maybe (fromJust)
 
-data Point = Point Int Int deriving (Show,Eq)
+import qualified Data.Map.Strict as M
+
+type Point = (Int,Int)
 
 data Square = Square
               {
@@ -23,10 +27,10 @@ isUnit :: Square -> Bool
 isUnit sq = sq^.size == 1
 
 origin :: Point
-origin = Point 0 0
+origin = (0,0)
 
 addPoint :: Point -> Point -> Point
-addPoint (Point x y) (Point a b) = Point (a+x) (b+y)
+addPoint (x,y) (a,b) = (a+x,b+y)
 
 move :: Point -> Square -> Square
 move p = position `over` addPoint p
@@ -60,24 +64,38 @@ topRight :: Square -> Int -> Square
 topRight parent offset = set tl (averageTopHeight parent) $
                          set bl (averageHeight parent) sq
   where
-    sq = move (Point 0 offset) (size `over` (`div` 2) $ parent)
+    sq = move (0,offset) (size `over` (`div` 2) $ parent)
 
 bottomLeft :: Square -> Int -> Square
 bottomLeft parent offset = set tr (averageHeight parent) $
                            set br (averageBottomHeight parent) sq
   where
-    sq = move (Point offset 0) (size `over` (`div` 2) $ parent)
+    sq = move (offset,0) (size `over` (`div` 2) $ parent)
 
 bottomRight :: Square -> Int -> Square
 bottomRight parent offset = set tl (averageHeight parent) $
                             set bl (averageBottomHeight parent) sq
   where
-    sq = move (Point offset offset) (size `over` (`div` 2) $ parent)
+    sq = move (offset,offset) (size `over` (`div` 2) $ parent)
 
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
   | isUnit sq = [sq]
   | otherwise = concatMap (allSubSquares f) (f sq)
 
+
+imageSize :: Int
+imageSize = 256
+
+generatePlasma :: Square -> Image Pixel16
+generatePlasma sq = generateImage f imageSize imageSize
+  where
+    f x y = truncate (65536 * M.findWithDefault 0 (x,y) pixels)
+    pixels = M.fromList $ map (\x -> (x^.position, averageHeight x)) $ allSubSquares divide sq
+
 main :: IO ()
-main = undefined
+main = do
+  writePng "/home/jefff/Desktop/allWhite.png" $ generatePlasma (Square origin imageSize 1 1 1 1)
+  writePng "/home/jefff/Desktop/allBlack.png" $ generatePlasma (Square origin imageSize 0 0 0 0)
+  writePng "/home/jefff/Desktop/leftToRight.png" $ generatePlasma (Square origin imageSize 1 1 0 0)
+  writePng "/home/jefff/Desktop/rightToLeft.png" $ generatePlasma (Square origin imageSize 0 0 1 1)

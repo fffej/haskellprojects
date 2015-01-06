@@ -22,6 +22,8 @@ executable diamond-square
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8,
                        array >= 0.5,
-                       lens >= 4.6
+                       lens >= 4.6,
+                       JuicyPixels >= 3.2,
+                       containers >= 0.5.5
   hs-source-dirs:      src/
   default-language:    Haskell2010
