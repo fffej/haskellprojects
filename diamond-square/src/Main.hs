@@ -42,24 +42,24 @@ averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0
 averageBottomHeight :: Square -> Double
 averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
 
-divide :: Square -> [Square]
-divide parent = [
-              set tr avgTopHeight $ set br avgHeight    sq
-            , set tl avgTopHeight $ set bl avgHeight    (move (0,offset) sq)
-            , set tr avgHeight    $ set br avgBotHeight (move (offset,0) sq)
-            , set tl avgHeight    $ set bl avgBotHeight (move (offset,offset) sq)
-            ]
+divide :: Double -> Square -> [Square]
+divide eps parent = [
+    set tr avgTopHeight $ set br avgHeight    sq
+  , set tl avgTopHeight $ set bl avgHeight    (move (0,offset) sq)
+  , set tr avgHeight    $ set br avgBotHeight (move (offset,0) sq)
+  , set tl avgHeight    $ set bl avgBotHeight (move (offset,offset) sq)
+  ]
   where    
     offset = parent^.size `div` 2
     sq = size `over` (`div` 2) $ parent
     avgTopHeight = averageTopHeight parent
-    avgHeight = averageHeight 0 parent
+    avgHeight = averageHeight eps parent
     avgBotHeight = averageBottomHeight parent
     
-allSubSquares :: (Square -> [Square]) -> Square -> [Square]
+allSubSquares :: (Double -> Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
   | isUnit sq = [sq]
-  | otherwise = concatMap (allSubSquares f) (f sq)
+  | otherwise = concatMap (allSubSquares f) (f 0 sq)
 
 imageSize :: Int
 imageSize = 256
@@ -67,7 +67,8 @@ imageSize = 256
 generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
   where
-    f x y = truncate (65536 * M.findWithDefault 0 (x,y) pixels)
+    scale p = truncate (65536 * p)
+    f x y = scale (M.findWithDefault 0 (x,y) pixels) 
     pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) $ allSubSquares divide sq
 
 main :: IO ()
