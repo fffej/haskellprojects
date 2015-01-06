@@ -5,8 +5,6 @@ module Main where
 
 import Control.Lens
 import Codec.Picture
-import Data.Maybe (fromJust)
-
 import qualified Data.Map.Strict as M
 
 type Point = (Int,Int)
