@@ -35,13 +35,35 @@ move :: Point -> Square -> Square
 move p = position `over` addPoint p
 
 divide :: Square -> [Square]
-divide sq = [topLeft,topRight,bottomLeft,bottomRight]
-  where
-    topLeft = size `over` (`div` 2) $ sq
-    topRight = move (Point 0 offset) topLeft
-    bottomLeft = move (Point offset 0) topLeft
-    bottomRight = move (Point offset offset) topLeft
+divide sq = [
+              topLeft sq 
+            , topRight sq offset
+            , bottomLeft sq offset
+            , bottomRight sq offset
+            ]
+  where    
     offset = sq^.size `div` 2
+
+averageHeight :: Square -> Double
+averageHeight sq = (sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0
+
+averageTopHeight :: Square -> Double
+averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
+
+averageBottomHeight :: Square -> Double
+averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
+
+topLeft :: Square -> Square
+topLeft parent = size `over` (`div` 2) $ parent
+
+topRight :: Square -> Int -> Square
+topRight parent offset = move (Point 0 offset) (size `over` (`div` 2) $ parent)
+
+bottomLeft :: Square -> Int -> Square
+bottomLeft parent offset = move (Point offset 0) (size `over` (`div` 2) $ parent)
+
+bottomRight :: Square -> Int -> Square
+bottomRight parent offset = move (Point offset offset) (size `over` (`div` 2) $ parent)
 
 allSubSquares :: (Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
