@@ -3,9 +3,6 @@
 
 module Main where
 
--- import Diagrams.Prelude hiding (Point, origin)
--- import Diagrams.Backend.SVG.CmdLine
-
 import Control.Lens
 
 data Point = Point Int Int deriving (Show,Eq)
@@ -66,12 +63,14 @@ topRight parent offset = set tl (averageTopHeight parent) $
     sq = move (Point 0 offset) (size `over` (`div` 2) $ parent)
 
 bottomLeft :: Square -> Int -> Square
-bottomLeft parent offset = sq
+bottomLeft parent offset = set tr (averageHeight parent) $
+                           set br (averageBottomHeight parent) sq
   where
     sq = move (Point offset 0) (size `over` (`div` 2) $ parent)
 
 bottomRight :: Square -> Int -> Square
-bottomRight parent offset = sq
+bottomRight parent offset = set tl (averageHeight parent) $
+                            set bl (averageBottomHeight parent) sq
   where
     sq = move (Point offset offset) (size `over` (`div` 2) $ parent)
 
