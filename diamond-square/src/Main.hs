@@ -80,22 +80,25 @@ allSubSquaresPlusPerturbation f sq
 imageSize :: Int
 imageSize = 256
 
-scale :: Double -> Pixel16
-scale p = truncate (65536 * p)
+scale :: Double -> Double -> Double -> Pixel16
+scale mn mx p = truncate (65536 * p)
 
 generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
   where
     minP = maximum $ M.elems pixels
     maxP = minimum $ M.elems pixels
-    f x y = scale (M.findWithDefault 0 (x,y) pixels) 
+    f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels) 
     pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) $ allSubSquares divide sq
 
 generatePlasma2 :: Square -> IO (Image Pixel16)
 generatePlasma2 sq = do
   sqs <- allSubSquaresPlusPerturbation divide sq
-  let f x y = scale (M.findWithDefault 0 (x,y) pixels)
+  let f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels)
       pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) sqs
+      minP = maximum $ M.elems pixels
+      maxP = minimum $ M.elems pixels
+
   return (generateImage f imageSize imageSize)
 
 main :: IO ()
