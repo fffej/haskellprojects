@@ -38,7 +38,7 @@ move :: Point -> Square -> Square
 move p = position `over` addPoint p
 
 averageHeight :: Double -> Square -> Double
-averageHeight eps sq = min 1 $ abs $ eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0)
+averageHeight eps sq = abs (eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0))
 
 averageTopHeight :: Square -> Double
 averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
@@ -72,7 +72,7 @@ allSubSquaresPlusPerturbation :: (Double -> Square -> [Square]) -> Square -> IO 
 allSubSquaresPlusPerturbation f sq
   | isUnit sq = return [sq]
   | otherwise = do
-    let sz = logBase 2 (fromIntegral $ sq^.size) :: Double
+    let sz = (fromIntegral $ sq^.size) :: Double
     x <- normalIO' (0,sz) 
     liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (x * epsilon) sq)
     
@@ -86,6 +86,8 @@ scale p = truncate (65536 * p)
 generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
   where
+    minP = maximum $ M.elems pixels
+    maxP = minimum $ M.elems pixels
     f x y = scale (M.findWithDefault 0 (x,y) pixels) 
     pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) $ allSubSquares divide sq
 
