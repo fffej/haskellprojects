@@ -19,11 +19,16 @@ data Square = Square
               , br      :: Double -- Height of bottom right
               } deriving (Show,Eq)
 
+mkSquare :: Int -> IO Square
+mkSquare sz = do
+  a <- randomRIO(- 0.5, 0.5)
+  b <- randomRIO(- 0.5, 0.5)
+  c <- randomRIO(- 0.5, 0.5)
+  d <- randomRIO(- 0.5, 0.5)
+  return (Square (0,0) sz a b c d)
+
 isUnit :: Square -> Bool
 isUnit sq = size sq == 1
-
-origin :: Point
-origin = (0,0)
 
 addPoint :: Point -> Point -> Point
 addPoint (x,y) (a,b) = (a+x,b+y)
@@ -109,10 +114,3 @@ main = do
   writePng "/home/jefff/Desktop/random.png" img
   writePng "/home/jefff/Desktop/notrandom.png" img2
 
-mkSquare :: Int -> IO Square
-mkSquare sz = do
-  a <- randomRIO(- 0.5, 0.5)
-  b <- randomRIO(- 0.5, 0.5)
-  c <- randomRIO(- 0.5, 0.5)
-  d <- randomRIO(- 0.5, 0.5)
-  return (Square origin sz a b c d)
