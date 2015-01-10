@@ -30,11 +30,10 @@ mkSquare sz = do
 isUnit :: Square -> Bool
 isUnit sq = size sq == 1
 
-addPoint :: Point -> Point -> Point
-addPoint (x,y) (a,b) = (a+x,b+y)
-
 move :: Point -> Square -> Square
-move p sq = sq { position = addPoint p (position sq) }
+move (x,y) sq = sq { position = (a+x,b+y) }
+  where
+    (a,b) = position sq
 
 averageHeight :: Double -> Square -> Double
 averageHeight eps sq = eps + ((tl sq + tr sq + bl sq + br sq) / 4.0)
