@@ -88,6 +88,22 @@ grayScale mn mx p = truncate $ 65535 * zeroToOne
   where
     zeroToOne = (p - mn) / (mx - mn)
 
+jetMap :: Double -> Double -> Double -> PixelRGB8
+jetMap mn mx p = PixelRGB8 (trunc r) (trunc g) (trunc b)
+  where
+    trunc c = truncate (c * 255)
+    (r,g,b) = color $ (p - mn) / (mx -mn)
+
+-- v is bound between 0 and 1
+-- dv is 1
+color :: Double -> (Double,Double,Double)
+color v
+  | v < 0.25  = (0,4*v,1)
+  | v < 0.50  = (0,1,1 + 4 * (0.25 - v))
+  | v < 0.75  = (4 * (v - 0.5),1,0)
+  | otherwise = (1,1 + 4 * (0.75 - v),0)
+
+
 generatePlasma :: Pixel a => (Double -> Double -> Double -> a) -> Square -> Image a
 generatePlasma pixFunc sq = generateImage f imageSize imageSize
   where
@@ -108,8 +124,8 @@ generatePlasma2 pixFunc sq = do
 main :: IO ()
 main = do
   sq <- mkSquare imageSize
-  img <- generatePlasma2 grayScale sq
-  let img2 = generatePlasma grayScale sq
-  writePng "/home/jefff/Desktop/random.png" img
-  writePng "/home/jefff/Desktop/notrandom.png" img2
+  img <- generatePlasma2 jetMap sq
+  let img2 = generatePlasma jetMap sq
+  writePng "/home/jefff/Desktop/randomC.png" img
+  writePng "/home/jefff/Desktop/notrandomC.png" img2
 
