@@ -7,10 +7,8 @@ import Control.Lens
 import Codec.Picture
 import qualified Data.Map.Strict as M
 
-import Data.Random.Normal
-import Control.Monad (liftM,liftM2)
-import Control.Applicative
-
+import System.Random
+import Control.Monad (liftM)
 type Point = (Int,Int)
 
 data Square = Square
@@ -38,7 +36,7 @@ move :: Point -> Square -> Square
 move p = position `over` addPoint p
 
 averageHeight :: Double -> Square -> Double
-averageHeight eps sq = abs (eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0))
+averageHeight eps sq = eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0)
 
 averageTopHeight :: Square -> Double
 averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
@@ -65,23 +63,20 @@ allSubSquares f sq
   | isUnit sq = [sq]
   | otherwise = concatMap (allSubSquares f) (f 0 sq)
 
-epsilon :: Double
-epsilon = 0.1
-
 allSubSquaresPlusPerturbation :: (Double -> Square -> [Square]) -> Square -> IO [Square]
 allSubSquaresPlusPerturbation f sq
   | isUnit sq = return [sq]
   | otherwise = do
-    let sz = (fromIntegral $ sq^.size) :: Double
-    x <- normalIO' (0,sz) 
-    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (x * epsilon) sq)
+    let sz = 2 ** (- (fromIntegral $ sq^.size)) :: Double
+    x <- randomRIO (0,1)
+    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (x * sz) sq)
     
 
 imageSize :: Int
 imageSize = 256
 
 scale :: Double -> Double -> Double -> Pixel16
-scale mn mx p = truncate (65536 * p)
+scale mn mx p = truncate $ 65535 * ((p - mn) / (mx - mn))
 
 generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
@@ -103,6 +98,6 @@ generatePlasma2 sq = do
 
 main :: IO ()
 main = do
-  img <- generatePlasma2 (Square origin imageSize 0.9 0.25 0.75 0.8)
+  img <- generatePlasma2 (Square origin imageSize 1 0.25 0.75 0.2)
   writePng "/home/jefff/Desktop/random.png" img
 
