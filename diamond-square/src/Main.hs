@@ -50,26 +50,9 @@ averageLhsHeight sq = (sq^.tl + sq^.bl) / 2.0
 averageRhsHeight :: Square -> Double
 averageRhsHeight sq = (sq^.tr + sq^.br) / 2.0
 
-
--- Divides a square
--- XXXXXXXX
--- XXXXXXXX
--- XXXXXXXX
--- XXXXXXXX
--- Into individual components, computing the new height
--- AXXXBXXX
--- XXXXXXXX
--- XXXXXXXX
--- XXXXXXXX
--- CXXXDXXX
--- XXXXXXXX
--- XXXXXXXX
--- XXXXXXXX
--- So TR A should be TL B
--- BR A should be BL B
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    set tr avgTopHeight $ set br avgHeight $ set bl avgLhsHeight $ sq -- top left unchanged
+    set tr avgTopHeight $ set br avgHeight    $ set bl avgLhsHeight $ sq -- top left unchanged
   , set tl avgTopHeight $ set bl avgHeight    $ set br avgRhsHeight $ (move (offset,0) sq) -- top right unchanged
   , set tr avgHeight    $ set br avgBotHeight $ set tl avgLhsHeight $ (move (0,offset) sq) -- bottom left unchanged
   , set tl avgHeight    $ set bl avgBotHeight $ set tr avgRhsHeight $ (move (offset,offset) sq)    -- bottom right unchanged
