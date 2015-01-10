@@ -6,6 +6,7 @@ import qualified Data.Map.Strict as M
 
 import System.Random
 import Control.Monad (liftM)
+import Control.Arrow ((&&&))
 type Point = (Int,Int)
 
 data Square = Square
@@ -70,16 +71,18 @@ allSubSquaresPlusPerturbation :: (Double -> Square -> [Square]) -> Square -> IO 
 allSubSquaresPlusPerturbation f sq
   | isUnit sq = return [sq]
   | otherwise = do
-    let sz = fromIntegral (size sq) :: Double
+    let sz = sqrt $ fromIntegral (size sq)
     x <- randomRIO (- 0.5,0.5)
-    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (sqrt sz * x) sq)
+    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (sz * x) sq)
     
 
 imageSize :: Int
 imageSize = 512
 
 scale :: Double -> Double -> Double -> Pixel16
-scale mn mx p = truncate $ 65535 * ((p - mn) / (mx - mn))
+scale mn mx p = truncate $ 65535 * zeroToOne
+  where
+    zeroToOne = ((p - mn) / (mx - mn))
 
 generatePlasma :: Square -> Image Pixel16
 generatePlasma sq = generateImage f imageSize imageSize
@@ -87,23 +90,24 @@ generatePlasma sq = generateImage f imageSize imageSize
     minP = maximum $ M.elems pixels
     maxP = minimum $ M.elems pixels
     f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels) 
-    pixels = M.fromList $ map (\x -> (position x, averageHeight 0 x)) $ allSubSquares divide sq
+    pixels = M.fromList $ map (position &&& averageHeight 0) $ allSubSquares divide sq
 
 generatePlasma2 :: Square -> IO (Image Pixel16)
 generatePlasma2 sq = do
   sqs <- allSubSquaresPlusPerturbation divide sq
   let f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels)
-      pixels = M.fromList $ map (\x -> (position x, averageHeight 0 x)) sqs
+      pixels = M.fromList $ map (position &&& averageHeight 0) sqs
       minP = maximum $ M.elems pixels
       maxP = minimum $ M.elems pixels
-
   return (generateImage f imageSize imageSize)
 
 main :: IO ()
 main = do
   sq <- mkSquare imageSize
   img <- generatePlasma2 sq
+  let img2 = generatePlasma sq
   writePng "/home/jefff/Desktop/random.png" img
+  writePng "/home/jefff/Desktop/notrandom.png" img2
 
 mkSquare :: Int -> IO Square
 mkSquare sz = do
