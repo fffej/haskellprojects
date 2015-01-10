@@ -3,7 +3,6 @@
 
 module Main where
 
-import Control.Lens
 import Codec.Picture
 import qualified Data.Map.Strict as M
 
@@ -13,18 +12,16 @@ type Point = (Int,Int)
 
 data Square = Square
               {
-                _position :: Point                
-              , _size    :: Int 
-              , _tl      :: Double -- Height of top left
-              , _tr      :: Double -- top right
-              , _bl      :: Double -- bottom left
-              , _br      :: Double -- bottom right
+                position :: Point                
+              , size    :: Int 
+              , tl      :: Double -- Height of top left
+              , tr      :: Double -- top right
+              , bl      :: Double -- bottom left
+              , br      :: Double -- bottom right
               } deriving (Show,Eq)
 
-makeLenses ''Square
-
 isUnit :: Square -> Bool
-isUnit sq = sq^.size == 1
+isUnit sq = size sq == 1
 
 origin :: Point
 origin = (0,0)
@@ -33,33 +30,33 @@ addPoint :: Point -> Point -> Point
 addPoint (x,y) (a,b) = (a+x,b+y)
 
 move :: Point -> Square -> Square
-move p = position `over` addPoint p
+move p sq = sq { position = addPoint p (position sq) }
 
 averageHeight :: Double -> Square -> Double
-averageHeight eps sq = eps + ((sq^.tl + sq^.tr + sq^.bl + sq ^.br) / 4.0)
+averageHeight eps sq = eps + ((tl sq + tr sq + bl sq + br sq) / 4.0)
 
 averageTopHeight :: Square -> Double
-averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
+averageTopHeight sq = (tl sq + tr sq) / 2.0 
 
 averageBottomHeight :: Square -> Double
-averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0
+averageBottomHeight sq = (bl sq + br sq) / 2.0
 
 averageLhsHeight :: Square -> Double
-averageLhsHeight sq = (sq^.tl + sq^.bl) / 2.0
+averageLhsHeight sq = (tl sq + bl sq) / 2.0
 
 averageRhsHeight :: Square -> Double
-averageRhsHeight sq = (sq^.tr + sq^.br) / 2.0
+averageRhsHeight sq = (tr sq + br sq) / 2.0
 
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    set tr avgTopHeight $ set br avgHeight    $ set bl avgLhsHeight sq -- top left unchanged
-  , set tl avgTopHeight $ set bl avgHeight    $ set br avgRhsHeight (move (offset,0) sq) -- top right unchanged
-  , set tr avgHeight    $ set br avgBotHeight $ set tl avgLhsHeight (move (0,offset) sq) -- bottom left unchanged
-  , set tl avgHeight    $ set bl avgBotHeight $ set tr avgRhsHeight (move (offset,offset) sq)    -- bottom right unchanged
+    sq { tr = avgTopHeight, br = avgHeight, bl = avgLhsHeight } -- top left unchanged
+  , (move (offset,0) sq) { tl = avgTopHeight, bl = avgHeight, br = avgRhsHeight } -- top right unchanged
+  , (move (0,offset) sq) { tr = avgHeight, br = avgBotHeight, tl = avgLhsHeight } -- bottom left unchanged
+  , (move (offset,offset) sq) { tl = avgHeight, bl = avgBotHeight, tr = avgRhsHeight } -- bottom right unchanged
   ]
   where    
-    offset = parent^.size `div` 2
-    sq = size `over` (`div` 2) $ parent
+    offset = size parent `div` 2
+    sq = parent { size = size parent `div` 2 }
     avgTopHeight = averageTopHeight parent
     avgHeight = averageHeight eps parent
     avgBotHeight = averageBottomHeight parent
@@ -75,7 +72,7 @@ allSubSquaresPlusPerturbation :: (Double -> Square -> [Square]) -> Square -> IO 
 allSubSquaresPlusPerturbation f sq
   | isUnit sq = return [sq]
   | otherwise = do
-    let sz = fromIntegral (sq^.size) :: Double
+    let sz = fromIntegral (size sq) :: Double
     x <- randomRIO (- 0.5,0.5)
     liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (sqrt sz * x) sq)
     
@@ -92,13 +89,13 @@ generatePlasma sq = generateImage f imageSize imageSize
     minP = maximum $ M.elems pixels
     maxP = minimum $ M.elems pixels
     f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels) 
-    pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) $ allSubSquares divide sq
+    pixels = M.fromList $ map (\x -> (position x, averageHeight 0 x)) $ allSubSquares divide sq
 
 generatePlasma2 :: Square -> IO (Image Pixel16)
 generatePlasma2 sq = do
   sqs <- allSubSquaresPlusPerturbation divide sq
   let f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels)
-      pixels = M.fromList $ map (\x -> (x^.position, averageHeight 0 x)) sqs
+      pixels = M.fromList $ map (\x -> (position x, averageHeight 0 x)) sqs
       minP = maximum $ M.elems pixels
       maxP = minimum $ M.elems pixels
 
