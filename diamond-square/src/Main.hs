@@ -48,19 +48,19 @@ averageRhsHeight sq = (tr sq + br sq) / 2.0
 
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    sq { tr = avgTopHeight, br = avgHeight, bl = avgLhsHeight } -- top left unchanged
-  , (move (offset,0) sq) { tl = avgTopHeight, bl = avgHeight, br = avgRhsHeight } -- top right unchanged
-  , (move (0,offset) sq) { tr = avgHeight, br = avgBotHeight, tl = avgLhsHeight } -- bottom left unchanged
-  , (move (offset,offset) sq) { tl = avgHeight, bl = avgBotHeight, tr = avgRhsHeight } -- bottom right unchanged
+    sq                        { tr = at, br = ah, bl = al } -- top left unchanged
+  , (move (offset,0) sq)      { tl = at, bl = ah, br = ar } -- top right unchanged
+  , (move (0,offset) sq)      { tr = ah, br = ab, tl = al } -- bottom left unchanged
+  , (move (offset,offset) sq) { tl = ah, bl = ab, tr = ar } -- bottom right unchanged
   ]
   where    
     offset = size parent `div` 2
-    sq = parent { size = size parent `div` 2 }
-    avgTopHeight = averageTopHeight parent
-    avgHeight = averageHeight eps parent
-    avgBotHeight = averageBottomHeight parent
-    avgRhsHeight = averageRhsHeight parent
-    avgLhsHeight = averageLhsHeight parent
+    sq = parent { size = offset }
+    at = averageTopHeight parent
+    ah = averageHeight eps parent -- height of diamond
+    ab = averageBottomHeight parent
+    ar = averageRhsHeight parent
+    al = averageLhsHeight parent
     
 allSubSquares :: (Double -> Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
@@ -79,23 +79,23 @@ allSubSquaresPlusPerturbation f sq
 imageSize :: Int
 imageSize = 512
 
-scale :: Double -> Double -> Double -> Pixel16
-scale mn mx p = truncate $ 65535 * zeroToOne
+grayScale :: Double -> Double -> Double -> Pixel16
+grayScale mn mx p = truncate $ 65535 * zeroToOne
   where
     zeroToOne = ((p - mn) / (mx - mn))
 
-generatePlasma :: Square -> Image Pixel16
-generatePlasma sq = generateImage f imageSize imageSize
+generatePlasma :: Pixel a => (Double -> Double -> Double -> a) -> Square -> Image a
+generatePlasma pixFunc sq = generateImage f imageSize imageSize
   where
     minP = maximum $ M.elems pixels
     maxP = minimum $ M.elems pixels
-    f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels) 
+    f x y = pixFunc minP maxP (M.findWithDefault 0 (x,y) pixels) 
     pixels = M.fromList $ map (position &&& averageHeight 0) $ allSubSquares divide sq
 
 generatePlasma2 :: Square -> IO (Image Pixel16)
 generatePlasma2 sq = do
   sqs <- allSubSquaresPlusPerturbation divide sq
-  let f x y = scale minP maxP (M.findWithDefault 0 (x,y) pixels)
+  let f x y = grayScale minP maxP (M.findWithDefault 0 (x,y) pixels)
       pixels = M.fromList $ map (position &&& averageHeight 0) sqs
       minP = maximum $ M.elems pixels
       maxP = minimum $ M.elems pixels
@@ -105,7 +105,7 @@ main :: IO ()
 main = do
   sq <- mkSquare imageSize
   img <- generatePlasma2 sq
-  let img2 = generatePlasma sq
+  let img2 = generatePlasma grayScale sq
   writePng "/home/jefff/Desktop/random.png" img
   writePng "/home/jefff/Desktop/notrandom.png" img2
 
