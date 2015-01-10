@@ -42,14 +42,37 @@ averageTopHeight :: Square -> Double
 averageTopHeight sq = (sq^.tl + sq^.tr) / 2.0 
 
 averageBottomHeight :: Square -> Double
-averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0 
+averageBottomHeight sq = (sq^.bl + sq^.br) / 2.0
 
+averageLhsHeight :: Square -> Double
+averageLhsHeight sq = (sq^.tl + sq^.bl) / 2.0
+
+averageRhsHeight :: Square -> Double
+averageRhsHeight sq = (sq^.tr + sq^.br) / 2.0
+
+
+-- Divides a square
+-- XXXXXXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- Into individual components, computing the new height
+-- AXXXBXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- CXXXDXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- XXXXXXXX
+-- So TR A should be TL B
+-- BR A should be BL B
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    set tr avgTopHeight $ set br avgHeight    sq
-  , set tl avgTopHeight $ set bl avgHeight    (move (offset,0) sq)
-  , set tl avgHeight    $ set bl avgBotHeight (move (offset,offset) sq)
-  , set tr avgHeight    $ set br avgBotHeight (move (0,offset) sq)
+    set tr avgTopHeight $ set br avgHeight $ set bl avgLhsHeight $ sq -- top left unchanged
+  , set tl avgTopHeight $ set bl avgHeight    $ set br avgRhsHeight $ (move (offset,0) sq) -- top right unchanged
+  , set tr avgHeight    $ set br avgBotHeight $ set tl avgLhsHeight $ (move (0,offset) sq) -- bottom left unchanged
+  , set tl avgHeight    $ set bl avgBotHeight $ set tr avgRhsHeight $ (move (offset,offset) sq)    -- bottom right unchanged
   ]
   where    
     offset = parent^.size `div` 2
@@ -57,6 +80,8 @@ divide eps parent = [
     avgTopHeight = averageTopHeight parent
     avgHeight = averageHeight eps parent
     avgBotHeight = averageBottomHeight parent
+    avgRhsHeight = averageRhsHeight parent
+    avgLhsHeight = averageLhsHeight parent
     
 allSubSquares :: (Double -> Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
@@ -67,13 +92,13 @@ allSubSquaresPlusPerturbation :: (Double -> Square -> [Square]) -> Square -> IO 
 allSubSquaresPlusPerturbation f sq
   | isUnit sq = return [sq]
   | otherwise = do
-    let sz = 2 ** (- (fromIntegral $ sq^.size)) :: Double
-    x <- randomRIO (0,1)
-    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (x * sz) sq)
+    let sz = fromIntegral (sq^.size) :: Double
+    x <- randomRIO (- 0.5,0.5)
+    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f ((sqrt sz) * x) sq)
     
 
 imageSize :: Int
-imageSize = 256
+imageSize = 512
 
 scale :: Double -> Double -> Double -> Pixel16
 scale mn mx p = truncate $ 65535 * ((p - mn) / (mx - mn))
@@ -98,6 +123,14 @@ generatePlasma2 sq = do
 
 main :: IO ()
 main = do
-  img <- generatePlasma2 (Square origin imageSize 1 0.25 0.75 0.2)
+  sq <- mkSquare imageSize
+  img <- generatePlasma2 sq
   writePng "/home/jefff/Desktop/random.png" img
 
+mkSquare :: Int -> IO Square
+mkSquare sz = do
+  a <- randomRIO(- 0.5, 0.5)
+  b <- randomRIO(- 0.5, 0.5)
+  c <- randomRIO(- 0.5, 0.5)
+  d <- randomRIO(- 0.5, 0.5)
+  return (Square origin sz a b c d)
