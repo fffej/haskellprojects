@@ -52,14 +52,14 @@ averageRightHeight sq = (tr sq + br sq) / 2.0
 
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    sq                        { tr = at, br = ah, bl = al } -- top left unchanged
-  , (move sq (offset,0))      { tl = at, bl = ah, br = ar } -- top right unchanged
-  , (move sq (0,offset))      { tr = ah, br = ab, tl = al } -- bottom left unchanged
-  , (move sq (offset,offset)) { tl = ah, bl = ab, tr = ar } -- bottom right unchanged
+    sq                    { tr = at, br = ah, bl = al } -- top left unchanged
+  , (move sq (half,0))    { tl = at, bl = ah, br = ar } -- top right unchanged
+  , (move sq (0,half))    { tr = ah, br = ab, tl = al } -- bottom left unchanged
+  , (move sq (half,half)) { tl = ah, bl = ab, tr = ar } -- bottom right unchanged
   ]
   where    
-    offset = size parent `div` 2
-    sq = parent { size = offset }
+    half = size parent `div` 2
+    sq = parent { size = half }
     at = averageTopHeight parent
     ah = averageHeight eps parent -- height of middle
     ab = averageBottomHeight parent
