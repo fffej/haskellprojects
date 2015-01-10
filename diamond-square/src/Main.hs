@@ -30,8 +30,8 @@ mkSquare sz = do
 isUnit :: Square -> Bool
 isUnit sq = size sq == 1
 
-move :: Point -> Square -> Square
-move (x,y) sq = sq { position = (a+x,b+y) }
+move :: Square -> Point -> Square
+move sq (x,y) = sq { position = (a+x,b+y) }
   where
     (a,b) = position sq
 
@@ -53,9 +53,9 @@ averageRhsHeight sq = (tr sq + br sq) / 2.0
 divide :: Double -> Square -> [Square]
 divide eps parent = [
     sq                        { tr = at, br = ah, bl = al } -- top left unchanged
-  , (move (offset,0) sq)      { tl = at, bl = ah, br = ar } -- top right unchanged
-  , (move (0,offset) sq)      { tr = ah, br = ab, tl = al } -- bottom left unchanged
-  , (move (offset,offset) sq) { tl = ah, bl = ab, tr = ar } -- bottom right unchanged
+  , (move sq (offset,0))      { tl = at, bl = ah, br = ar } -- top right unchanged
+  , (move sq (0,offset))      { tr = ah, br = ab, tl = al } -- bottom left unchanged
+  , (move sq (offset,offset)) { tl = ah, bl = ab, tr = ar } -- bottom right unchanged
   ]
   where    
     offset = size parent `div` 2
