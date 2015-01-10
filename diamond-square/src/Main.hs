@@ -1,6 +1,4 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE TemplateHaskell #-}
-
 module Main where
 
 import Codec.Picture
