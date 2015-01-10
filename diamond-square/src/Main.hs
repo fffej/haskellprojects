@@ -44,11 +44,11 @@ averageTopHeight sq = (tl sq + tr sq) / 2.0
 averageBottomHeight :: Square -> Double
 averageBottomHeight sq = (bl sq + br sq) / 2.0
 
-averageLhsHeight :: Square -> Double
-averageLhsHeight sq = (tl sq + bl sq) / 2.0
+averageLeftHeight :: Square -> Double
+averageLeftHeight sq = (tl sq + bl sq) / 2.0
 
-averageRhsHeight :: Square -> Double
-averageRhsHeight sq = (tr sq + br sq) / 2.0
+averageRightHeight :: Square -> Double
+averageRightHeight sq = (tr sq + br sq) / 2.0
 
 divide :: Double -> Square -> [Square]
 divide eps parent = [
@@ -63,8 +63,8 @@ divide eps parent = [
     at = averageTopHeight parent
     ah = averageHeight eps parent -- height of middle
     ab = averageBottomHeight parent
-    ar = averageRhsHeight parent
-    al = averageLhsHeight parent
+    ar = averageRightHeight parent
+    al = averageLeftHeight parent
     
 allSubSquares :: (Double -> Square -> [Square]) -> Square -> [Square]
 allSubSquares f sq 
@@ -86,7 +86,7 @@ imageSize = 512
 grayScale :: Double -> Double -> Double -> Pixel16
 grayScale mn mx p = truncate $ 65535 * zeroToOne
   where
-    zeroToOne = ((p - mn) / (mx - mn))
+    zeroToOne = (p - mn) / (mx - mn)
 
 generatePlasma :: Pixel a => (Double -> Double -> Double -> a) -> Square -> Image a
 generatePlasma pixFunc sq = generateImage f imageSize imageSize
