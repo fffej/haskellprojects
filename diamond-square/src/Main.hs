@@ -92,10 +92,10 @@ generatePlasma pixFunc sq = generateImage f imageSize imageSize
     f x y = pixFunc minP maxP (M.findWithDefault 0 (x,y) pixels) 
     pixels = M.fromList $ map (position &&& averageHeight 0) $ allSubSquares divide sq
 
-generatePlasma2 :: Square -> IO (Image Pixel16)
-generatePlasma2 sq = do
+generatePlasma2 :: Pixel a => (Double -> Double -> Double -> a) -> Square -> IO (Image a)
+generatePlasma2 pixFunc sq = do
   sqs <- allSubSquaresPlusPerturbation divide sq
-  let f x y = grayScale minP maxP (M.findWithDefault 0 (x,y) pixels)
+  let f x y = pixFunc minP maxP (M.findWithDefault 0 (x,y) pixels)
       pixels = M.fromList $ map (position &&& averageHeight 0) sqs
       minP = maximum $ M.elems pixels
       maxP = minimum $ M.elems pixels
@@ -104,7 +104,7 @@ generatePlasma2 sq = do
 main :: IO ()
 main = do
   sq <- mkSquare imageSize
-  img <- generatePlasma2 sq
+  img <- generatePlasma2 grayScale sq
   let img2 = generatePlasma grayScale sq
   writePng "/home/jefff/Desktop/random.png" img
   writePng "/home/jefff/Desktop/notrandom.png" img2
