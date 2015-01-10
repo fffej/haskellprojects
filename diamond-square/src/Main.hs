@@ -61,7 +61,7 @@ divide eps parent = [
     offset = size parent `div` 2
     sq = parent { size = offset }
     at = averageTopHeight parent
-    ah = averageHeight eps parent -- height of diamond
+    ah = averageHeight eps parent -- height of middle
     ab = averageBottomHeight parent
     ar = averageRhsHeight parent
     al = averageLhsHeight parent
