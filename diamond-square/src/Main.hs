@@ -15,9 +15,9 @@ data Square = Square
                 position :: Point                
               , size    :: Int 
               , tl      :: Double -- Height of top left
-              , tr      :: Double -- top right
-              , bl      :: Double -- bottom left
-              , br      :: Double -- bottom right
+              , tr      :: Double -- Height of top right
+              , bl      :: Double -- Height of bottom left
+              , br      :: Double -- Height of bottom right
               } deriving (Show,Eq)
 
 isUnit :: Square -> Bool
