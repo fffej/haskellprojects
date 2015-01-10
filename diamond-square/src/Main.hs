@@ -52,10 +52,10 @@ averageRhsHeight sq = (sq^.tr + sq^.br) / 2.0
 
 divide :: Double -> Square -> [Square]
 divide eps parent = [
-    set tr avgTopHeight $ set br avgHeight    $ set bl avgLhsHeight $ sq -- top left unchanged
-  , set tl avgTopHeight $ set bl avgHeight    $ set br avgRhsHeight $ (move (offset,0) sq) -- top right unchanged
-  , set tr avgHeight    $ set br avgBotHeight $ set tl avgLhsHeight $ (move (0,offset) sq) -- bottom left unchanged
-  , set tl avgHeight    $ set bl avgBotHeight $ set tr avgRhsHeight $ (move (offset,offset) sq)    -- bottom right unchanged
+    set tr avgTopHeight $ set br avgHeight    $ set bl avgLhsHeight sq -- top left unchanged
+  , set tl avgTopHeight $ set bl avgHeight    $ set br avgRhsHeight (move (offset,0) sq) -- top right unchanged
+  , set tr avgHeight    $ set br avgBotHeight $ set tl avgLhsHeight (move (0,offset) sq) -- bottom left unchanged
+  , set tl avgHeight    $ set bl avgBotHeight $ set tr avgRhsHeight (move (offset,offset) sq)    -- bottom right unchanged
   ]
   where    
     offset = parent^.size `div` 2
@@ -77,7 +77,7 @@ allSubSquaresPlusPerturbation f sq
   | otherwise = do
     let sz = fromIntegral (sq^.size) :: Double
     x <- randomRIO (- 0.5,0.5)
-    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f ((sqrt sz) * x) sq)
+    liftM concat $ mapM (allSubSquaresPlusPerturbation f) (f (sqrt sz * x) sq)
     
 
 imageSize :: Int
