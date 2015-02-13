@@ -18,10 +18,12 @@ cents = Cents
 
 data Item = Loaf
           | Noodles
+          | Soup
 
 priceOf :: Item -> Money
 priceOf Loaf    = dollar 1
 priceOf Noodles = cents 50
+priceOf Soup    = dollar 2 
 
 main :: IO ()
 main = hspec $ do
