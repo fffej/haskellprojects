@@ -18,3 +18,5 @@ main = hspec $ do
   describe "Supermarket pricing" $ do
     it "a loaf of bread is a dollar" $ do
       priceOf Loaf `shouldBe` 1
+    it "a pack of noodles is 50 cents" $ do
+      priceOf Noodles `shouldBe` 0.50
