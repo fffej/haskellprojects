@@ -6,7 +6,7 @@ import Test.QuickCheck
 data Item = Apple
 
 priceOf :: Item -> Int
-priceOf = undefined
+priceOf _ = 1
 
 main :: IO ()
 main = hspec $ do
