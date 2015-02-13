@@ -31,7 +31,7 @@ priceOf' Noodles = cents 50
 priceOf' Soup    = dollar 2 
 
 priceOf :: [Item] -> Money
-priceOf xs = mconcat (map priceOf' xs)
+priceOf = mconcat . map priceOf' 
 
 main :: IO ()
 main = hspec $ do
