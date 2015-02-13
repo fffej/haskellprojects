@@ -7,6 +7,7 @@ module SuperMarket where
 
 import Test.Hspec
 import Test.QuickCheck
+import Data.Monoid
 
 data Money = Cents Integer deriving (Show,Eq)
 
@@ -20,19 +21,26 @@ data Item = Loaf
           | Noodles
           | Soup
 
-priceOf :: Item -> Money
-priceOf Loaf    = dollar 1
-priceOf Noodles = cents 50
-priceOf Soup    = dollar 2 
+instance Monoid Money where
+  mempty = Cents 0
+  mappend (Cents x) (Cents y) = Cents (x + y)
+
+priceOf' :: Item -> Money
+priceOf' Loaf    = dollar 1
+priceOf' Noodles = cents 50
+priceOf' Soup    = dollar 2 
+
+priceOf :: [Item] -> Money
+priceOf xs = mconcat (map priceOf' xs)
 
 main :: IO ()
 main = hspec $ do
   describe "Supermarket pricing" $ do
     it "a loaf of bread is a dollar" $ do
-      priceOf Loaf `shouldBe` (Cents 100)
+      priceOf' Loaf `shouldBe` (Cents 100)
     it "a pack of noodles is 50 cents" $ do
-      priceOf Noodles `shouldBe` (Cents 50)
+      priceOf' Noodles `shouldBe` (Cents 50)
     it "a can of soup is 2 dollars" $ do
-      priceOf Soup `shouldBe` (Cents 200)
+      priceOf' Soup `shouldBe` (Cents 200)
     it "a loaf, some noodles and soup is $3.50" $ do
       priceOf [Loaf,Noodles,Soup] `shouldBe` (Cents 350)
