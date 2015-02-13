@@ -1,9 +1,14 @@
+{-
+
+Coding kata taken from http://nimblepros.com/media/36760/supermarket%20pricing%20kata.pdf
+
+-}
 module SuperMarket where
 
 import Test.Hspec
 import Test.QuickCheck
 
-data Item = Apple
+data Item = Loaf
 
 priceOf :: Item -> Int
 priceOf _ = 1
@@ -11,5 +16,5 @@ priceOf _ = 1
 main :: IO ()
 main = hspec $ do
   describe "Supermarket pricing" $ do
-    it "returns the price of a single element" $ do
-      priceOf Apple `shouldBe` 1
+    it "a loaf of bread is a dollar" $ do
+      priceOf Loaf `shouldBe` 1
