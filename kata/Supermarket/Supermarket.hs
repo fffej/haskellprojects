@@ -30,3 +30,5 @@ main = hspec $ do
       priceOf Loaf `shouldBe` (Cents 100)
     it "a pack of noodles is 50 cents" $ do
       priceOf Noodles `shouldBe` (Cents 50)
+    it "a can of soup is 2 dollars" $ do
+      priceOf Soup `shouldBe` (Cents 200)
