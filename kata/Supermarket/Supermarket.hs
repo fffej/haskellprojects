@@ -9,9 +9,11 @@ import Test.Hspec
 import Test.QuickCheck
 
 data Item = Loaf
+          | Noodles
 
-priceOf :: Item -> Int
-priceOf _ = 1
+priceOf :: Item -> Double
+priceOf Loaf   = 1
+priceOf Noodles= 0.5
 
 main :: IO ()
 main = hspec $ do
