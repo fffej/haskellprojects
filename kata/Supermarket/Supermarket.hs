@@ -8,17 +8,25 @@ module SuperMarket where
 import Test.Hspec
 import Test.QuickCheck
 
+data Money = Cents Integer deriving (Show,Eq)
+
+dollar :: Integer -> Money
+dollar x = Cents (x * 100)
+
+cents :: Integer -> Money
+cents = Cents 
+
 data Item = Loaf
           | Noodles
 
-priceOf :: Item -> Double
-priceOf Loaf   = 1
-priceOf Noodles= 0.5
+priceOf :: Item -> Money
+priceOf Loaf    = dollar 1
+priceOf Noodles = cents 50
 
 main :: IO ()
 main = hspec $ do
   describe "Supermarket pricing" $ do
     it "a loaf of bread is a dollar" $ do
-      priceOf Loaf `shouldBe` 1
+      priceOf Loaf `shouldBe` (Cents 100)
     it "a pack of noodles is 50 cents" $ do
-      priceOf Noodles `shouldBe` 0.50
+      priceOf Noodles `shouldBe` (Cents 50)
