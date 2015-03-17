@@ -5,20 +5,19 @@ type Operator = Integer -> Integer
 type Expression = String
 
 createExpression :: [Operator] -> Integer -> Integer
-createExpression []     seed = seed
-createExpression (x:xs) seed = createExpression xs (x seed)
+createExpression xs seed = foldl (\_ x -> x seed) seed xs
 
 parse :: Expression -> [Operator]
 parse = map toOperator . words
 
 toOperator :: String -> Operator
-toOperator ('*':xs) = (* (read xs :: Integer))
-toOperator ('-':xs) = ((-) (read xs :: Integer))
-toOperator ('/':xs) = ((div) (read xs :: Integer))
-toOperator ('+':xs) = (+ (read xs :: Integer))
+toOperator ('*':xs) = (*) (read xs :: Integer)
+toOperator ('-':xs) = (-) (read xs :: Integer)
+toOperator ('/':xs) = (div) (read xs :: Integer)
+toOperator ('+':xs) = (+) (read xs :: Integer)
 toOperator _        = error "Malformed expression"
 
 recurrence :: Expression -> Integer -> [Integer]
-recurrence expr seed = iterate (createExpression $ parse expr) seed 
+recurrence expr = iterate (createExpression $ parse expr)  
 
 
