@@ -2,6 +2,7 @@ module Irrigation where
 
 import Data.List (maximumBy)
 import Data.Ord (comparing)
+import Control.Arrow ((&&&))
 
 type Location = (Int,Int)
 
@@ -29,7 +30,7 @@ intDistance (x1,y1) (x2,y2) = floor (sqrt (dx*dx + dy*dy))
 
 -- Goal is to maximise crops covered
 bestLocation :: CropField -> Int -> Location
-bestLocation field radius = fst $ maximumBy (comparing snd) $ map (\x -> (location x, score field x)) sprinklers
+bestLocation field radius = fst $ maximumBy (comparing snd) $ map (location &&& score field) sprinklers
     where
       sprinklers = [Sprinkler loc radius | loc <-  grid field]
 
