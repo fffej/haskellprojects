@@ -35,9 +35,9 @@ bestLocation field radius = fst $ maximumBy (comparing snd) $ map (location &&& 
       sprinklers = [Sprinkler loc radius | loc <-  grid field]
 
 score :: CropField -> Sprinkler -> Int
-score field sprinkler = killedCrop + (length $ filter (inRange sprinkler) (crops field))
+score field sprinkler = killedCrop + length (filter (inRange sprinkler) (crops field))
     where
-      killedCrop = if (location sprinkler `elem` crops field) then (- 1) else 0
+      killedCrop = if location sprinkler `elem` crops field then (- 1) else 0
  
 inRange :: Sprinkler -> Location -> Bool
 inRange s p = intDistance l p <= r
