@@ -28,7 +28,6 @@ intDistance (x1,y1) (x2,y2) = floor (sqrt (dx*dx + dy*dy))
       dx = fromIntegral (x1 - x2)
       dy = fromIntegral (y1 - y2)
 
--- Goal is to maximise crops covered
 bestLocation :: CropField -> Int -> Location
 bestLocation field radius = fst $ maximumBy (comparing snd) $ map (location &&& score field) sprinklers
     where
