@@ -1,35 +1,46 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-http://hypernephelist.com/2014/09/16/sending-data-to-azure-event-hubs-from-nodejs.html
-
 import Network.URI
 import Data.Time.Clock.POSIX
 import Data.Digest.Pure.SHA
-import Data.ByteString.Lazy.Char8 (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as B
-
-data EventHub = EventHub
-                {
-                  namespace :: ByteString
-                , hubname :: ByteString
-                , devicename :: ByteString
-                } deriving (Show,Eq)
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as LB
+import Data.ByteString.Base64
 
 data AccessKey = AccessKey
                  {
-                   keyName :: ByteString
-                 , key :: ByteString
+                   keyName :: B.ByteString
+                 , key :: B.ByteString
                  } deriving (Show,Eq)
 
-type Token = ByteString
+type Token = B.ByteString
+
+encodeURI :: URI -> B.ByteString
+encodeURI x = B.pack $ uriToString id x ""
+
+sign :: B.ByteString -> B.ByteString -> B.ByteString
+sign key signingString = encode $ LB.toStrict $ bytestringDigest dig
+  where
+    strictKey = LB.fromStrict key
+    strictString = LB.fromStrict signingString
+    dig = hmacSha1 strictString strictString
 
 createSASToken :: URI -> AccessKey -> IO Token
 createSASToken uri accessKey = do
   expiry <- round `fmap` getPOSIXTime
-  let signingString = B.pack $ (uriToString id uri) "\n" ++ show expiry
-      signature = hmacSha1 (key accessKey) signingString
-      
-  return (B.pack $ show signature)
+  let signingString = B.concat [encodeURI uri, "\n", B.pack $ show expiry]
+      signature :: B.ByteString
+      signature = sign (key accessKey) signingString
+  return $ B.concat [
+        "SharedAccessSignature sr=",
+        encodeURI uri,
+        "&sig=",
+        signature,
+        "&se=",
+        B.pack $ show expiry,
+        "&skn=",
+        keyName accessKey
+        ]  
 
 main :: IO ()
 main = do
