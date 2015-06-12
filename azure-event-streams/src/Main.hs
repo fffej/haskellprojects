@@ -8,6 +8,7 @@ import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.ByteString.Base64
 import Data.Maybe (fromJust)
+import Data.List (genericLength)
 
 import Network.Http.Client
 
@@ -63,12 +64,15 @@ main = do
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
       key = AccessKey "" ""
+      payload :: String
+      payload = "{\"Foo\": \"123.123\", \"Bar\":\"3\"}"
   token <- createSASToken (fromJust $ parseURI $ show url) key
   c <- withConnection (openConnection url 443) $ (\c -> do
     let q = buildRequest1 $ do
           http POST ""
           setHeader "Authorization" token
           setContentType contentType
+          setContentLength (genericLength payload)
     
     return "blah")
   return ()
