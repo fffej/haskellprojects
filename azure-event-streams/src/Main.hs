@@ -10,7 +10,12 @@ import Data.ByteString.Base64
 import Data.Maybe (fromJust)
 import Data.List (genericLength)
 
-import Network.Http.Client
+import Network.Wreq
+import Control.Lens
+import Data.Aeson (toJSON)
+import Data.Aeson.Lens (nth)
+import OpenSSL.Session (context)
+import Network.HTTP.Client.TLS
 
 data AccessKey = AccessKey
                  {
@@ -21,7 +26,7 @@ data AccessKey = AccessKey
 type Token = ByteString
 
 namespace :: ByteString
-namespace = "eventhubexample-ns.servicebus.windows.net";
+namespace = "https://eventhubexample-ns.servicebus.windows.net";
 
 hubName :: ByteString
 hubName = "hubname";
@@ -59,13 +64,10 @@ createSASToken uri accessKey = do
       signature = sign (key accessKey) signingString
   return $ buildUri (encodeURI uri) signature expiry (keyName accessKey)
 
-main :: IO ()
-main = do
+makeRequest :: Options -> AccessKey -> [a] -> IO ByteString
+makeRequest ops key payload = do
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
-      key = AccessKey "" ""
-      payload :: String
-      payload = "{\"Foo\": \"123.123\", \"Bar\":\"3\"}"
   token <- createSASToken (fromJust $ parseURI $ show url) key
   c <- withConnection (openConnection url 443) $ (\c -> do
     let q = buildRequest1 $ do
@@ -73,6 +75,18 @@ main = do
           setHeader "Authorization" token
           setContentType contentType
           setContentLength (genericLength payload)
-    
+
+    sendRequest c q (\o -> Streams.write (Just (fromString payload)) o)
+    receiveResponse c debugHandler    
     return "blah")
+  return c
+
+url :: ByteString
+url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
+
+main :: IO ()
+main = do
+  let ops = defaults & manager .~ Left (opensslManagerSettings context)
+  withOpenSSL $
+    makeRequest ops (AccessKey "" "") "[1,2,3]"
   return ()
