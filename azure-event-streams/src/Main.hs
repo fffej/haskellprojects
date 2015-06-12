@@ -69,6 +69,8 @@ makeRequest ops key payload = do
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
   token <- createSASToken (fromJust $ parseURI $ show url) key
+  return ""
+  {-
   c <- withConnection (openConnection url 443) $ (\c -> do
     let q = buildRequest1 $ do
           http POST ""
@@ -79,14 +81,14 @@ makeRequest ops key payload = do
     sendRequest c q (\o -> Streams.write (Just (fromString payload)) o)
     receiveResponse c debugHandler    
     return "blah")
-  return c
+  return c -}
 
 url :: ByteString
 url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
 
 main :: IO ()
 main = do
-  let ops = defaults & manager .~ Left (opensslManagerSettings context)
-  withOpenSSL $
-    makeRequest ops (AccessKey "" "") "[1,2,3]"
+  --let ops = defaults & manager .~ Left (tlsManagerSettings context)
+  --withtls $
+  --x <-  makeRequest ops (AccessKey "" "") "[1,2,3]"
   return ()
