@@ -25,22 +25,25 @@ sign key signingString = encode $ LB.toStrict $ bytestringDigest dig
     strictString = LB.fromStrict signingString
     dig = hmacSha1 strictString strictString
 
+buildUri :: B.ByteString -> B.ByteString -> Integer -> B.ByteString -> B.ByteString
+buildUri uri signature expiry keyName = B.concat [
+        "SharedAccessSignature sr=",
+        uri,
+        "&sig=",
+        signature,
+        "&se=",
+        B.pack $ show expiry,
+        "&skn=",
+        keyName
+        ]
+
 createSASToken :: URI -> AccessKey -> IO Token
 createSASToken uri accessKey = do
   expiry <- round `fmap` getPOSIXTime
   let signingString = B.concat [encodeURI uri, "\n", B.pack $ show expiry]
       signature :: B.ByteString
       signature = sign (key accessKey) signingString
-  return $ B.concat [
-        "SharedAccessSignature sr=",
-        encodeURI uri,
-        "&sig=",
-        signature,
-        "&se=",
-        B.pack $ show expiry,
-        "&skn=",
-        keyName accessKey
-        ]  
+  return $ buildUri (encodeURI uri) signature expiry (keyName accessKey)
 
 main :: IO ()
 main = do
