@@ -7,6 +7,9 @@ import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.ByteString.Base64
+import Data.Maybe (fromJust)
+
+import Network.Http.Client
 
 data AccessKey = AccessKey
                  {
@@ -15,6 +18,15 @@ data AccessKey = AccessKey
                  } deriving (Show,Eq)
 
 type Token = ByteString
+
+namespace :: ByteString
+namespace = "eventhubexample-ns.servicebus.windows.net";
+
+hubName :: ByteString
+hubName = "hubname";
+
+deviceName :: ByteString
+deviceName = "computer";
 
 encodeURI :: URI -> ByteString
 encodeURI x = B.pack $ uriToString id x ""
@@ -48,4 +60,15 @@ createSASToken uri accessKey = do
 
 main :: IO ()
 main = do
+  let contentType = "application/atom+xml;type=entry;charset=utf-8"
+      url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
+      key = AccessKey "" ""
+  token <- createSASToken (fromJust $ parseURI $ show url) key
+  c <- withConnection (openConnection url 443) $ (\c -> do
+    let q = buildRequest1 $ do
+          http POST ""
+          setHeader "Authorization" token
+          setContentType contentType
+    
+    return "blah")
   return ()
