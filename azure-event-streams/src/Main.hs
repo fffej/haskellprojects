@@ -26,30 +26,33 @@ data AccessKey = AccessKey
 type Token = ByteString
 
 namespace :: ByteString
-namespace = "https://eventhubexample-ns.servicebus.windows.net";
+namespace = "eventhubexample-ns"
 
 hubName :: ByteString
-hubName = "hubname";
+hubName = "eventhubexample"
 
 deviceName :: ByteString
-deviceName = "computer";
+deviceName = "computer"
 
 encodeURI :: URI -> ByteString
 encodeURI x = B.pack $ uriToString id x ""
 
 sign :: ByteString -> ByteString -> ByteString
-sign key signingString = encode $ LB.toStrict $ bytestringDigest dig
+sign key signingString = digestToHexByteString dig
   where
     strictKey = LB.fromStrict key
     strictString = LB.fromStrict signingString
-    dig = hmacSha1 strictString strictString
+    dig = hmacSha256 strictKey strictString
+
+escape :: ByteString -> ByteString
+escape = B.pack . escapeURIString isUnreserved . B.unpack
 
 buildUri :: ByteString -> ByteString -> Integer -> ByteString -> ByteString
 buildUri uri signature expiry keyName = B.concat [
         "SharedAccessSignature sr=",
-        uri,
+        B.concat [namespace, ".servicebus.windows.net"],
         "&sig=",
-        signature,
+        escape signature,
         "&se=",
         B.pack $ show expiry,
         "&skn=",
@@ -58,33 +61,38 @@ buildUri uri signature expiry keyName = B.concat [
 
 createSASToken :: URI -> AccessKey -> IO Token
 createSASToken uri accessKey = do
-  expiry <- round `fmap` getPOSIXTime
-  let signingString = B.concat [encodeURI uri, "\n", B.pack $ show expiry]
-      signature :: ByteString
-      signature = sign (key accessKey) signingString
-  return $ buildUri (encodeURI uri) signature expiry (keyName accessKey)
+  expiry <- (+ 3600) `fmap` round `fmap` getPOSIXTime
+  let name = keyName accessKey
+      encodedURI = encodeURI uri
+      signingString = B.concat [
+        encodedURI,
+        "\n",
+        B.pack $ show expiry
+        ]                      
+      signature = sign name signingString 
 
-makeRequest :: Options -> AccessKey -> [a] -> IO ByteString
-makeRequest ops key payload = do
+  return $ buildUri encodedURI signature expiry name
+
+makeRequest :: AccessKey -> IO (Response LB.ByteString)
+makeRequest key = do
+  token <- createSASToken (fromJust $ parseURI $ B.unpack url) key
+
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
-      url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
-  token <- createSASToken (fromJust $ parseURI $ show url) key
-  return ""
-  {-
-  c <- withConnection (openConnection url 443) $ (\c -> do
-    let q = buildRequest1 $ do
-          http POST ""
-          setHeader "Authorization" token
-          setContentType contentType
-          setContentLength (genericLength payload)
+      opts = defaults &
+             header "Authorization" .~ [token] &
+             header "Content-Length" .~ ["44"] &
+             header "Content-Type" .~ [contentType] &
+             header "Host" .~ [B.concat [namespace, ".servicebus.windows.net"]] &
+             header "Accept" .~ ["application/json"] 
 
-    sendRequest c q (\o -> Streams.write (Just (fromString payload)) o)
-    receiveResponse c debugHandler    
-    return "blah")
-  return c -}
+  print opts
+  
+  r <- postWith opts (B.unpack url) ["DeviceId" := ("dev-01" :: String), "Temperature" := (37.0 :: Double) ]
+  return r
+  
 
 url :: ByteString
-url = B.concat [namespace, "/", hubName, "/publishers/", deviceName, "/messages"]
+url = B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
 
 main :: IO ()
 main = do
