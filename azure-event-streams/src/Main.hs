@@ -76,8 +76,6 @@ makeRequest :: AccessKey -> IO ()
 makeRequest key = do
   token <- createSASToken url key
 
-  c <- establishConnection (B.pack $ show url)
-
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       messageBody = "{ \"Device-Id\": \"1\", \"Temperature\": \"37.0\" }" 
       q = buildRequest1 $ do
@@ -86,13 +84,10 @@ makeRequest key = do
         setContentType contentType
         setContentLength (genericLength messageBody)
         setHeader "Authorization" token
-  
-  sendRequest c q (\o ->
-                    Streams.write (Just (Builder.fromString messageBody)) o)
 
-  receiveResponse c debugHandler
-
-  closeConnection c
+  c <- withConnection (establishConnection (B.pack $ show url)) $ (\c -> do
+      sendRequest c q (\o -> Streams.write (Just (Builder.fromString messageBody)) o)
+      receiveResponse c debugHandler)
 
   return ()
   
