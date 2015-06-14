@@ -42,7 +42,6 @@ data Event = Event
 
 instance ToJSON Sample
 instance ToJSON Event
-
               
 
 namespace :: ByteString
