@@ -14,8 +14,10 @@ import Data.List (genericLength)
 import System.IO.Streams (InputStream, OutputStream, stdout)
 import qualified System.IO.Streams as Streams
 import Network.Http.Client
-import qualified Blaze.ByteString.Builder.Char8 as Builder
+import qualified Blaze.ByteString.Builder.ByteString as Builder
+
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
+import GHC.Generics (Generic)
 
 data AccessKey = AccessKey
                  {
@@ -24,6 +26,24 @@ data AccessKey = AccessKey
                  } deriving (Show,Eq)
 
 type Token = ByteString
+
+
+data Sample = Sample
+              {
+                name :: String,
+                value :: Double
+              } deriving (Show, Generic)
+
+data Event = Event
+              {
+                device :: String
+              , samples :: [Sample]
+              } deriving (Show, Generic)
+
+instance ToJSON Sample
+instance ToJSON Event
+
+              
 
 namespace :: ByteString
 namespace = "eventhubexample-ns"
@@ -74,21 +94,21 @@ createSASToken uri accessKey = do
 
   return $ buildUri encodedURI signature expiry name
 
-makeRequest :: AccessKey -> IO ()
-makeRequest key = do
+makeRequest :: ToJSON a => AccessKey -> a -> IO ()
+makeRequest key obj = do
   token <- createSASToken url key
 
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
-      messageBody = "{ \"Device-Id\": \"1\", \"Temperature\": \"37.0\" }" 
+      messageBody = encode obj
       q = buildRequest1 $ do
         http POST (B.pack $ show url) 
         setAccept "application/json"
         setContentType contentType
-        setContentLength (genericLength messageBody)
+        setContentLength (fromIntegral $ LB.length messageBody)
         setHeader "Authorization" token
 
   c <- withConnection (establishConnection (B.pack $ show url)) $ (\c -> do
-      sendRequest c q (\o -> Streams.write (Just (Builder.fromString messageBody)) o)
+      sendRequest c q (\o -> Streams.write (Just (Builder.fromLazyByteString messageBody)) o)
       receiveResponse c debugHandler)
 
   return ()
