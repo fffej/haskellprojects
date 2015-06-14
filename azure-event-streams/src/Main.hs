@@ -76,12 +76,12 @@ makeRequest :: AccessKey -> IO ()
 makeRequest key = do
   token <- createSASToken url key
 
-  c <- openConnection (B.pack (uriRegName $ fromJust $ uriAuthority url)) 443
+  c <- establishConnection (B.pack $ show url)
 
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       messageBody = "{ \"Device-Id\": \"1\", \"Temperature\": \"37.0\" }" 
       q = buildRequest1 $ do
-        http POST (B.pack $ uriPath url)
+        http POST (B.pack $ show url) 
         setAccept "application/json"
         setContentType contentType
         setContentLength (genericLength messageBody)
