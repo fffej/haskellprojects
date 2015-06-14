@@ -13,6 +13,7 @@ import Data.List (genericLength)
 import System.IO.Streams (InputStream, OutputStream, stdout)
 import qualified System.IO.Streams as Streams
 import Network.Http.Client
+import qualified Blaze.ByteString.Builder.Char8 as Builder
 
 data AccessKey = AccessKey
                  {
@@ -48,7 +49,7 @@ escape = B.pack . escapeURIString isUnreserved . B.unpack
 buildUri :: ByteString -> ByteString -> Integer -> ByteString -> ByteString
 buildUri uri signature expiry keyName = B.concat [
         "SharedAccessSignature sr=",
-        escape url,
+        uri,
         "&sig=",
         escape signature,
         "&se=",
@@ -73,32 +74,31 @@ createSASToken uri accessKey = do
 
 makeRequest :: AccessKey -> IO ()
 makeRequest key = do
-  --token <- createSASToken (fromJust $ parseURI $ B.unpack url) key
+  token <- createSASToken url key
 
-  c <- openConnection "requestb.in" 80
+  c <- openConnection (B.pack (uriRegName $ fromJust $ uriAuthority url)) 443
 
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
+      messageBody = "{ \"Device-Id\": \"1\", \"Temperature\": \"37.0\" }" 
       q = buildRequest1 $ do
-        http POST "/rn25fprn"
+        http POST (B.pack $ uriPath url)
         setAccept "application/json"
         setContentType contentType
-        setContentLength 0
-        setHeader "Authorization" "CUNT" -- token
+        setContentLength (genericLength messageBody)
+        setHeader "Authorization" token
+  
+  sendRequest c q (\o ->
+                    Streams.write (Just (Builder.fromString messageBody)) o)
 
-  sendRequest c q emptyBody
-
-  receiveResponse c (\p i -> do
-                        putStr $ show p
-                        x <- Streams.read i
-                        B.putStr $ fromMaybe "" x)
+  receiveResponse c debugHandler
 
   closeConnection c
 
   return ()
   
 
-url :: ByteString
-url = B.pack "requestb.in/rn25fprn" --B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
+url :: URI
+url = fromJust $ parseURI $ B.unpack $ B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
 
 main :: IO ()
 main = do
