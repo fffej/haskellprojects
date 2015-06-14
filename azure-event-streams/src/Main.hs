@@ -37,8 +37,9 @@ deviceName = "computer"
 encodeURI :: URI -> ByteString
 encodeURI x = B.pack $ uriToString id x ""
 
+-- This function validates against the JS thing
 sign :: ByteString -> ByteString -> ByteString
-sign key signingString = digestToHexByteString dig
+sign key signingString = encode $ LB.toStrict $ bytestringDigest dig
   where
     strictKey = LB.fromStrict key
     strictString = LB.fromStrict signingString
@@ -50,7 +51,7 @@ escape = B.pack . escapeURIString isUnreserved . B.unpack
 buildUri :: ByteString -> ByteString -> Integer -> ByteString -> ByteString
 buildUri uri signature expiry keyName = B.concat [
         "SharedAccessSignature sr=",
-        B.concat [namespace, ".servicebus.windows.net"],
+        escape url,
         "&sig=",
         escape signature,
         "&se=",
@@ -63,13 +64,13 @@ createSASToken :: URI -> AccessKey -> IO Token
 createSASToken uri accessKey = do
   expiry <- (+ 3600) `fmap` round `fmap` getPOSIXTime
   let name = keyName accessKey
-      encodedURI = encodeURI uri
-      signingString = B.concat [
+      encodedURI = escape $ B.pack $ show uri
+      stringToSign = B.concat [
         encodedURI,
         "\n",
         B.pack $ show expiry
         ]                      
-      signature = sign name signingString 
+      signature = sign (key accessKey) stringToSign 
 
   return $ buildUri encodedURI signature expiry name
 
@@ -80,10 +81,8 @@ makeRequest key = do
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
       opts = defaults &
              header "Authorization" .~ [token] &
-             header "Content-Length" .~ ["44"] &
-             header "Content-Type" .~ [contentType] &
-             header "Host" .~ [B.concat [namespace, ".servicebus.windows.net"]] &
-             header "Accept" .~ ["application/json"] 
+             header "Content-Length" .~ ["42"] &
+             header "Content-Type" .~ [contentType]
 
   print opts
   
@@ -92,7 +91,7 @@ makeRequest key = do
   
 
 url :: ByteString
-url = B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
+url = B.pack "http://requestb.in/1lmux981" --B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
 
 main :: IO ()
 main = do
