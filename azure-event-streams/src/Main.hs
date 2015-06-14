@@ -102,7 +102,4 @@ url = fromJust $ parseURI $ B.unpack $ B.concat ["https://", namespace, ".servic
 
 main :: IO ()
 main = do
-  --let ops = defaults & manager .~ Left (tlsManagerSettings context)
-  --withtls $
-  --x <-  makeRequest ops (AccessKey "" "") "[1,2,3]"
   return ()
