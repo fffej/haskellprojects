@@ -7,15 +7,12 @@ import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
 import Data.ByteString.Base64
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.List (genericLength)
 
-import Network.Wreq
-import Control.Lens
-import Data.Aeson (toJSON)
-import Data.Aeson.Lens (nth)
-import OpenSSL.Session (context)
-import Network.HTTP.Client.TLS
+import System.IO.Streams (InputStream, OutputStream, stdout)
+import qualified System.IO.Streams as Streams
+import Network.Http.Client
 
 data AccessKey = AccessKey
                  {
@@ -74,24 +71,34 @@ createSASToken uri accessKey = do
 
   return $ buildUri encodedURI signature expiry name
 
-makeRequest :: AccessKey -> IO (Response LB.ByteString)
+makeRequest :: AccessKey -> IO ()
 makeRequest key = do
-  token <- createSASToken (fromJust $ parseURI $ B.unpack url) key
+  --token <- createSASToken (fromJust $ parseURI $ B.unpack url) key
+
+  c <- openConnection "requestb.in" 80
 
   let contentType = "application/atom+xml;type=entry;charset=utf-8"
-      opts = defaults &
-             header "Authorization" .~ [token] &
-             header "Content-Length" .~ ["42"] &
-             header "Content-Type" .~ [contentType]
+      q = buildRequest1 $ do
+        http POST "/rn25fprn"
+        setAccept "application/json"
+        setContentType contentType
+        setContentLength 0
+        setHeader "Authorization" "CUNT" -- token
 
-  print opts
-  
-  r <- postWith opts (B.unpack url) ["DeviceId" := ("dev-01" :: String), "Temperature" := (37.0 :: Double) ]
-  return r
+  sendRequest c q emptyBody
+
+  receiveResponse c (\p i -> do
+                        putStr $ show p
+                        x <- Streams.read i
+                        B.putStr $ fromMaybe "" x)
+
+  closeConnection c
+
+  return ()
   
 
 url :: ByteString
-url = B.pack "http://requestb.in/1lmux981" --B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
+url = B.pack "requestb.in/rn25fprn" --B.concat ["https://", namespace, ".servicebus.windows.net", "/", hubName, "/publishers/", deviceName, "/messages"]
 
 main :: IO ()
 main = do
