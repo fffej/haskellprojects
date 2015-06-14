@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 import Network.URI
 import Data.Time.Clock.POSIX
@@ -6,7 +7,7 @@ import Data.Digest.Pure.SHA
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as LB
-import Data.ByteString.Base64
+import qualified Data.ByteString.Base64 as Base64
 import Data.Maybe (fromJust, fromMaybe)
 import Data.List (genericLength)
 
@@ -14,6 +15,7 @@ import System.IO.Streams (InputStream, OutputStream, stdout)
 import qualified System.IO.Streams as Streams
 import Network.Http.Client
 import qualified Blaze.ByteString.Builder.Char8 as Builder
+import Data.Aeson (FromJSON, ToJSON, decode, encode)
 
 data AccessKey = AccessKey
                  {
@@ -37,7 +39,7 @@ encodeURI x = B.pack $ uriToString id x ""
 
 -- This function validates against the JS thing
 sign :: ByteString -> ByteString -> ByteString
-sign key signingString = encode $ LB.toStrict $ bytestringDigest dig
+sign key signingString = Base64.encode $ LB.toStrict $ bytestringDigest dig
   where
     strictKey = LB.fromStrict key
     strictString = LB.fromStrict signingString
